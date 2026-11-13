@@ -1,0 +1,5 @@
+.DS_Store
+.vercel
+node_modules/
+# local 1:1 overlay checks (dossier ch. 10 W-06 overlay): screenshots stay out of the repo
+docs-screens/

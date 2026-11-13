@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <!-- Static hosts serve /app as a file path; the relative URLs below need /app/ (reference: eylul app/index.html:5). -->
+  <script>if (/\/app$/.test(location.pathname)) location.replace(location.pathname + '/' + location.search + location.hash);</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#F7F6FB">
+  <title>Doremimi</title>
+  <link rel="icon" type="image/png" href="../assets/brand/logo.png">
+  <link rel="stylesheet" href="../assets/fonts/fonts.css?v=2">
+  <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+  <div class="app tab-kesfet" id="app">
+    <canvas class="backdrop" id="bg" aria-hidden="true"></canvas>
+    <div class="fake-status" aria-hidden="true">
+      <span id="clock">09:41</span>
+      <span class="ind">
+        <svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+        <svg viewBox="0 0 16 12"><path d="M8 2.2c2.4 0 4.6.9 6.2 2.5l1.3-1.4C13.5 1.3 10.9.2 8 .2S2.5 1.3.5 3.3l1.3 1.4C3.4 3.1 5.6 2.2 8 2.2zm0 3.9c1.4 0 2.6.5 3.5 1.4l1.4-1.4C11.6 4.8 9.9 4.1 8 4.1s-3.6.7-4.9 2l1.4 1.4c.9-.9 2.1-1.4 3.5-1.4zM8 12l2.2-2.2c-1.2-1.2-3.2-1.2-4.4 0z"/></svg>
+        <svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="16" height="8" rx="1.6"/><rect x="24" y="4" width="2" height="4" rx="1" opacity=".4"/></svg>
+      </span>
+    </div>
+    <header class="topbar" id="topbar"></header>
+    <main class="page" id="page" tabindex="-1"></main>
+    <nav class="dock" id="dock" aria-label="Ana menü"></nav>
+    <section class="game" id="game" hidden aria-label="Müzik Kart Oyunu"></section>
+    <div class="toast-host" id="toast" role="status"></div>
+  </div>
+  <script type="module" src="app.js?v=2"></script>
+</body>
+</html>

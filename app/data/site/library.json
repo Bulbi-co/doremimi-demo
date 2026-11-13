@@ -1,0 +1,50 @@
+[
+ {
+  "title": "İlkokul kitapları",
+  "subtitle": "Dore Mimi ilkokul kitap serisi",
+  "url": "https://www.doremimi.org/ilkokul-kitaplari",
+  "color": "#FF8A1E"
+ },
+ {
+  "title": "Ortaokul kitapları",
+  "subtitle": "Dore Mimi ortaokul kitap serisi",
+  "url": "https://www.doremimi.org/ortaokul-kitaplari",
+  "color": "#E8443A"
+ },
+ {
+  "title": "Metodlar",
+  "subtitle": "Çalgı metodları",
+  "url": "https://www.doremimi.org/metodlar",
+  "color": "#8A4FE0"
+ },
+ {
+  "title": "Notalar",
+  "subtitle": "Şarkıların notaları",
+  "url": "https://www.doremimi.org/notalar-all",
+  "color": "#2F8CFF"
+ },
+ {
+  "title": "Çalgı bilgisi",
+  "subtitle": "41 çalgının ayrıntılı bilgisi",
+  "url": "https://www.doremimi.org/calgi-bilgisi",
+  "color": "#3DBE5C"
+ },
+ {
+  "title": "Satış noktaları",
+  "subtitle": "Kitapları nereden alabilirsin?",
+  "url": "https://www.doremimi.org/satis-noktalari",
+  "color": "#B8763E"
+ },
+ {
+  "title": "Oyuncaklar",
+  "subtitle": "Dore Mimi oyuncak satış noktaları",
+  "url": "https://www.doremimi.org/oyuncak-satis-noktalari",
+  "color": "#C2379B"
+ },
+ {
+  "title": "Sipariş",
+  "subtitle": "Kitap ve oyuncak siparişi",
+  "url": "https://www.doremimi.org/siparis",
+  "color": "#1E7A4C"
+ }
+]

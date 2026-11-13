@@ -19,8 +19,12 @@ No build step, no dependencies. Every asset, including the fonts, is in the fold
 network.
 
 ```
-python3 -m http.server 4175        # or: npm start
+npm start                          # = node tools/serve.mjs; a busy 4175 moves to the next free port
 ```
+
+Not `python3 -m http.server`: its listen backlog of 5 drops part of the deck's burst of ES-module requests on a cold
+load, and one failed import leaves the whole deck or phone blank (9 of 12 cold loads failed). `tools/serve.mjs` is a
+small Node server with no dependencies (Node's backlog is 511).
 
 - Deck: http://localhost:4175
 - The phone on its own: http://localhost:4175/app/

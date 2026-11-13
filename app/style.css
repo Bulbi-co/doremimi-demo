@@ -52,6 +52,12 @@ img { display: block; }
 /* Opened on a phone without the deck: the reference's 440 px column (dossier ch. 10 A-35). */
 @media (min-width: 700px) { .app:not(.embed) { max-width: 440px; box-shadow: 0 0 0 1px rgba(10,10,60,.08), 0 30px 80px rgba(10,10,60,.18); } }
 .app.embed { --safe-top: 54px; --safe-bottom: 24px; max-width: none; }
+/* A tablet (embed at >= 700 px, the Platformlar slide's frame): the app keeps the top bar and the dock on the centred
+   content column, as dossier screen 20-tablet-home.png shows; only the backdrop runs edge to edge. */
+@media (min-width: 700px) {
+  .app.embed .topbar { margin-left: calc((100% - 640px) / 2); margin-right: calc((100% - 640px) / 2); }
+  .app.embed .dock { margin-left: calc((100% - 664px) / 2); margin-right: calc((100% - 664px) / 2); }
+}
 .backdrop { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; pointer-events: none; }
 .fake-status { display: none; }
 .app.embed .fake-status { display: flex; position: absolute; z-index: 30; left: 0; right: 0; top: 0; height: 54px; align-items: center; justify-content: space-between; padding: 6px 34px 0 46px; font: 800 17px var(--font-body); color: var(--ink); pointer-events: none; }
@@ -63,6 +69,9 @@ img { display: block; }
 .app.tab-izle { --tab-clay: var(--clay-daha); --tab-lip: #A93AA8; --tab-ribbon-lip: var(--orchid); }
 /* The hub's new warm wash (OC-22, PROPOSED): the cream of the Doremimi nedir? card, with its gold lip. */
 .app.tab-doremimi { --tab-clay: var(--clay-cream); --tab-lip: #D9B850; --tab-ribbon-lip: var(--yellow); }
+/* The game is a layer over the shell, not part of any tab (ch. 01 N-01), so it takes the app's default cream card with
+   the gold lip. Without this its feedback pill wore the tab underneath: magenta from Keşfet, blue from Çal. */
+#game { --tab-clay: var(--clay-cream); --tab-lip: #D9B850; --tab-ribbon-lip: var(--blue); }
 
 /* ───────────────────────── top bar (ShellView.axaml:1239-1275) */
 .topbar { position: relative; z-index: 2; display: flex; align-items: center; gap: 0; margin: calc(16px + var(--safe-top)) 20px 10px; min-height: 48px; }
@@ -101,9 +110,9 @@ img { display: block; }
 .tab.active .pill .ic { animation: hop 520ms var(--ease-back-out); }
 @keyframes hop { 30% { transform: translateY(-6px) scale(1.12); } 60% { transform: translateY(1px) scale(.96); } }
 /* The centre slot (NR-04, PROPOSED look): a round 68 px plate in the dock's own gradient and lip, raised so its top
-   sits ~22 px above the dock's edge, the official logo at 56 x 55 inside. Never recoloured (D21); active = Indigo ring. */
+   sits ~22 px above the dock's edge (bottom 14 px: at 0 it measured only 8 px), the official logo at 56 x 55 inside. Never recoloured (D21); active = Indigo ring. */
 .tab.logo { position: relative; height: 40px; }
-.tab.logo .plate { position: absolute; left: 50%; bottom: 0; width: 68px; height: 68px; margin-left: -34px; border-radius: 50%; background: var(--dock-bg); box-shadow: 0 5px 0 0 #14107A, 0 10px 18px -6px rgba(10,10,60,.5); display: grid; place-items: center; transition: transform 200ms var(--ease-back-out), box-shadow 150ms; }
+.tab.logo .plate { position: absolute; left: 50%; bottom: 14px; width: 68px; height: 68px; margin-left: -34px; border-radius: 50%; background: var(--dock-bg); box-shadow: 0 5px 0 0 #14107A, 0 10px 18px -6px rgba(10,10,60,.5); display: grid; place-items: center; transition: transform 200ms var(--ease-back-out), box-shadow 150ms; }
 .tab.logo .plate img { width: 56px; height: 55px; }
 .tab.logo:hover .plate { transform: translateY(-2px) scale(1.06); }
 .tab.logo:active .plate { transform: translateY(1px) scale(.92); }
@@ -510,11 +519,13 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .g-head .t b { font: 800 22px/26px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .g-head .t small { font: 800 13px/14px var(--font-display); margin-top: -4px; }
 .g-head .sv { height: 38px; min-width: 58px; width: auto; padding: 0 10px; background: var(--blue); color: var(--ink); font-size: 16px; }
+/* The bottom margin keeps the safe-area inset on purpose. The dossier's game shots were taken on desktop with no inset, so
+   their keyboard and choices end ~25 px lower; on an iPhone the app pads the same way (ShellView TopLevel.AutoSafeAreaPadding). */
 .g-body { position: relative; z-index: 2; flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 12px calc(10px + var(--safe-bottom)); }
 .ladder { border-radius: var(--r-m); box-shadow: 0 3px 0 0 #232046, 0 6px 12px rgba(43,36,64,.2); }
 .ladder .in { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 5px; background: #0A0A3C; border-radius: var(--r-m); padding: 6px; border: 1px solid rgba(255,255,255,.2); }
 .step { height: 32px; padding: 0 4px; border-radius: var(--r-s); background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; gap: 4px; color: #fff; font: 800 14px/18px var(--font-display); transition: background 240ms; }
-.step .ic { width: 13px; height: 13px; }
+.step .ic { width: 16px; height: 16px; }
 .step.lit { border: 2px solid #fff; color: var(--ink); }
 .step.yaz.lit { background: var(--yellow); }
 .step.sec.lit { background: var(--cyan); }
@@ -546,8 +557,9 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 @keyframes ring { from { opacity: 1; transform: scale(.9); } to { opacity: 0; transform: scale(1.12); } }
 .spark { position: absolute; width: 10px; height: 10px; border-radius: 2px; pointer-events: none; animation: spark 750ms var(--ease-cubic-out) both; }
 @keyframes spark { from { transform: translate(0,0) rotate(0); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
-.wrong-tint { position: absolute; inset: 0; border-radius: var(--r-card); background: rgba(255,77,0,.18); pointer-events: none; animation: tint 600ms ease both; }
-@keyframes tint { from { opacity: 1; } to { opacity: 0; } }
+/* ToyCard.FlashTint: coral #FF7A6B at 35 %, linear to nothing in 320 ms (motion.json wrong.tintOpacity / durationMs). */
+.wrong-tint { position: absolute; inset: 0; border-radius: var(--r-card); background: #FF7A6B; opacity: .35; pointer-events: none; animation: tint 320ms linear both; }
+@keyframes tint { from { opacity: .35; } to { opacity: 0; } }
 .xp-chip { position: absolute; left: 50%; top: -50px; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; animation: xpChip 1.6s var(--ease-cubic-out) both; }
 .xp-chip .toastb { padding: 8px 22px 10px; border-radius: var(--r-m); background: var(--yellow); box-shadow: 0 5px 0 0 #C29500, var(--drop-toast); font: 800 32px/36px var(--font-display); }
 .xp-chip small { padding: 3px 12px 5px; border-radius: var(--r-m); background: var(--indigo); color: #fff; font: 800 13px/16px var(--font-display); }
@@ -658,7 +670,7 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .dontknow { align-self: center; }
 .dontknow > .face { padding: 10px 22px; }
 .answer-area > .chunky { width: 100%; }
-.answer-area > .chunky.wide { width: calc(100% - 16px); margin: 0 8px; }
+.answer-area > .chunky.wide { width: 100%; }
 .grade { display: flex; flex-direction: column; gap: 8px; align-items: center; animation: pageIn 320ms var(--ease-cubic-out) both; }
 .grade .two { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .grade .two .face { padding: 16px 8px; }

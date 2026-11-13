@@ -71,9 +71,13 @@ export class Backdrop {
    * @param canvas the element to draw into (it fills its parent)
    * @param opts.seed note layout seed (the shell uses 5, the game 3, as in the app)
    * @param opts.clearTop px from the top where the title band starts (status bar in embed mode)
+   * @param opts.avoid optional () => {x, y, w, h} | null, in the canvas's own px: notes fade out before they reach it.
+   *   The deck passes its phone frame, so the field never peeks out from behind the device (the Eylül deck keeps the
+   *   area round its phone clean). Asked every frame, so it follows the device as it slides between layouts.
    */
-  constructor(canvas, { seed = 5, mood = 'kesfet', clearTop = 0, reduced = false } = {}) {
+  constructor(canvas, { seed = 5, mood = 'kesfet', clearTop = 0, reduced = false, avoid = null } = {}) {
     this.canvas = canvas;
+    this.avoid = avoid;
     this.ctx = canvas.getContext('2d');
     this.clearTop = clearTop;
     this.reduced = reduced;
@@ -216,12 +220,18 @@ export class Backdrop {
       this.#field(this.mood, 1);
     }
 
+    const keepOut = this.avoid?.();
     for (const n of this.notes) {
       const t = this.t, d = n.depth;
       const x = n.fx * w + (8 + 14 * d) * Math.sin(0.45 * t + n.phase);
       const y = n.y + 6 * Math.sin(1.1 * t + 1.7 * n.phase);
       const top = this.clearTop + 92;
-      const fade = smooth((y - top) / 150);
+      let fade = smooth((y - top) / 150);
+      if (keepOut) {
+        // Distance from the note's centre to the rectangle; the note is gone while its body (~size) could touch it.
+        const dx = Math.max(keepOut.x - x, 0, x - keepOut.x - keepOut.w), dy = Math.max(keepOut.y - y, 0, y - keepOut.y - keepOut.h);
+        fade *= smooth((Math.hypot(dx, dy) - n.size) / 60);
+      }
       if (fade <= 0) continue;
       let colors = this.mood.notes;
       if (crest && x * crest.ux + y * crest.uy > crest.c) colors = this.sweep.from.notes;

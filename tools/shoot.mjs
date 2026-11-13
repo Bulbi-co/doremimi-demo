@@ -115,8 +115,15 @@ const PHONE = [
   ['phone-38-game-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 10000],
   ['phone-39-game-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 12 })], 11000],
 ].map(([name, url, steps = [], wait = 1200]) => ({ name, url, steps, wait, w: 430, h: 932 }));
+// The Platformlar slide's frames (index.html #frames) are copied from these into assets/screens/, so they show the
+// demo's own navigation: the app's c33d9ff captures still had the old four-tab dock.
+const TABLET = [
+  // &embed: the standalone page narrows to a 440 px phone column on a wide screen (style.css .app:not(.embed)), and a
+  // tablet runs the app full width with the content column centred, as dossier screen 20-tablet-home.png shows.
+  { name: 'tablet-01-kesfet', url: app('#/', '&embed'), steps: [], wait: 1500, w: 1024, h: 1366 },
+];
 
-for (const s of [...DECK, ...PHONE]) {
+for (const s of [...DECK, ...PHONE, ...TABLET]) {
   if (only && !only.test(s.name)) continue;
   if (!s.cont) await load(s.url, s.w, s.h);
   for (const st of s.steps ?? []) { await evaluate(st); await sleep(250); }

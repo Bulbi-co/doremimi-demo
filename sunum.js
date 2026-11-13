@@ -64,7 +64,7 @@ const SLIDES = [
     html: step(1, 'Gezinme', 'Dört sekme, ortada Doremimi',
       'Alt menü artık Keşfet, Öğren, İzle ve Çal. Ortada vakfın resmî logosu durur: uygulamanın ve vakfın bütün bilgileri ona dokununca açılır. Çocuğun profili sağ üst köşede.',
       [],
-      [['Logoya dokun', go('#/doremimi'), 'IconInfo'], ['İzle', go('#/izle'), 'IconEye'], ['Çal', go('#/cal'), 'IconNote'], ['Profil', go('#/profil'), 'IconSmile']],
+      [['Logoya dokun', go('#/doremimi'), 'IconInfo'], ['İzle', go('#/izle'), 'IconEye'], ['Çal', go('#/cal'), 'IconNote'], ['Profil', batch(go('#/'), go('#/profil')), 'IconSmile']],
       '', dockPic),
     notes: `<p>Vakıfla konuştuğumuz yeni düzen bu: <b>Keşfet · Öğren · logo · İzle · Çal.</b> “Oyunlar” ve “Daha fazla” sekmeleri kalktı.</p><ol><li><b>Logo</b>: vakıf, ekip, burslar, gönüllülük, iletişim, kitaplar, yardım ve yasal metinler burada.</li><li><b>İzle</b>: bilmeceler, klipler, röportajlar, karaoke ve jenerikler.</li><li><b>Çal</b>: nota çalan her şey: serbest piyano, her çalgının kendi şarkısı karaoke sözleriyle, Melodim.</li><li><b>Profil</b>: sağ üstteki karakter; aile ve ayarlar da orada.</li></ol><p>Not: uygulamanın kendisi bu düzene göre güncelleniyor; telefondaki ekranların içi uygulamayla birebir, yalnızca yerleri yeni.</p>`,
   },
@@ -188,7 +188,15 @@ slidesEl.innerHTML = SLIDES.map((s, i) => `<section class="slide ${s.layout === 
 $('#dots').innerHTML = SLIDES.map((s, i) => `<button data-dot="${i}" aria-label="${i + 1}. ${s.label}" title="${s.label}"></button>`).join('');
 
 // The light slides carry the app's own slow note field, quietly (S-01).
-const notes = new Backdrop($('#deck-notes'), { seed: 9, mood: 'kesfet', clearTop: 40, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches });
+// The phone frame is the one place they keep out of (avoid), measured live because the device slides between layouts;
+// rects are in screen px, and the canvas draws in its own scaled px, so both are read the same way.
+const deckCanvas = $('#deck-notes');
+const avoidDevice = () => {
+  if (device.classList.contains('away')) return null;
+  const c = deckCanvas.getBoundingClientRect(), d = device.getBoundingClientRect();
+  return { x: d.left - c.left, y: d.top - c.top, w: d.width, h: d.height };
+};
+const notes = new Backdrop(deckCanvas, { seed: 9, mood: 'kesfet', clearTop: 40, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches, avoid: avoidDevice });
 notes.start();
 
 /* ---------- ölçek (R-02) */
@@ -259,6 +267,7 @@ function show(i) {
   $('#bar').style.width = ((i + 1) / SLIDES.length * 100) + '%';
   $('#notes-body').innerHTML = s.notes || '';
   $('#notes-step').textContent = (i + 1) + '. slayt';
+  if (notes.reduced) setTimeout(() => notes.draw(), 950);   // a still field is drawn once; redraw it round the phone's new place
   cur = i; sub = 0; markActs();
   history.replaceState(null, '', location.search + '#' + (i + 1));
 }
@@ -271,7 +280,7 @@ function key(k) {
   if (k === 'End') show(SLIDES.length - 1);
   if (phoneTyping) return;   // while the game takes letters, N, F and R are letters, not shortcuts
   if (k === 'n' || k === 'N') $('#notes').hidden = !$('#notes').hidden;
-  if (k === 'f' || k === 'F') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.(); }
+  if (k === 'f' || k === 'F') { if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); else document.documentElement.requestFullscreen?.().catch(() => {}); }   // refused (no gesture, headless): stay windowed, no uncaught rejection
   if (k === 'r' || k === 'R') { const s = SLIDES[cur]; if (s.phone) sendPhone({ ...s.phone, play: false }); sub = 0; markActs(); }
 }
 document.addEventListener('keydown', e => {

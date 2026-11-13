@@ -1217,6 +1217,9 @@ function afterCardRender() {
   if (G.fx === 'wrong' && card) {
     if (card.classList.contains('qcard')) { card.classList.remove('deal'); card.classList.add('shake'); }
     card.insertAdjacentHTML('beforeend', '<span class="wrong-tint"></span>');
+    // Removed by a timer, not by the fade: with reduced motion (and in ?still) the fade never runs, and the card stayed
+    // coral until the next render. The app's flash ends after 320 ms either way.
+    setTimeout(() => card.querySelector('.wrong-tint')?.remove(), 320);
   }
   if (G.fx === 'right' && card && !REDUCED) {
     card.insertAdjacentHTML('beforeend', '<span class="burst-ring"></span>');

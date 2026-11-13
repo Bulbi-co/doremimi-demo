@@ -63,14 +63,15 @@ const deckKey = k => `document.dispatchEvent(new KeyboardEvent('keydown', { key:
 const msg = m => `window.postMessage(${JSON.stringify(m)}, '*')`;
 const tap = sel => `(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) throw new Error('no ' + ${JSON.stringify(sel)}); el.click(); })()`;
 
-const SLIDES = 16;
+const SLIDES = 9;
 const DECK = [];
 // Every slide as it opens, then after each "canlı göster" step (→ plays the next one).
-const STEPS = { 3: 4, 4: 3, 5: 2, 6: 2, 7: 3, 8: 3, 9: 3, 10: 3, 11: 2, 12: 3, 13: 2 };
+const STEPS = { 2: 2, 3: 1, 4: 2, 5: 1, 6: 2, 7: 2 };
+const GAME = n => n === 4 || n === 5;   // the scripted round replays fast to the slide's step first
 for (let n = 1; n <= SLIDES; n++) {
-  DECK.push({ name: `slide-${String(n).padStart(2, '0')}`, url: `${base}/?v=shoot#${n}`, w: 1440, h: 900, wait: n >= 8 && n <= 11 ? 9000 : 3500 });
+  DECK.push({ name: `slide-${String(n).padStart(2, '0')}`, url: `${base}/?v=shoot#${n}`, w: 1440, h: 900, wait: GAME(n) ? 9000 : 3500 });
   for (let s = 1; s <= (STEPS[n] ?? 0); s++) {
-    DECK.push({ name: `slide-${String(n).padStart(2, '0')}-step${s}`, cont: true, steps: [deckKey('ArrowRight')], w: 1440, h: 900, wait: n >= 8 && n <= 11 ? 9000 : n === 7 ? 5000 : 3500 });
+    DECK.push({ name: `slide-${String(n).padStart(2, '0')}-step${s}`, cont: true, steps: [deckKey('ArrowRight')], w: 1440, h: 900, wait: GAME(n) ? 9000 : n === 6 ? 5000 : 3500 });
   }
 }
 

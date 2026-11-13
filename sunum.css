@@ -20,13 +20,9 @@ svg.i { width: 22px; height: 22px; fill: currentColor; flex: none; }
 .viewport { position: fixed; inset: 0; overflow: hidden; }
 .stage { position: absolute; left: 50%; top: 50%; width: 1600px; height: 900px; overflow: hidden; transform-origin: center; transform: translate(-50%, -50%); background: var(--canvas); }
 
-/* ---------- background: the app's note field, quiet, on light slides */
-.bg { position: absolute; inset: 0; background: var(--canvas); transition: background .7s; }
-/* The notes stay out from behind the slide's text: they fade in between the text column and the phone. */
-.bg canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .55; transition: opacity .7s; -webkit-mask-image: linear-gradient(90deg, transparent 0 46%, #000 62%); mask-image: linear-gradient(90deg, transparent 0 46%, #000 62%); }
-.bg::after { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity .7s; background: radial-gradient(900px 700px at 78% 30%, rgba(232,91,230,.28), transparent 60%), radial-gradient(800px 600px at 10% 100%, rgba(43,155,255,.22), transparent 60%), var(--navy); }
-.stage.dark .bg::after { opacity: 1; }
-.stage.dark .bg canvas { opacity: 0; }
+/* ---------- background: flat. The note field and the gradient halos round the phone went with the 2026-11-13 cut. */
+.bg { position: absolute; inset: 0; background: var(--canvas); transition: background .6s; }
+.stage.dark .bg { background: var(--navy); }
 
 /* ---------- slides */
 .slides { position: absolute; inset: 0; }
@@ -36,32 +32,16 @@ svg.i { width: 22px; height: 22px; fill: currentColor; flex: none; }
 .slide .col { width: 700px; }
 .slide.wide .col { width: 1360px; }
 
-.kicker { display: inline-flex; align-items: center; gap: 12px; font: 800 16px/1 var(--display); letter-spacing: .16em; color: var(--gold-text); text-transform: uppercase; }
-.dark .kicker { color: var(--yellow); }
-h1.title { font: 800 66px/1.02 var(--display); letter-spacing: -.01em; margin: 22px 0 22px; }
+h1.title { font: 800 64px/1.02 var(--display); letter-spacing: -.01em; margin: 40px 0 20px; }
 h1.title em { font-style: normal; color: var(--magenta); }
 .dark h1.title { color: #fff; }
 .dark h1.title em { color: var(--yellow); }
 .lead { font-size: 23px; line-height: 1.45; font-weight: 600; color: var(--ink-2); margin: 0; max-width: 640px; }
 .dark .lead { color: rgba(255, 255, 255, .8); }
 
-/* cover */
-.stats { display: flex; gap: 46px; margin-top: 54px; }
-.stats div b { display: block; font: 800 48px/1 var(--display); color: var(--yellow); }
-.stats div small { white-space: nowrap; display: block; margin-top: 8px; font-size: 16px; color: rgba(255, 255, 255, .7); font-weight: 700; }
-.src { margin-top: 26px; font-size: 13px; color: var(--muted); font-weight: 600; }
-.dark .src { color: rgba(255, 255, 255, .45); }
-
-/* goal cards */
-.cards3 { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 22px; margin-top: 46px; width: 1360px; }
-.gcard { padding: 30px 30px 26px; border-radius: 16px; background: rgba(255, 255, 255, .07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); color: #fff; display: flex; flex-direction: column; gap: 12px; }
-.gcard h3 { margin: 0; font: 800 28px/1.1 var(--display); color: var(--yellow); }
-.gcard p, .gcard li { margin: 0; font-size: 18px; line-height: 1.5; color: rgba(255, 255, 255, .82); font-weight: 600; }
-.gcard ul { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column; gap: 4px; }
-.gcard small { margin-top: auto; font-size: 12.5px; color: rgba(255, 255, 255, .42); font-weight: 700; }
-
 /* ---------- the phone (S-02): a 430 × 932 screen, the size of every screenshot, in a 454 × 956 frame at 0.8 */
-.device { position: absolute; left: 1048px; top: 8px; width: 454px; height: 956px; border-radius: 16px; background: #0d0e10; padding: 12px; box-shadow: 0 0 0 2px #3a3d44, 0 0 0 5px #17181c, 0 50px 90px rgba(10, 10, 60, .35), 0 20px 40px rgba(10, 10, 60, .22); transform-origin: 50% 50%; transform: scale(.8); transition: transform .9s cubic-bezier(.2, .8, .2, 1), left .9s cubic-bezier(.2, .8, .2, 1), opacity .6s; z-index: 5; }
+.device { position: absolute; left: 1048px; top: 8px; width: 454px; height: 956px; border-radius: 16px; background: #0d0e10; padding: 12px; box-shadow: 0 0 0 2px #3a3d44, 0 0 0 5px #17181c, 0 14px 28px rgba(10, 10, 60, .22); transform-origin: 50% 50%; transform: scale(.8); transition: transform .9s cubic-bezier(.2, .8, .2, 1), left .9s cubic-bezier(.2, .8, .2, 1), opacity .6s; z-index: 5; }
+/* The shadow stays short: the stage clips at its bottom edge, and a long one ended there in a hard line. */
 /* A phone's corner is an exact circle segment, which is the one place the boxy 16 px radius rule (T-05) does not apply. */
 .device, .device .screen { border-radius: 68px / 68px; }
 .device .screen { position: relative; width: 430px; height: 932px; border-radius: 56px; overflow: hidden; background: var(--canvas); }
@@ -73,17 +53,7 @@ h1.title em { font-style: normal; color: var(--magenta); }
 .device .btn-l2 { left: -6px; top: 276px; height: 64px; }
 .device .btn-r { right: -6px; top: 236px; height: 100px; }
 .device.away { left: 1700px; opacity: 0; pointer-events: none; }
-.device.side { left: 1128px; transform: scale(.74); }
 .device.center { left: 573px; top: 8px; transform: scale(.82); }
-
-/* ---------- the browser frame (S12) */
-.browser { position: absolute; left: 120px; top: 340px; width: 1320px; height: 860px; transform-origin: 0 0; transform: scale(.55); border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .06), 0 50px 100px rgba(10, 10, 60, .25); opacity: 0; pointer-events: none; transition: opacity .6s; z-index: 4; }
-.browser.on { opacity: 1; pointer-events: auto; }
-.browser .bar { height: 46px; display: flex; align-items: center; gap: 8px; padding: 0 18px; background: #ECEEF6; border-bottom: 1px solid #DCDFEA; }
-.browser .bar i { width: 13px; height: 13px; border-radius: 50%; }
-.browser .bar i:nth-child(1) { background: #ff6159; } .browser .bar i:nth-child(2) { background: #ffbd2e; } .browser .bar i:nth-child(3) { background: #28c941; }
-.browser .bar span { margin-left: 18px; padding: 6px 16px; border-radius: 9px; background: #fff; font-size: 14px; font-weight: 700; color: var(--muted); }
-.browser iframe { width: 1320px; height: 814px; border: 0; display: block; }
 
 /* ---------- still frames for the platforms slide (S13) */
 .frames { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .6s; z-index: 4; }
@@ -132,56 +102,40 @@ h1.title em { font-style: normal; color: var(--magenta); }
 .topbrand img.bulbi { height: 22px; }
 .topbrand i { width: 1px; height: 26px; background: var(--line); }
 .dark .topbrand { box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
-.open-app { position: absolute; z-index: 8; right: 28px; top: 22px; display: inline-flex; align-items: center; gap: 12px; height: 54px; padding: 0 16px 0 8px; border-radius: 14px; background: #fff; color: var(--ink); text-decoration: none; box-shadow: 0 1px 2px rgba(10, 10, 60, .06), 0 10px 26px rgba(10, 10, 60, .10); transition: transform .15s, box-shadow .2s; }
+.open-app { position: absolute; z-index: 8; right: 28px; top: 36px; display: inline-flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px; border-radius: 14px; background: #fff; color: var(--ink); text-decoration: none; box-shadow: 0 1px 2px rgba(10, 10, 60, .06), 0 10px 26px rgba(10, 10, 60, .10); transition: transform .15s, box-shadow .2s; }
 .open-app:hover { transform: translateY(-2px); }
-.open-app .oa-ico { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--yellow); color: var(--ink); box-shadow: inset 0 -3px 0 0 #B28E00; }
 .open-app svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .open-app b { display: block; font: 800 16px/1 var(--display); }
 .open-app .oa-go { color: var(--muted); }
 /* S-04: the sound pill sits left of Uygulamayı aç; browsers start audio only after a gesture in the deck. */
-.sound-btn { right: 250px; border: 0; cursor: pointer; font: inherit; text-align: left; }
-.sound-btn small { display: block; margin-top: 3px; font: 700 12px/1 var(--body, 'Nunito'); color: var(--muted); }
-.sound-btn.on .oa-ico { background: #38E08C; box-shadow: inset 0 -3px 0 0 #279C62; }
+.sound-btn { right: 222px; border: 0; cursor: pointer; font: inherit; text-align: left; }
+.sound-btn.on { box-shadow: inset 0 0 0 2px var(--ok), 0 10px 26px rgba(10, 10, 60, .10); }
 /* the new dock, drawn small on the navigation slide (dossier ch. 11 NR-02) */
-.dockpic { display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; gap: 6px; width: 520px; margin: 54px 0 10px; padding: 12px 10px 14px; border-radius: 16px; background: linear-gradient(#fff, #ECEFFB); box-shadow: 0 5px 0 0 #14107A, 0 14px 26px -6px rgba(10,10,60,.35); }
+.dockpic { display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; gap: 6px; width: 520px; margin: 40px 0 10px; padding: 12px 10px 14px; border-radius: 16px; background: linear-gradient(#fff, #ECEFFB); box-shadow: 0 5px 0 0 #14107A, 0 14px 26px -6px rgba(10,10,60,.35); }
 .dockpic .dp { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #585B72; }
 .dockpic .dp svg { width: 26px; height: 26px; }
 .dockpic .dp b { font: 800 14px/1 var(--display); }
 .dockpic .dp.logo { position: relative; height: 44px; }
 .dockpic .dp.logo img { position: absolute; bottom: 0; width: 76px; height: 76px; padding: 6px; border-radius: 50%; background: linear-gradient(#fff, #ECEFFB); box-shadow: 0 5px 0 0 #14107A; }
 
-/* ---------- app-tour steps (R-04) */
-.stepbar { display: flex; align-items: center; gap: 14px; width: 640px; }
-.stepbar .sb-n { font: 800 20px/1 var(--display); color: var(--gold-text); white-space: nowrap; }
-.stepbar .sb-n em { font-style: normal; font-size: 16px; color: var(--muted); margin-left: 4px; }
-.stepbar .sb-name { font: 800 14px/1 var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
-.stepbar .sb-track { flex: 1; height: 6px; border-radius: 3px; background: rgba(10, 10, 60, .08); overflow: hidden; }
-.stepbar .sb-track b { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--magenta), var(--yellow)); }
-h1.title.tour { font-size: 64px; margin: 26px 0 14px; }
-.slide .stepbar ~ .lead { font-size: 21px; line-height: 1.5; max-width: 660px; }
-.feats { list-style: none; margin: 30px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; width: 640px; }
-.feats:empty { display: none; }
-.feats li { display: flex; align-items: center; gap: 16px; font: 700 20px/1.3 var(--body); color: var(--ink); }
-.feats .f-ico { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; background: #FFF4D6; color: var(--gold-text); flex: none; box-shadow: inset 0 -3px 0 0 #F0DFA8; }
-.feats .tag { font: 800 12px/1 var(--display); letter-spacing: .08em; padding: 4px 8px; border-radius: 6px; background: var(--indigo); color: #fff; margin-left: 4px; }
+/* ---------- tour slides (R-04) */
+h1.title.tour { font-size: 60px; margin: 40px 0 18px; }
+.feats { list-style: none; margin: 28px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; width: 640px; }
+.feats li { position: relative; padding-left: 22px; font: 700 20px/1.35 var(--body); color: var(--ink); }
+.feats li::before { content: ''; position: absolute; left: 0; top: .5em; width: 8px; height: 8px; border-radius: 2px; background: var(--magenta); }
 .acts { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; width: 700px; }
-.act { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 10px; border-radius: 14px; background: var(--ink); color: #fff; text-align: left; box-shadow: 0 6px 0 0 #000, 0 12px 26px rgba(10, 10, 60, .18); transition: transform .15s, box-shadow .2s; margin-bottom: 6px; }
+.act { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 20px; border-radius: 14px; background: var(--ink); color: #fff; text-align: left; box-shadow: 0 6px 0 0 #000, 0 12px 26px rgba(10, 10, 60, .18); transition: transform .15s, box-shadow .2s; margin-bottom: 6px; }
 .act:hover { transform: translateY(-2px); }
 .act:active { transform: translateY(5px); box-shadow: 0 1px 0 0 #000, 0 6px 14px rgba(10, 10, 60, .18); }
-.act .a-ico { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--yellow); color: var(--ink); flex: none; }
 .act b { font: 800 17px/1.1 var(--display); margin-right: 6px; }
 .act .a-go { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .12); flex: none; }
 .act .a-go svg.i { width: 14px; height: 14px; }
 .act.ghost { background: #fff; color: var(--ink); box-shadow: 0 6px 0 0 #C9CFE6, 0 12px 26px rgba(10, 10, 60, .08); }
-.act.ghost .a-ico { background: #FFF4D6; color: var(--gold-text); }
 .act.ghost .a-go { background: var(--canvas); }
 .act.upnext { outline: 3px solid var(--magenta); outline-offset: 3px; }
 .act.done .a-go { background: var(--ok); color: var(--ink); }
 .act.done .a-go svg { display: none; }
 .act.done .a-go::after { content: '✓'; font-weight: 900; font-size: 14px; }
-.soon-chip { display: inline-flex; align-items: center; gap: 8px; margin-top: 30px; padding: 10px 14px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px var(--line); font-size: 15px; font-weight: 700; color: var(--ink-2); }
-.soon-chip b { font: 800 12px/1 var(--display); letter-spacing: .1em; padding: 4px 8px; border-radius: 6px; background: var(--indigo); color: #fff; }
-
 /* platforms (S13) */
 .plat { list-style: none; margin: 34px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; width: 760px; }
 .plat li { display: grid; grid-template-columns: 240px 1fr; gap: 18px; align-items: baseline; color: #fff; }

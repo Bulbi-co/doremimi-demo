@@ -49,18 +49,18 @@ the server.
 - **Typing in the game:** while the game asks for a typed answer, the laptop keyboard types into it. During that time
   N, F and R are letters, not shortcuts.
 - **Demo PIN: `135790`.** The parent gate accepts only this demo PIN, never the app's own default (ch. 10 G-06). It
-  is in the notes of slides 6 and 13.
+  is in the notes of slide 7.
 - `?notlar` on the deck URL opens the notes. `#7` opens slide 7.
 
-The deck has 16 slides: Kapak, Vakfın hedefi, then 12 tour steps (1 the new navigation, 2 Keşfet, 3 İşaretler,
-4 Çalgılar, 5 Çal, 6-9 the game, 10 Profil, 11 the family account and gate, 12 content panel), Platformlar and
-Kapanış. The game slides replay one fixed, seeded round, so every press lands on the same card each time.
+The deck has 9 slides, each with at most two "canlı göster" steps: Kapak, Gezinme (the new dock; logo, Öğren),
+Keşfet (OYNA; a foundation banner), Oyun (Yaz → harf kutuları → seçenekler and the flipped card; the ladder), Tur sonu,
+Çal (piano, a song), Aile ve içerik (profiles, parent PIN, content the foundation edits), Platformlar and Kapanış. The
+game slides replay one fixed, seeded round, so every press lands on the same card each time.
 
 ## What is where
 
 ```
 index.html  sunum.js  sunum.css    the deck: the SLIDES list, keys, notes, the phone frame, the sound button
-panel.html                         the content panel placeholder (slide 14)
 app/index.html  app.js  style.css  the phone: shell, every screen, the game, overlays
 app/lib/                           the app's rules ported to JavaScript:
   answers.js tiles.js ladder.js round.js progress.js   the game (Yaz/Seç/Çevir, tiles, matching, XP, badges)
@@ -145,7 +145,7 @@ plate; the `Doremimi` hub and its two new pages (`Doremimi nedir?`, `Kitaplar ve
   only the foundation's own address. The buttons still ask the gate.
 - **The sign category page** (`Aç` on a flipped tile) is a simple list with `Pratik yap`. Its copy is PROPOSED,
   because the app's own layout was not screenshotted.
-- **The content panel** (slide 14) is a placeholder until the real panel is screenshotted.
+- **The content panel** is described on slide 7, not shown, until the real panel is screenshotted.
 - **Azaltılmış hareket** stops the CSS motion and the canvas. The app also slows the card's deal, and the demo does not.
 - **The phone keeps one state** in `localStorage` (`doremimi-demo-v1`). Slide 1 and `?reset` wipe it.
 

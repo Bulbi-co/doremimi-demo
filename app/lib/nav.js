@@ -12,8 +12,9 @@ export const TABS = [
   { key: 'cal', hash: '#/cal', label: 'Çal', icon: 'IconNote', title: 'Çal' },
 ];
 export const TAB_OF = { '': 'kesfet', ogren: 'ogren', doremimi: 'doremimi', izle: 'izle', cal: 'cal' };
-// Old routes stay as redirects so a stale deep link (a bookmark, an old slide) still lands (NR-91).
-export const REDIRECTS = { oyunlar: '#/oyun-merkezi', daha: '#/doremimi', 'ogren/videolar': '#/izle', 'ogren/kitaplik': '#/cal', 'kim-oynuyor': '#/profil' };
+// Old routes stay as redirects so a stale deep link (a bookmark, an old slide) still lands (NR-91). The game's own
+// page went in the clean-up (superapp f8c3a52): its topics are Keşfet's Konu seç now, so both of its links land there.
+export const REDIRECTS = { oyunlar: '#/', 'oyun-merkezi': '#/', daha: '#/doremimi', 'ogren/videolar': '#/izle', 'ogren/kitaplik': '#/cal', 'kim-oynuyor': '#/profil' };
 /*
  * Where a page lives when it is opened with nothing under it (a deep link, or the deck's `go`): the song page in
  * Çal, the instrument in Öğren, the foundation's pages in the hub. Opened by a tap, a page stays on the tab it was
@@ -21,7 +22,7 @@ export const REDIRECTS = { oyunlar: '#/oyun-merkezi', daha: '#/doremimi', 'ogren
  * have no home: Profilim is pushed over whichever tab the avatar was tapped on (NR-60).
  */
 export const PAGE_HOME = { calgi: 'ogren', isaret: 'ogren', 'isaret-kategori': 'ogren', sarki: 'cal', sozler: 'cal', melodim: 'cal',
-  'oyun-merkezi': 'kesfet', 'doremimi-nedir': 'doremimi', kitaplar: 'doremimi', 'dore-ve-mimi': 'doremimi', vakif: 'doremimi', ekip: 'doremimi',
+  'doremimi-nedir': 'doremimi', kitaplar: 'doremimi', 'dore-ve-mimi': 'doremimi', vakif: 'doremimi', ekip: 'doremimi',
   burslar: 'doremimi', gonullu: 'doremimi', iletisim: 'doremimi', yardim: 'doremimi', metin: 'doremimi', hakkinda: 'doremimi', tasarim: 'doremimi' };
 
 export function parse(hash) {

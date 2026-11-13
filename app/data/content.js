@@ -118,7 +118,16 @@ const QUIZ = [
   ['flute-notation', 'Flütte uzun bir müzik cümlesinde nefes işaretleri neyi planlar?', 'Çalan kişinin nefesi tükenmemeli.', 'Nerede nefes alınacağını ve müzikal ifadenin nasıl süreceğini.', 'NoteReading', 'flute'],
 ];
 
-const firstSentence = t => { if (!t) return null; const s = t.trim(); const e = s.indexOf('. '); return e < 0 ? s : s.slice(0, e + 1); };
+/**
+ * ConceptCatalog.FirstSentence: up to the first full stop that ends a sentence. A full stop after a digit is the Turkish
+ * ordinal ("4." is "fourth"), not an end: cut there, Fa anahtarı's fact in Konu seç ended on "(dizek) 4.".
+ */
+const firstSentence = t => {
+  if (!t || !t.trim()) return null;
+  const s = t.trim();
+  for (let e = s.indexOf('. '); e >= 0; e = s.indexOf('. ', e + 1)) if (e === 0 || !/\d/.test(s[e - 1])) return s.slice(0, e + 1);
+  return s;
+};
 
 /** QuestionDeck.From (QuestionDeck.cs:45-85): one list of questions, signs then instrument questions. */
 export const QUESTIONS = [

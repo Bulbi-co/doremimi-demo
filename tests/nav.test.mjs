@@ -23,7 +23,7 @@ test('the dock draws the official logo file, the same one as the app icon (NR-04
 
 test('every tab root clears the stack; the old tabs redirect so stale links still land (NR-91)', () => {
   for (const t of TABS) assert.equal(resolve(t.hash).kind, 'root', t.hash);
-  assert.equal(resolve('#/oyunlar').to, '#/oyun-merkezi');
+  assert.equal(resolve('#/oyunlar').to, '#/');
   assert.equal(resolve('#/daha').to, '#/doremimi');
   assert.equal(resolve('#/ogren/videolar').to, '#/izle');
   assert.equal(resolve('#/ogren/kitaplik').to, '#/cal');

@@ -1,4 +1,11 @@
+# The deploy is the static site only: the deck (index.html, sunum.*), the phone (app/) and assets/.
+docs/
+docs/screens/
+docs-screens/
 tests/
 tools/
-docs-screens/
-docs/
+node_modules/
+package.json
+package-lock.json
+README.md
+.claude/

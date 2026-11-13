@@ -66,7 +66,7 @@ const tap = sel => `(() => { const el = document.querySelector(${JSON.stringify(
 const SLIDES = 9;
 const DECK = [];
 // Every slide as it opens, then after each "canlı göster" step (→ plays the next one).
-const STEPS = { 2: 2, 3: 1, 4: 2, 5: 1, 6: 2, 7: 2 };
+const STEPS = { 2: 2, 3: 2, 4: 2, 5: 1, 6: 2, 7: 2 };
 const GAME = n => n === 4 || n === 5;   // the scripted round replays fast to the slide's step first
 for (let n = 1; n <= SLIDES; n++) {
   DECK.push({ name: `slide-${String(n).padStart(2, '0')}`, url: `${base}/?v=shoot#${n}`, w: 1440, h: 900, wait: GAME(n) ? 9000 : 3500 });
@@ -100,7 +100,6 @@ const PHONE = [
   ['phone-20-profil', app('#/profil')],
   ['phone-21-kim-oynuyor', app('#/profil'), [tap('[data-do="switcher"]')]],
   ['phone-22-ayarlar', app('#/ayarlar')],
-  ['phone-23-oyun-merkezi', app('#/oyun-merkezi')],
   ['phone-24-gate', app('#/profil'), [tap('[data-do="hesabim"]')]],
   ['phone-25-hesabim', app('#/profil'), [tap('[data-do="hesabim"]'), ...'135790'.split('').map(d => tap(`[data-pin="${d}"]`))], 1500],
   ['phone-26-vakif', app('#/vakif')],
@@ -118,13 +117,37 @@ const PHONE = [
 ].map(([name, url, steps = [], wait = 1200]) => ({ name, url, steps, wait, w: 430, h: 932 }));
 // The Platformlar slide's frames (index.html #frames) are copied from these into assets/screens/, so they show the
 // demo's own navigation: the app's c33d9ff captures still had the old four-tab dock.
+// v3 (superapp f8c3a52, the milk-white clean-up): one shot per screen in docs/dossier/screens/v2 of the app, at the
+// app's 430 x 932, with no fake status bar (?sunum seeds the deck like the embed, without the phone frame), so the two
+// can be laid side by side. `node … tools/shoot.mjs <base> docs/screens '^v3/'`.
+const sunum = (step, extra = [], wait = 6000) => [app('#/', '&sunum'), [msg({ type: 'act', name: 'goto', step }), ...extra], wait];
+const V3 = [
+  ['v3/01-kesfet', app('#/')],
+  ['v3/02-kesfet-full', app('#/'), [], 1500, 2000],
+  // ?gun=+1 and +2 are the next two kinds of Bugünün kartı (02b/02d in the app's set); a tap turns the question over.
+  ['v3/02b-home-today-soru', app('#/', '&gun=+1'), [`document.querySelector('.today').scrollIntoView()`]],
+  ['v3/02c-home-today-soru-cevap', app('#/', '&gun=+1'), [tap('[data-today]'), `document.querySelector('.today').scrollIntoView()`]],
+  ['v3/02d-home-today-isaret', app('#/', '&gun=+2'), [`document.querySelector('.today').scrollIntoView()`]],
+  ['v3/10-hub', app('#/doremimi')],
+  ['v3/05-izle', app('#/izle')],
+  ['v3/06-cal', app('#/cal')],
+  ['v3/11-game-intro', ...sunum(0, [], 2500)],
+  ['v3/12-game-yaz', ...sunum(1, [], 4000)],
+  ['v3/12b-game-yaz-typed', ...sunum(1, [msg({ type: 'act', name: 'game.type', text: 'sol' })], 4000)],
+  ['v3/13-game-tiles', ...sunum(2, [], 4500)],
+  ['v3/18-game-solved', ...sunum(3, [], 5000)],
+  ['v3/14-game-choices', ...sunum(5, [], 7000)],
+  ['v3/19-game-reveal', ...sunum(6, [], 7000)],
+  ['v3/20-game-results', ...sunum(11, [], 10000)],
+].map(([name, url, steps = [], wait = 1200, h = 932]) => ({ name, url, steps, wait, w: 430, h }));
 const TABLET = [
   // &embed: the standalone page narrows to a 440 px phone column on a wide screen (style.css .app:not(.embed)), and a
   // tablet runs the app full width with the content column centred, as dossier screen 20-tablet-home.png shows.
   { name: 'tablet-01-kesfet', url: app('#/', '&embed'), steps: [], wait: 1500, w: 1024, h: 1366 },
 ];
 
-for (const s of [...DECK, ...PHONE, ...TABLET]) {
+mkdirSync(join(out, 'v3'), { recursive: true });
+for (const s of [...DECK, ...PHONE, ...TABLET, ...V3]) {
   if (only && !only.test(s.name)) continue;
   if (!s.cont) await load(s.url, s.w, s.h);
   for (const st of s.steps ?? []) { await evaluate(st); await sleep(250); }

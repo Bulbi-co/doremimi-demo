@@ -43,3 +43,12 @@ mutate "logo moved to the end"                 nav.js     "s/(\{ key: 'doremimi'
 mutate "Daha fazla link lands nowhere"         nav.js     "s/daha: '#\/doremimi', //"
 mutate "songs open on the current tab"         nav.js     "s/sarki: 'cal', //"
 mutate "a tap jumps to the page's home tab"    nav.js     's/!fromApp && !stacked && PAGE_HOME/!stacked \&\& PAGE_HOME/'
+# daily.js and accent.js (tests/kesfet.test.mjs)
+mutate "CONTROL: daily comment only"           daily.js   's/Day zero, a Monday/Day zero (a Monday)/'
+mutate "the kind turns weekly, not daily"      daily.js   's/const turn = Math.floor\(day \/ kinds\);/const turn = Math.floor(day \/ 7);/'
+mutate "the kind is the turn, not the day"     daily.js   's/let kind = mod\(day, kinds\);/let kind = mod(Math.floor(day \/ 7), kinds);/'
+mutate "an empty pool shows nothing"           daily.js   's/if \(poolSizes\[kind\] > 0\) return/return/'
+mutate "the hour moves the day"                daily.js   's/Date.UTC\(date.getFullYear\(\), date.getMonth\(\), date.getDate\(\)\)/date.getTime() + 0/'
+# (Trying white before ink is not a mutant: no colour reads 4.5:1 under both, so the order cannot be observed.)
+mutate "the old rule: white labels only"       accent.js  's/\[face, label\] = \[c, INK\];/[face, label] = [darken(c), WHITE];/'
+mutate "every accent is deepened"              accent.js  's/if \(contrast\(INK, c\) >= MIN\) \[face, label\] = \[c, INK\];/if (false) [face, label] = [c, INK];/'

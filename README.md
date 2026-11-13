@@ -79,7 +79,7 @@ docs/screens/                      the latest screenshots (not deployed)
 
 The phone takes messages from the deck (`go`, `reset`, `act`, `batch`), as in the reference. Its routes:
 `#/`, `#/ogren/isaretler`, `#/ogren/calgilar`, `#/doremimi`, `#/izle`, `#/cal` (the five roots); pages such as
-`#/calgi/piyano`, `#/sarki/akordeon`, `#/sozler/akordeon`, `#/melodim`, `#/profil`, `#/oyun-merkezi`, `#/vakif`;
+`#/calgi/piyano`, `#/sarki/akordeon`, `#/sozler/akordeon`, `#/melodim`, `#/profil`, `#/vakif`;
 the game as `#/oyun?deste=karisik`. The old `#/oyunlar`, `#/daha`, `#/ogren/videolar` and `#/ogren/kitaplik` redirect.
 
 ## Checks
@@ -109,14 +109,15 @@ Keep the published URL unlisted. Every page has `noindex`, and `robots.txt` disa
 
 **1:1 with the app** (copy from the source, checked against `docs/dossier/screens`):
 
-- The game: the intro, Yaz with the app's own Turkish keyboard (three sizes, held ⌫), letter tiles with green prefill,
+- The game: the intro, Yaz with the app's own Turkish keyboard (three sizes, held ⌫), letter tiles prefilled in the card's colour,
   the four choices after two misses, the reveal card with Tanım / Çocuk anlatımı (toy piano, clef faces), Seç, Çevir
   with Bildim / Bilemedim, the ladder strip and the canvas mood change, the results with stars, XP, Müzik bilgin and
   badges, and the level-up popup. These run the app's rules, ported in `app/lib`.
-- The shell's look: the top bar, the clay cards and ribbons, the chunky buttons, the near-white 2.5D note canvas with
-  a mood per tab, the tab washes.
-- Keşfet (banners, OYNA, Doremimi nedir? with tappable Dore and Mimi, the card of the day, the quick tiles, the video
-  strip); Öğren's İşaretler flip tiles and Çalgılar list with filter chips; the instrument page; the song page with
+- The shell's look, v3 (superapp f8c3a52, checked against its `docs/dossier/screens/v2` in `docs/screens/v3/`): milk
+  white cards with one soft shadow, ink text, every button white or ink, the card's colour as the game's single accent
+  (`app/lib/accent.js`), OYNA's yellow, no bounce or pulse; the near-white 2.5D note canvas with a mood per tab.
+- Keşfet (the banner, OYNA, `Konu seç` with every topic as a row and `Tekrar zamanı` first when due, `Bugünün kartı`
+  turning daily by the app's `DailyCard` rule, `app/lib/daily.js`); Öğren's İşaretler flip tiles and Çalgılar list with filter chips; the instrument page; the song page with
   karaoke, the lit keys, Çal / Duraklat / Durdur; Profilim; Ayarlar; Hesabım; Ebeveyn paneli; the parent gate; Kim
   oynuyor?.
 - The sound: the 44 piano keys are synthesised exactly as `PianoKeys.cs` does. Songs are sequenced with repeats, ties
@@ -126,8 +127,8 @@ Keep the published URL unlisted. Every page has `noindex`, and `robots.txt` disa
 **New, from chapter 11** (PROPOSED there; no app screenshot exists yet): the five-slot dock with the raised logo
 plate; the `Doremimi` hub and its two new pages (`Doremimi nedir?`, `Kitaplar ve notalar`); İzle as a tab; the Çal root
 (free-play keyboard, Melodim card, song tiles with chips, lyrics carousel); `Şarkısını çal` switching to Çal; the
-`Sözleri` button; Profilim's child header and `Aile ve ayarlar` rows; Keşfet's `Konu seç` and `Tekrar zamanı` rows and
-`Öğren · İzle · Çal` pillars; the results button `Çık`; the hub's warm wash.
+`Sözleri` button; Profilim's child header and `Aile ve ayarlar` rows; the results button `Çık`; the hub's warm wash.
+The game's own page (`Oyun merkezi`) went with the app's clean-up; `#/oyun-merkezi` and `#/oyunlar` land on Keşfet.
 
 **Simplified:**
 

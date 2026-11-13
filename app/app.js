@@ -4,7 +4,7 @@
  * Every on-screen string is copied from the source line named next to it. Copy written for the demo itself (the
  * "yakında" notes) is marked PROPOSED.
  */
-import { QUESTIONS, LEARNING, SUNUM_DECK, BADGES, BANNERS, LINES, INTRO_STEPS, CONCEPTS, SIGN_CARDS, SIGN_CATEGORIES, INSTRUMENTS, FAMILIES } from './data/content.js';
+import { QUESTIONS, LEARNING, SUNUM_DECK, BADGES, BANNERS, INTRO_STEPS, CONCEPTS, SIGN_CARDS, SIGN_CATEGORIES, INSTRUMENTS, FAMILIES } from './data/content.js';
 import { QuestionDeck, LearningRound, Stage, Resolution, isRight } from './lib/round.js';
 import { LevelLadder, Level, Move } from './lib/ladder.js';
 import { Mastery, addXp, toNextLevel, stars as starsOf, pickConcepts, newlyEarned, today } from './lib/progress.js';
@@ -12,6 +12,8 @@ import { seeded, fromClock } from './lib/rng.js';
 import { Backdrop } from './lib/backdrop.js';
 import { icon } from './lib/icons.js';
 import { TABS, resolve } from './lib/nav.js';
+import { pick as pickDaily } from './lib/daily.js';
+import { accentSet, INK_SET, darken, edge as edgeOf } from './lib/accent.js';
 import { normalise, isLetterOrDigit } from './lib/answers.js';
 import { slug, songFor, sequence, length, keyboardBase, karaokeLines, indexAt, render as renderSong, safeTheme, fromKeys, keyIndex, Sound, ButtonMelody } from './lib/music.js';
 import { DIRECTORY, SONGS, GROUPS, GROUP_COLORS, DIFFICULTY, MANIFESTO, VISION, NEWS, CHARACTERS, BOARD, FOUNDERS, TEAM, ADVISORS, PARTNERS, CONTACTS, LEGAL, DRAFT_NOTE } from './data/site.js';
@@ -49,14 +51,11 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 // FAST: the deck's fast-forward replays the script with no pauses and no pressed-button flashes.
 let FAST = false;
 const sleep = ms => FAST ? Promise.resolve() : new Promise(r => setTimeout(r, ms));
-const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-const mixHex = (a, b, t) => { const x = hex(a), y = hex(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
-const lum = h => hex(h).map(v => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); }).reduce((a, c, i) => a + c * [0.2126, 0.7152, 0.0722][i], 0);
-const contrast = (a, b) => { const la = lum(a), lb = lum(b); return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05); };
-/** Controls/Readable.cs: darken toward #2B2440 in 5% steps until white text reads at 4.5:1 (and the colour reads on white). */
-const readable = h => { for (let s = 0; s <= 20; s++) { const c = mixHex(h, '#2B2440', s / 20); if (contrast(c, '#FFFFFF') >= 4.5) return c; } return '#2B2440'; };
-/** Controls/Motion.cs:80: a toy card's edge is its face 32% toward #2B2440. */
-const edge = h => mixHex(h, '#2B2440', 0.32);
+/** Readable.UnderWhite and Motion.Edge, toward the app's ink #16182C (lib/accent.js). */
+const readable = h => darken(h);
+const edge = h => edgeOf(h);
+/** A screen's primary as CSS variables: the card's AccentSet in the game, ink elsewhere (Accent.cs Tone). */
+const toneVars = t => `--pface:${t.face};--plabel:${t.label};--pedge:${t.edge};--ptext:${t.text}`;
 const upperTr = s => s.toLocaleUpperCase('tr');
 const levelName = l => ['Cevir', 'Sec', 'Yaz'][l];
 const levelLabel = l => ['Çevir', 'Seç', 'Yaz'][l];
@@ -157,7 +156,6 @@ function renderTopbar() {
     <div class="title"><h1>${esc(title)}</h1></div>
     <button class="tile levelbtn" data-go="#/profil" title="Profilim" aria-label="Seviye ${profile.level}">
       <span class="lv"><b>Seviye ${profile.level}</b><span class="slim"><i style="width:${Math.round(Math.min(1, ratio) * 100)}%"></i></span></span>
-      <span class="avatar gumdrop">${profile.level}</span>
     </button>
     <button class="tile" data-go="#/profil" data-do="avatar" title="Profilim" aria-label="Profilim"><span class="avatar who"><img src="../assets/site/characters/${kid.image}" alt=""></span></button>`;
 }
@@ -181,7 +179,11 @@ const songArt = s => `../assets/site/instruments/${s.slug.startsWith('cello') ? 
 const entryOfSong = s => DIRECTORY.find(d => songFor(d.name, SONGS) === s);
 const note = text => `<div class="card note"><p class="p strong">${esc(text)}</p></div>`;
 const ribbon = (text, extra = '') => `<span class="ribbon${extra}"><h2>${esc(text)}</h2></span>`;
-const menuRow = (ic, color, title, sub, attrs) => `<button class="mrow" ${attrs}><span class="sq" style="background:${color}">${icon(ic)}</span><span class="mt"><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${icon('IconChevronRight', 'chev')}</button>`;
+// The colour argument is ignored on purpose: since ch. 12 every row icon is ink on a sunken square (ShellViewModel.cs
+// MenuItem passes #EDEFF3 for all of them); colour belongs to the cards. A row that leaves the app ends in ↗, not ›.
+const menuRow = (ic, color, title, sub, attrs) => `<button class="mrow" ${attrs}><span class="sq">${icon(ic)}</span><span class="mt"><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${icon(/data-ext=/.test(attrs) ? 'IconExternal' : 'IconChevronRight', 'chev')}</button>`;
+/** A hub group: its title inside its white card, as the app draws MenuGroupViewModel. */
+const group = (title, rows) => `<div class="card menu"><h3 class="group-title">${esc(title)}</h3>${rows.join('')}</div>`;
 const menu = rows => `<div class="card menu">${rows.join('')}</div>`;
 const chips = (list, on, attr) => `<div class="chips">${list.map(([v, t]) => `<button class="chip-btn${v === on ? ' on' : ''}" ${attr}="${esc(v)}">${esc(t)}</button>`).join('')}</div>`;
 const pct = v => `%${Math.round(Math.min(1, v) * 100)}`;
@@ -190,11 +192,10 @@ const videoCard = (v, wide = false) => `<button class="tile video${wide ? ' grid
   <div class="meta"><b>${esc(v.title)}</b>${wide ? '' : `<small>${esc(KIND_NAMES[v.kind] ?? '')}</small>`}</div></div></button>`;
 const KIND_NAMES = { riddle: 'Bilmece videoları', clip: 'Klipler', interview: 'Dore soruyor, müzisyen cevaplıyor', karaoke: 'Karaoke', intro: 'Jenerikler' };
 
-// ───────────────────────── Keşfet (ch. 11 NR-10; ShellView.axaml:20-213)
+// ───────────────────────── Keşfet (superapp f8c3a52, ShellView.axaml:20-170): the banner, OYNA, Konu seç and
+// Bugünün kartı, nothing else. The owner asked for it "really simpler"; Doremimi nedir?, the three pillars, the quick
+// tiles and the video row went, and so did the banner's badge and orbs.
 let banner = 0, carouselTimer = null;
-const realCards = SIGN_CARDS.filter(c => !c.isSample);
-const dayOfYear = d => Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 864e5);
-const todayCard = () => realCards[dayOfYear(new Date()) % realCards.length];
 // Banner targets after the revision (NR-10): 3 opens İzle, 5 the hub's Kitaplar ve notalar page.
 const BANNER_GO = ['game', '#/dore-ve-mimi', '#/izle', '#/vakif', '#/kitaplar'];
 /** Cards the child has met that are due again: the Tekrar zamanı row, shown only when there are some (NR-80). */
@@ -202,51 +203,88 @@ const dueCards = () => deck.all.filter(q => mastery.of(q.id) && mastery.isDue(q.
 
 function bannerHtml(b, cls = '') {
   return `<button class="tile banner ${cls}" data-banner="${BANNERS.indexOf(b)}" style="--accent:${readable(b.accent)}">
-    <div class="hero"><span class="orb big"></span><span class="orb small"></span>
-      <div class="txt"><span class="badge">${esc(b.badge)}</span><b>${esc(b.title)}</b><small>${esc(b.subtitle)}</small></div>
+    <div class="hero"><div class="txt"><b>${esc(b.title)}</b><small>${esc(b.subtitle)}</small></div>
       <img src="../assets/site/banners/${b.image}" alt=""></div></button>`;
 }
 
+/** Konu seç's rows: every concept of the deck but the single instruments, in the deck's order (HomePageViewModel.Refresh). */
+function topicRows() {
+  return deck.concepts.filter(id => !id.startsWith('instrument:')).map(id => {
+    const info = CONCEPTS[id];
+    if (!info) return '';
+    const t = accentSet(info.color);
+    const cards = deck.forConcept(id).length;
+    const m = Math.min(1, Math.max(0, mastery.conceptMastery(id, deck)));
+    const played = deck.forConcept(id).some(q => mastery.of(q.id));
+    const art = info.family ? `<img src="../assets/cards/portrait-${FAMILIES[info.family].art}.png" alt="">` : `<span class="music">${esc(info.symbol)}</span>`;
+    return `<button class="trow" data-play="${id}" aria-label="${esc(info.name)}"><span class="kart" style="background:${t.face};color:${t.label}">${art}</span>
+      <span class="mt"><b>${esc(info.name)}</b><small>${esc(info.fact)}</small>
+        <span class="kbar"><span class="track"><i style="width:${Math.round(m * 100)}%;background:${t.text}"></i></span><em>${cards} kart · ${played ? `%${Math.round(m * 100)}` : 'henüz oynamadın'}</em></span></span>
+      ${icon('IconChevronRight', 'chev')}</button>`;
+  }).join('');
+}
+
+/*
+ * Bugünün kartı (DailyCardViewModel.For): the kind turns daily by DailyCard's rule (lib/daily.js), from the same
+ * three pools as the app: the site's instruments, the instrument questions and the signs that are not samples.
+ * ?gun=+N shifts the day like the rest of the demo, so the presenter can show tomorrow's card.
+ */
+const DAILY_POOLS = () => [DIRECTORY, QUESTIONS.filter(q => q.kind !== 'sign'), SIGN_CARDS.filter(c => !c.isSample)];
+const todayShown = { key: null, answer: false };
+function todayCard() {
+  const date = new Date(); date.setDate(date.getDate() + DAY_SHIFT);
+  const pools = DAILY_POOLS();
+  const p = pickDaily(date, pools.map(x => x.length));
+  if (!p) return null;
+  const item = pools[p.kind][p.item];
+  const key = `${p.kind}:${p.item}`;
+  if (todayShown.key !== key) { todayShown.key = key; todayShown.answer = false; }
+  if (p.kind === 0) return { key, kind: `Günün çalgısı · ${item.group}`, title: item.name, body: item.summary, color: GROUP_COLORS[item.group], photo: photoOf(item.name), go: `#/calgi/${slug(item.name)}` };
+  if (p.kind === 1) {
+    const instKey = item.conceptIds.find(id => id.startsWith('instrument:'))?.slice(11);
+    const inst = INSTRUMENTS[instKey];
+    const entry = inst && DIRECTORY.find(d => quizKeyOf(d.name) === instKey);
+    const answer = item.explanation?.tip ? `${item.answer.replace(/[. ]+$/, '')}. ${item.explanation.tip}` : item.answer;
+    return { key, kind: `Günün sorusu · ${inst?.name ?? 'Çalgılar'}`, title: item.prompt, body: 'Cevabı görmek için dokun.', answer,
+      color: entry ? GROUP_COLORS[entry.group] : '#6B6E85', photo: entry ? photoOf(entry.name) : null, go: entry ? `#/calgi/${slug(entry.name)}` : null };
+  }
+  const cat = SIGN_CATEGORIES.find(c => c.key === item.category);
+  return { key, kind: `Günün işareti · ${cat.name}`, title: item.name, body: item.definition, color: cat.color, symbol: item.symbol, go: `#/isaret/${item.id}` };
+}
+function todayHtml() {
+  const c = todayCard();
+  if (!c) return '';
+  const t = accentSet(c.color);
+  const art = c.photo ? `<img src="${c.photo}" alt="">` : c.symbol ? `<span class="music">${esc(c.symbol)}</span>` : icon('IconNote');
+  const shown = c.answer && todayShown.answer;
+  return `<button class="tile today" data-today="1" style="--acc:${c.color};--acc-edge:${edge(c.color)}"><div class="tface">
+    <h2 class="h2">Bugünün kartı</h2>
+    <div class="tgrid"><span class="tart" style="background:${t.face};color:${t.label}">${art}</span>
+      <span class="ttxt"><b>${esc(c.title)}</b><small>${esc(c.kind)}</small>${shown ? `<span class="p reply">${esc(c.answer)}</span>` : `<span class="p">${esc(c.body)}</span>`}</span></div>
+  </div></button>`;
+}
+function tapToday() {
+  const c = todayCard();
+  if (!c) return;
+  if (c.answer && !todayShown.answer) { todayShown.answer = true; const el = $('.today'); if (el) el.outerHTML = todayHtml(); return; }
+  if (c.go) push(c.go);
+}
+
 function home() {
-  const card = todayCard();
-  const cat = SIGN_CATEGORIES.find(c => c.key === card.category);
-  const pillar = (cls, color, ic, title, sub, go) => `<button class="tile" data-go="${go}"><div class="toy pillar ${cls}" style="--edge:${edge(color)};--pc:${color}"><div class="pf"><span class="bub">${icon(ic)}</span><b>${title}</b><small>${sub}</small></div></div></button>`;
   const due = dueCards();
   return `<div class="stack home">
     <div class="carousel">
       <div class="banner-slot" id="bslot">${bannerHtml(BANNERS[banner])}</div>
-      <div class="dots">${BANNERS.map((b, i) => `<span class="dot${i === banner ? ' on' : ''}" style="background:${b.accent}"></span>`).join('')}</div>
+      <div class="dots">${BANNERS.map((b, i) => `<span class="dot${i === banner ? ' on' : ''}"></span>`).join('')}</div>
     </div>
-    <button class="chunky giant yellow wiggle shine oyna" data-do="play"><span class="face">
+    <button class="chunky giant oyna" data-do="play"><span class="face">
       <span class="sym">♭</span><span class="words"><b>OYNA</b><small>Kartı gör, cevabı yaz!</small></span>${icon('IconPlay')}</span></button>
-    ${due.length ? `<button class="tile" data-do="review"><div class="card due-row"><span class="sq" style="background:var(--orchid)">${icon('IconReplay')}</span><span class="mt"><b>Tekrar zamanı</b><small>${due.length} kart seni bekliyor</small></span>${icon('IconChevronRight', 'chev')}</div></button>` : ''}
-    <button class="tile" data-go="#/oyun-merkezi"><div class="card due-row"><span class="sq" style="background:var(--blue)">${icon('IconCards')}</span><span class="mt"><b>Konu seç</b><small>Bir işaretle ya da çalgı ailesiyle oyna</small></span>${icon('IconChevronRight', 'chev')}</div></button>
-    <div class="toy nedir"><div class="in">
-      <div class="head"><img src="../assets/brand/logo.png" alt="Doremimi"><div><div class="eyebrow">DOREMİMİ NEDİR?</div><b>Dore ve Mimi ile müziği oynayarak öğren!</b></div></div>
-      <p class="lead">Nota işaretlerini ve çalgıları tanı, cevabını kendin yaz, şarkı ve bilmece videolarıyla dinle.</p>
-      <div class="stage-chars">
-        <span class="hint">Dore ve Mimi'ye dokun!</span>
-        <div class="actor" data-actor="mimi" style="left:28%"><img src="../assets/site/characters/mimi.png" alt="Mimi"></div>
-        <div class="actor" data-actor="dore" style="left:72%"><img data-sprite="dore-drum" src="${frame('dore-drum', 0)}" alt="Dore"></div>
-      </div>
-      <div class="pillars">
-        ${pillar('', '#1C6FAA', 'IconBook', 'Öğren', 'İşaretler ve çalgılar', '#/ogren/isaretler')}
-        ${pillar('', '#D7109A', 'IconEye', 'İzle', 'Şarkı ve bilmece videoları', '#/izle')}
-        ${pillar('ink', '#FF4D00', 'IconNote', 'Çal', 'Piyano, şarkılar ve Melodim', '#/cal')}
-      </div>
-    </div></div>
-    <button class="tile today" data-push="#/isaret/${card.id}"><div class="card">
-      <span class="sym" style="background:${cat.color}">${card.symbol}</span>
-      <span class="txt"><span class="eyebrow" style="color:${readable(cat.color)}">BUGÜNÜN KARTI</span><span class="h2">${esc(card.name)}</span><span class="p">${esc(card.definition)}</span></span>
-      ${icon('IconChevronRight', 'chev')}</div></button>
-    <div class="quick">
-      <button class="tile" data-go="#/ogren/isaretler"><span class="q" style="background:var(--yellow)">${icon('IconSharp')}<span>İşaretler</span></span></button>
-      <button class="tile" data-go="#/ogren/calgilar"><span class="q" style="background:var(--cyan)">${icon('IconNote')}<span>Çalgılar</span></span></button>
-      <button class="tile" data-go="#/izle"><span class="q" style="background:var(--orchid)">${icon('IconPlay')}<span>Videolar</span></span></button>
-      <button class="tile" data-go="#/cal"><span class="q" style="background:var(--orange)">${icon('IconNote')}<span>Şarkılar</span></span></button>
+    <div class="card topics">
+      <div class="thead"><h2 class="h2">Konu seç</h2><button class="quiet" data-do="howto">Nasıl oynanır?</button></div>
+      ${due.length ? `<button class="trow" data-do="review"><span class="kart icon">${icon('IconReplay')}</span><span class="mt"><b>Tekrar zamanı</b><small>${due.length} kart seni bekliyor</small></span>${icon('IconChevronRight', 'chev')}</button>` : ''}
+      ${topicRows()}
     </div>
-    <div class="section-head">${ribbon('Bilmece videoları')}<button class="tile" data-go="#/izle"><span class="ribbon small">Tümü ›</span></button></div>
-    <div class="hscroll">${VIDEOS.slice(0, 8).map(v => videoCard(v)).join('')}</div>
+    ${todayHtml()}
   </div>`;
 }
 
@@ -394,9 +432,8 @@ function playRoot() {
     ${note('Piyanoda serbest çal ya da bir çalgının şarkısını dinle. Her şarkı uygulamanın piyanosuyla çalar.')}
     ${ribbon('Serbest çal')}
     <div class="card kb-card">${keyboardHtml2(60, 'free-keys')}<span class="caption c">Tuşlara dokun, sen de çal. Çaldıkların Melodim'e eklenir.</span></div>
-    <button class="tile" ${melodim.length ? 'data-push="#/melodim"' : ''} id="melodim-card"><div class="card due-row"><span class="sq" style="background:var(--magenta)">${icon('IconNote')}</span><span class="mt"><b>Melodim</b><small>${melodim.length ? `${melodim.length} nota` : 'Butonlara dokun, melodin burada birikir'}</small></span>${melodim.length ? icon('IconChevronRight', 'chev') : ''}</div></button>
+    <button class="tile" ${melodim.length ? 'data-push="#/melodim"' : ''} id="melodim-card"><div class="card due-row"><span class="sq ink">${icon('IconNote')}</span><span class="mt"><b>Melodim</b><small>${melodim.length ? `${melodim.length} nota` : 'Butonlara dokun, melodin burada birikir'}</small></span>${melodim.length ? icon('IconChevronRight', 'chev') : ''}</div></button>
     ${ribbon('Şarkılar')}
-    ${note('Bir çalgı seç, şarkısını dinle.')}
     ${chips([['', 'Tümü'], ...GROUPS.map(g => [slug(g), g])], calFilter, 'data-calf')}
     <div class="songs">${songs.map(s => `<button class="tile" data-push="#/sarki/${s.slug}"><div class="song-tile"><span class="ph"><img src="${songArt(s)}" alt="" loading="lazy"></span><b>${esc(s.instrument)}</b></div></button>`).join('')}</div>
     ${ribbon('Şarkı sözleri')}
@@ -526,32 +563,32 @@ function tapKey(el) {
 // ───────────────────────── the logo's hub, Doremimi (NR-30)
 function hub() {
   return `<div class="stack">
-    <div class="hub-hero"><span class="sq gold">${icon('IconNote')}</span><div><b>Dore Mimi Yetenek ve Eğitim Vakfı</b><small>Müziği çocuklarla buluşturuyoruz.</small></div></div>
-    ${ribbon('Doremimi', ' small')}${menu([
-      menuRow('IconInfo', 'var(--yellow-deep)', 'Doremimi nedir?', 'Uygulama ve vakıf hakkında', 'data-push="#/doremimi-nedir"'),
+    <div class="card hub-hero"><div><b>Dore Mimi Yetenek ve Eğitim Vakfı</b><small>Müziği çocuklarla buluşturuyoruz.</small></div><img src="../assets/site/characters/group.png" alt="Dore ve Mimi"></div>
+    ${group('Doremimi', [
+      menuRow('IconBulb', '', 'Hakkımızda', 'Uygulama ve vakıf hakkında', 'data-push="#/doremimi-nedir"'),
       menuRow('IconSmile', 'var(--magenta)', 'Dore ve Mimi', 'Karakterlerle tanış', 'data-push="#/dore-ve-mimi"')])}
-    ${ribbon('Vakıf', ' small')}${menu([
+    ${group('Vakıf', [
       menuRow('IconHeart', 'var(--orange)', 'Vakıf', 'Yetenek ve Eğitim Vakfı', 'data-push="#/vakif"'),
       menuRow('IconUsers', 'var(--indigo)', 'Ekip', 'Projeyi hayata geçirenler', 'data-push="#/ekip"'),
       menuRow('IconBolt', 'var(--magenta)', 'Burslar', 'Si Bemol ve Mi Bemol', 'data-push="#/burslar"')])}
-    ${ribbon('Katıl', ' small')}${menu([
+    ${group('Katıl', [
       menuRow('IconHand', 'var(--steel)', 'Gönüllü ol', 'D. M. Gönüllüleri başvurusu', 'data-push="#/gonullu"'),
       menuRow('IconMail', 'var(--indigo)', 'Bültene abone ol', 'Yeniliklerden ilk sen haberdar ol', 'data-push="#/iletisim"')])}
-    ${ribbon('Kitaplar', ' small')}${menu([
+    ${group('Kitaplar', [
       menuRow('IconBook', 'var(--orange)', 'Kitaplar ve notalar', 'Kitaplar, metodlar, notalar ve satış noktaları', 'data-push="#/kitaplar"')])}
-    ${ribbon('Bize ulaş', ' small')}${menu([
+    ${group('Bize ulaş', [
       menuRow('IconPhone', 'var(--navy)', 'İletişim', 'Telefon, e-posta ve mesaj formu', 'data-push="#/iletisim"'),
       menuRow('IconPlay', 'var(--orange)', 'YouTube', 'Tüm klipler ve bilmeceler', 'data-ext="youtube.com"'),
       menuRow('IconCamera', 'var(--magenta)', 'Instagram', '@dore_mimi_music', 'data-ext="instagram.com"'),
       menuRow('IconUsers', 'var(--steel)', 'Facebook', 'doremimitv', 'data-ext="facebook.com"'),
       menuRow('IconGlobe', 'var(--indigo)', 'Web sitesi', 'doremimi.org', 'data-ext="doremimi.org"')])}
-    ${ribbon('Yardım', ' small')}${menu([
+    ${group('Yardım', [
       menuRow('IconHelp', 'var(--orange)', 'Yardım ve SSS', 'Sık sorulan sorular', 'data-push="#/yardim"'),
       menuRow('IconLock', 'var(--slate)', 'Gizlilik politikası', 'Taslak', 'data-push="#/metin/gizlilik"'),
-      menuRow('IconLock', 'var(--slate)', 'Kullanım koşulları', 'Taslak', 'data-push="#/metin/kosullar"'),
-      menuRow('IconLock', 'var(--slate)', 'KVKK aydınlatma metni', 'Taslak', 'data-push="#/metin/kvkk"')])}
-    ${ribbon('Uygulama', ' small')}${menu([
-      menuRow('IconInfo', 'var(--steel)', 'Hakkında', 'Sürüm ve lisanslar', 'data-push="#/hakkinda"'),
+      menuRow('IconBook', 'var(--slate)', 'Kullanım koşulları', 'Taslak', 'data-push="#/metin/kosullar"'),
+      menuRow('IconInfo', 'var(--slate)', 'KVKK aydınlatma metni', 'Taslak', 'data-push="#/metin/kvkk"')])}
+    ${group('Uygulama', [
+      menuRow('IconInfo', 'var(--steel)', 'Uygulama bilgisi', 'Sürüm ve lisanslar', 'data-push="#/hakkinda"'),
       menuRow('IconPalette', 'var(--orchid)', 'Tasarım sistemi', 'Renkler, yazı tipleri ve bileşenler', 'data-push="#/tasarim"')])}
   </div>`;
 }
@@ -561,7 +598,7 @@ function whatIs() {
     ['IconBook', 'var(--cyan)', 'Öğren', 'Müzik işaretleri ve 41 çalgı', 'data-go="#/ogren/isaretler"'],
     ['IconEye', 'var(--orchid)', 'İzle', 'Bilmece videoları, klipler ve röportajlar', 'data-go="#/izle"'],
     ['IconNote', 'var(--blue)', 'Çal', 'Piyano, 41 şarkı ve Melodim', 'data-go="#/cal"'],
-    ['IconCards', 'var(--yellow-deep)', 'Müzik Kart Oyunu', 'Kartı gör, cevabı yaz!', 'data-push="#/oyun-merkezi"']];
+    ['IconCards', 'var(--yellow-deep)', 'Müzik Kart Oyunu', 'Kartı gör, cevabı yaz!', 'data-do="play"']];
   return `<div class="stack">
     <div class="toy nedir"><div class="in"><div class="head"><img src="../assets/brand/logo.png" alt=""><div><div class="eyebrow">DOREMİMİ NEDİR?</div><b>Dore ve Mimi ile müziği oynayarak öğren!</b></div></div>
       <p class="lead">Nota işaretlerini ve çalgıları tanı, cevabını kendin yaz, şarkı ve bilmece videolarıyla dinle.</p></div></div>
@@ -617,25 +654,8 @@ const about = () => `<div class="stack"><div class="card about"><img src="../ass
 // The app's Tasarım sistemi page (ch. 03 §18.8) is a long component gallery; the demo shows its palette and buttons only.
 const design = () => `<div class="stack">${note('Renkler, yazı tipleri ve bileşenler.')}
   <div class="card"><div class="swatches">${[['Navy', '#0A0A3C'], ['Indigo', '#14107A'], ['Steel', '#1C6FAA'], ['Blue', '#2B9BFF'], ['Cyan', '#3FDAFF'], ['Yellow', '#FFCC00'], ['Orange', '#FF4D00'], ['Orchid', '#E85BE6'], ['Magenta', '#E0109E'], ['Mint', '#38E08C']].map(([n, c]) => `<span><i style="background:${c}"></i>${n}<small>${c}</small></span>`).join('')}</div></div>
-  <div class="card" style="display:flex;flex-direction:column;gap:12px"><button class="chunky yellow"><span class="face">Sarı buton</span></button><button class="chunky blue"><span class="face">Mavi buton</span></button><button class="chunky white"><span class="face">Beyaz buton</span></button></div></div>`;
-
-// ───────────────────────── the game's page, pushed from Keşfet's Konu seç (§4, OC-01 A)
-const FAMILY_ART = { TelliCalgilar: 'strings', YayliCalgilar: 'bowed', VurmaliCalgilar: 'percussion', TusluCalgilar: 'keys', NefesliUflemeliCalgilar: 'wind' };
-function gameHub() {
-  const due = dueCards();
-  return `<div class="stack">
-    <div class="game-hero"><span class="eyebrow-pill">TEK OYUN · ÜÇ SEVİYE</span><b>Müzik Kart Oyunu</b>
-      <p>Kartı gör, cevabı yaz; zorlanırsan oyun sana seçenek verir ya da kartı çevirip birlikte okursunuz.</p><small>${QUESTIONS.length} kart · işaretler ve çalgılar</small>
-      <button class="chunky yellow large shine" data-do="play"><span class="face">${icon('IconPlay')}Oyna · Karışık deste</span></button>
-      <button class="chunky white" data-do="howto"><span class="face">${icon('IconHelp')}Nasıl oynanır?</span></button></div>
-    ${due.length ? `<button class="tile" data-do="review"><div class="card due-row"><span class="sq" style="background:var(--orchid)">${icon('IconReplay')}</span><span class="mt"><b>Tekrar zamanı</b><small>${due.length} kart seni bekliyor</small></span>${icon('IconChevronRight', 'chev')}</div></button>` : ''}
-    ${ribbon('Müzik işaretleri')}${note('Bir işarete dokun, o konudan başlayarak oyna.')}
-    <div class="signs">${SIGN_CATEGORIES.map(c => signTile(c, mastery.conceptMastery('signcat:' + c.key, deck))).join('')}</div>
-    ${ribbon('Çalgı aileleri')}
-    ${Object.entries(FAMILIES).map(([k, f]) => { const m = mastery.conceptMastery('family:' + k, deck); const n = deck.forConcept('family:' + k).length; return `<button class="tile" data-play="family:${k}"><div class="fam-row" style="--c:${f.color}">
-      <img src="../assets/cards/portrait-${FAMILY_ART[k]}.png" alt=""><span class="mt"><b>${esc(f.name)}</b><span class="bar"><span class="thin"><i style="width:${Math.round(m * 100)}%"></i></span><small>${pct(m)}</small></span><small>${n} kart</small></span>${icon('IconChevronRight', 'chev')}</div></button>`; }).join('')}
-  </div>`;
-}
+  <div class="card" style="display:flex;flex-direction:column;gap:12px"><p class="p">Süt beyazı yüz, mürekkep yazı. Ekranın tek ana eylemi mürekkep ya da o ekranın kartının rengi; OYNA sarı.</p>
+    <button class="chunky primary"><span class="face">Ana eylem</span></button><button class="chunky white"><span class="face">İkincil</span></button><button class="chunky giant oyna"><span class="face">OYNA</span></button></div></div>`;
 
 // ───────────────────────── Profilim (NR-60): the child header, progress, and the family's rows
 const GUEST = { id: null, name: 'Misafir', age: '', image: 'mimi.png' };
@@ -659,7 +679,7 @@ function profilePage() {
     ${ribbon('İstatistikler')}<div class="dark-card stats">${[['Oynanan tur', profile.rounds ?? 0, 'var(--blue)'], ['En iyi tur', profile.best ?? 0, 'var(--orange)'], ['Cevaplanan soru', profile.answered ?? 0, 'var(--mint)']].map(([l, v, c]) => `<div><span class="pl">${l}</span><b style="color:${c}">${v}</b></div>`).join('')}</div>
     ${ribbon('Rozetler')}<div class="card badges">${earned.map(b => `<span class="bdg">${medalHtml(b)}<small>${esc(b.name)}</small></span>`).join('')}</div>
     <div class="card note"><p class="p strong c">Çalgıları keşfet, bilmece izle, soruları cevapla ve Müzik Kart Oyunu'nu oyna: her şey XP kazandırır.</p></div>
-    ${ribbon('Aile ve ayarlar', ' small')}${menu([
+    ${group('Aile ve ayarlar', [
       menuRow('IconGrid', 'var(--slate)', 'Ayarlar', 'Hareket, sesler, bildirimler ve metinler', 'data-push="#/ayarlar"'),
       menuRow('IconLock', 'var(--indigo)', 'Hesabım', 'Ebeveyn bilgileri, şifre, çocuklar', 'data-do="hesabim"'),
       menuRow('IconStar', 'var(--steel)', 'Ebeveyn paneli', 'Çocukların seviyesi ve pratiği', 'data-do="panel"')])}
@@ -691,8 +711,7 @@ const PAGES = {
   sarki: { title: s => SONGS.find(x => x.slug === s)?.instrument ?? '', html: s => songPage(s) },
   sozler: { title: k => LYRICS.find(l => slug(l.instrument) === k)?.instrument ?? '', html: lyricsPage },
   melodim: { title: 'Melodim', html: () => songPage(null, true) },
-  'oyun-merkezi': { title: 'Müzik Kart Oyunu', html: gameHub },
-  'doremimi-nedir': { title: 'Doremimi nedir?', html: whatIs },
+  'doremimi-nedir': { title: 'Hakkımızda', html: whatIs },
   kitaplar: { title: 'Kitaplar ve notalar', html: booksPage },
   'dore-ve-mimi': { title: 'Dore ve Mimi', html: characters },
   vakif: { title: 'Vakıf', html: foundation },
@@ -702,7 +721,7 @@ const PAGES = {
   iletisim: { title: 'İletişim', html: contact },
   yardim: { title: 'Yardım ve SSS', html: () => legalPage('yardim') },
   metin: { title: k => LEGAL[k]?.title ?? '', html: legalPage },
-  hakkinda: { title: 'Hakkında', html: about },
+  hakkinda: { title: 'Uygulama bilgisi', html: about },
   tasarim: { title: 'Tasarım sistemi', html: design },
   profil: { title: 'Profilim', html: profilePage },
   ayarlar: { title: 'Ayarlar', html: settingsPage },
@@ -1019,9 +1038,11 @@ function renderGame() {
   const ended = [Stage.Solved, Stage.Revealed, Stage.Graded].includes(G.stage);
   const current = Math.min(done + (ended ? 0 : 1), r.count);
   $('#ghead').innerHTML = `
-    <button class="chunky orange close" data-g="exit" title="Oyundan çık" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
+    <button class="chunky white close" data-g="exit" title="Oyundan çık" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
     <div class="t"><b>Müzik Kart Oyunu</b>${playing ? `<small>Kart ${Math.max(current, 1)} / ${r.count}</small>` : ''}</div>
     <span class="avatar sv">Sv ${profile.level}</span>`;
+  // The card owns the game screen, so its colour is the one accent (Accent.cs); the popups over it reset to ink.
+  gameEl.style.cssText = toneVars(playing && G.q ? accentSet(G.q.accent) : INK_SET);
   const body = $('#gbody');
   body.style.visibility = playing ? '' : 'hidden';
   if (playing) {
@@ -1091,8 +1112,8 @@ function revealHtml(q) {
     G.links = { video: video?.id ?? null, instrument: entry ? slug(entry.name) : null };
     return `${head}<div class="card"><div class="caption">SORU</div><p class="p" style="color:var(--ink);font-weight:700">${esc(q.prompt)}</p></div>
       ${facts.map(([t, x]) => `<div class="card fact"><h3 class="h3">${esc(t)}</h3><p class="p">${esc(x)}</p></div>`).join('')}
-      <div class="links2">${video ? `<button class="chunky orange" data-g="video"><span class="face">${icon('IconPlay')}Videoyu izle</span></button>` : '<span></span>'}
-        ${G.links.instrument ? `<button class="chunky steel" data-g="instrument">` : '<span hidden>'}<span class="face">${icon('IconBook')}Çalgı sayfası</span>${G.links.instrument ? '</button>' : '</span>'}</div>`;
+      <div class="links2">${video ? `<button class="chunky white" data-g="video"><span class="face">${icon('IconPlay')}Videoyu izle</span></button>` : '<span></span>'}
+        ${G.links.instrument ? `<button class="chunky white" data-g="instrument">` : '<span hidden>'}<span class="face">${icon('IconBook')}Çalgı sayfası</span>${G.links.instrument ? '</button>' : '</span>'}</div>`;
   }
   return `${head}${explainHtml(q, G.revealTab, 'data-gtab')}`;
 }
@@ -1136,22 +1157,23 @@ function clefHtml(q, fa) {
 function answerHtml() {
   switch (G.stage) {
     case Stage.Typing: case Stage.Tiles:
-      return `<div class="sheet" id="sheet">${sheetInner()}</div>${keyboardHtml()}`;
+      // One sunken deck holds the answer sheet and the keys (MusicCardGameView.axaml:226).
+      return `<div class="deck"><div class="sheet" id="sheet">${sheetInner()}</div>${keyboardHtml()}</div>`;
     case Stage.Choices:
       return `<div class="choices-wrap">
         ${G.bad ? `<div class="card note fbnote">${esc(G.feedback)}</div>` : ''}
-        <div class="choices">${G.round.choices.map((c, i) => `<button class="chunky white large" data-choice="${i}"><span class="face">${esc(c)}</span></button>`).join('')}</div>
-        <button class="chunky white dontknow" data-g="dontknow"><span class="face">Bilmiyorum</span></button></div>`;
+        <div class="choices">${G.round.choices.map((c, i) => `<button class="chunky white" data-choice="${i}"><span class="face">${esc(c)}</span></button>`).join('')}</div>
+        <button class="quiet dontknow" data-g="dontknow">Bilmiyorum</button></div>`;
     case Stage.Question:
-      return `<button class="chunky blue large breathe shine wide" data-g="flip"><span class="face">${icon('IconReplay')}Kartı çevir</span></button>`;
+      return `<button class="chunky primary large wide" data-g="flip"><span class="face">${icon('IconReplay')}Kartı çevir</span></button>`;
     case Stage.Flipped:
-      return `<div class="grade"><span class="ribbon small game">Bu cevabı biliyor muydun?</span><div class="two">
-        <button class="chunky orange large" data-g="didnot"><span class="face">${icon('IconCross')}Bilemedim</span></button>
-        <button class="chunky green large" data-g="knew"><span class="face">${icon('IconCheck')}Bildim</span></button></div></div>`;
+      return `<div class="grade"><b class="gq">Bu cevabı biliyor muydun?</b><div class="two">
+        <button class="chunky white large" data-g="didnot"><span class="face">${icon('IconCross')}Bilemedim</span></button>
+        <button class="chunky white large" data-g="knew"><span class="face">${icon('IconCheck')}Bildim</span></button></div></div>`;
     case Stage.Solved:
-      return `<button class="chunky green large breathe shine wide" data-g="next"><span class="face">Devam${icon('IconArrow')}</span></button>`;
+      return `<button class="chunky primary large wide" data-g="next"><span class="face">Devam${icon('IconArrow')}</span></button>`;
     case Stage.Revealed:
-      return `<button class="chunky purple large" data-g="next"><span class="face">${icon('IconCheck')}Anladım, devam</span></button>`;
+      return `<button class="chunky primary large" data-g="next"><span class="face">${icon('IconCheck')}Anladım, devam</span></button>`;
     default: return '';
   }
 }
@@ -1200,7 +1222,7 @@ function keyboardHtml() {
   const letters = (row, off) => [...row].map((c, i) => k(c, 1 + off + i * 2, 2, '', `data-k="${c}"`)).join('');
   const size = kbSize();
   return `<div class="kb ${size === 'medium' ? '' : size}" id="kb">
-    <div class="bar"><button class="chunky white small dk" data-g="dontknow"><span class="face">Bilmiyorum</span></button>
+    <div class="bar"><button class="quiet dk" data-g="dontknow">Bilmiyorum</button>
       <div class="handle" id="kb-handle" aria-label="Klavye boyutu"><i></i></div>
       <div class="sizes">${[['small', 's', 'Küçük'], ['medium', 'm', 'Orta'], ['large', 'l', 'Büyük']].map(([v, c, t]) => `<button class="size ${c}${size === v ? ' on' : ''}" data-size="${v}" aria-label="${t} klavye"><span>${t}</span></button>`).join('')}</div></div>
     <div class="rows">
@@ -1242,24 +1264,23 @@ function resultsHtml() {
   const facts = R.facts.map(f => {
     const delta = f.after - f.before;
     return `<div class="rrow fact-row" style="--accent:${f.info.color};--accent-deep:${readable(f.info.color)}"><span class="art">${art(f.info)}</span><div>
-      <div class="top"><b>${esc(f.info.name)}</b>${delta > 0.004 ? `<span class="badge ink" style="background:var(--mint)">+%${Math.round(delta * 100)}</span>` : ''}</div>
+      <div class="top"><b>${esc(f.info.name)}</b>${delta > 0.004 ? `<span class="grew">+%${Math.round(delta * 100)}</span>` : ''}</div>
       <p>${esc(f.info.fact)}</p><div class="bar"><span class="thin"><i style="width:${Math.round(Math.min(1, f.after) * 100)}%"></i></span><small>%${Math.round(Math.min(1, f.after) * 100)}</small></div></div></div>`;
   }).join('');
   const medal = medalHtml;
   const badges = R.badges.map(b => `<div class="rrow badge-row" id="${b === R.badges[0] ? 'first-badge' : ''}">${medal(b)}<div><b>${esc(b.name)}</b><small>${esc(b.description)}</small></div></div>`).join('');
   return `<div class="overlay below" id="results"><div class="pop-wrap">
-    <svg class="rays" viewBox="-400 -400 800 800" aria-hidden="true"><path fill="rgba(255,204,0,.25)" d="M0,-400 L40,0 L-40,0 Z M0,400 L40,0 L-40,0 Z M-400,0 L0,40 L0,-40 Z M400,0 L0,40 L0,-40 Z M-283,-283 L28,-28 L-28,28 Z M283,283 L28,-28 L-28,28 Z M283,-283 L-28,-28 L28,28 Z M-283,283 L-28,-28 L28,28 Z"/></svg>
-    <div class="pop-card" style="--edge:${edge('#FFCC00')}"><div class="pop-face">
+    <div class="pop-card"><div class="pop-face">
+      <h2 class="r-head">Tur tamamlandı!</h2>
       <div class="stars">${star(0)}${star(1, true)}${star(2)}</div>
       <div class="r-title">${title}</div>
       <p class="p r-info">${esc(info)}</p>
-      <div class="stats3"><div class="rrow"><small>XP</small><b style="color:var(--text-xp)">+${R.xp}</b></div><div class="rrow"><small>Bilinen</small><b style="color:var(--text-success)">${R.right}/${R.count}</b></div><div class="rrow"><small>Seviye</small><b>${levelLabel(R.level)}</b></div></div>
-      ${facts ? `<div class="eyebrow r-eyebrow">MÜZİK BİLGİN</div>${facts}` : ''}
-      ${badges ? `<div class="eyebrow r-eyebrow" id="new-badges">YENİ ROZET</div>${badges}` : ''}
-      <div class="r-btns"><button class="chunky orange" data-g="exit"><span class="face">Çık</span></button>
-        <button class="chunky blue shine" data-g="replay"><span class="face">${icon('IconReplay')}Tekrar oyna</span></button></div>
+      <div class="stats3"><div class="rrow"><small>XP</small><b>+${R.xp}</b></div><div class="rrow"><small>Bilinen</small><b>${R.right}/${R.count}</b></div><div class="rrow"><small>Seviye</small><b>${levelLabel(R.level)}</b></div></div>
+      ${facts ? `<h3 class="group-title r-group">Müzik bilgin</h3>${facts}` : ''}
+      ${badges ? `<h3 class="group-title r-group" id="new-badges">Yeni rozet</h3>${badges}` : ''}
+      <div class="r-btns"><button class="chunky white" data-g="exit"><span class="face">Çık</span></button>
+        <button class="chunky primary" data-g="replay"><span class="face">${icon('IconReplay')}Tekrar oyna</span></button></div>
     </div></div>
-    <span class="pop-ribbon">Tur tamamlandı!</span>
     <button class="chunky white close x" data-g="exit" title="Kapat" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
   </div></div>`;
 }
@@ -1273,11 +1294,10 @@ const STAR = 'M12,1.5 L15.1,8.3 L22.5,9.1 L17,14.1 L18.5,21.5 L12,17.8 L5.5,21.5
 
 function levelUpHtml() {
   const L = G.levelUp;
-  return `<div class="overlay below"><div class="pop-wrap" style="max-width:400px"><div class="pop-card" style="--edge:${edge('#2B9BFF')}"><div class="pop-face" style="padding-top:46px;gap:12px">
+  return `<div class="overlay below"><div class="pop-wrap" style="max-width:400px"><div class="pop-card"><div class="pop-face" style="gap:12px">
     <div class="lvl-num">${L.level}</div><div class="r-title">Seviye ${L.level}!</div>
     <p class="p" style="text-align:center">Her doğru cevap XP getirir. Seviye ${L.level + 1} için ${L.toNext} XP daha topla.</p>
-    <button class="chunky green large" data-g="lvl-close"><span class="face">Devam${icon('IconArrow')}</span></button></div></div>
-    <span class="pop-ribbon slate">Yeni seviye!</span>
+    <button class="chunky primary large" data-g="lvl-close"><span class="face">Devam${icon('IconArrow')}</span></button></div></div>
     <button class="chunky white close x" data-g="lvl-close" title="Kapat" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button></div></div>`;
 }
 
@@ -1286,13 +1306,14 @@ function introHtml() {
   const pic = i === 0 ? '<div class="tiles5"><span>B</span><span class="free">E</span><span>M</span><span class="free">O</span><span></span></div>'
     : i === 1 ? '<div class="four"><span>Diyez</span><span>Bemol</span><span>Natürel</span><span>Porte</span></div>'
       : `<div class="flip"><span>?</span>${icon('IconReplay')}<span class="m">♭</span></div>`;
-  return `<div class="overlay intro"><div class="pop-wrap"><div class="pop-card" style="--edge:${edge(s.accent)}"><div class="pop-face">
+  return `<div class="overlay intro"><div class="pop-wrap"><div class="pop-card"><div class="pop-face">
+    <h2 class="r-head">Nasıl oynanır?</h2>
     <div class="pic" style="--accent:${s.accent}">${pic}</div>
     <div class="eyebrow">${esc(s.eyebrow)}</div><div class="tt">${esc(s.title)}</div><p class="p">${esc(s.text)}</p>
     <div class="stepdots">${[0, 1, 2].map(k => `<span class="dot${k === i ? ' on' : ''}"></span>`).join('')}</div>
     <div class="btns"><button class="chunky white" data-g="intro-prev"${i === 0 ? ' disabled' : ''}><span class="face">Geri</span></button>
-      <button class="chunky blue" data-g="intro-next"><span class="face">${i === 2 ? 'Hadi oynayalım!' : 'Sonraki'}</span></button></div>
-  </div></div><span class="pop-ribbon">Nasıl oynanır?</span>
+      <button class="chunky primary" data-g="intro-next"><span class="face">${i === 2 ? 'Hadi oynayalım!' : 'Sonraki'}</span></button></div>
+  </div></div>
   <button class="chunky white close x" data-g="intro-close" title="Kapat" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button></div></div>`;
 }
 
@@ -1303,15 +1324,15 @@ function closeOverlaysOfShell() { toastHost.innerHTML = ''; }
 const leaveApp = host => openGate(host, () => toast('Bağlantı bu demoda açılmaz', host));
 const openVideo = id => openGate('youtube.com', () => openOverlay('player', id));
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-push], button, [data-actor], [data-w], [data-key]');
+  const t = e.target.closest('[data-push], button, [data-w], [data-key]');
   if (!t) return;
   if (t.dataset.key && t.closest('.keys')) return tapKey(t);
   if (t.dataset.pin) return gateDigit(t.dataset.pin);
   if (t.dataset.do === 'gate-close') return closeGate();
   if (t.dataset.push) { e.stopPropagation(); return push(t.dataset.push); }
   if (t.dataset.go) { if (t.dataset.go === location.hash) return render(); inApp = true; location.hash = t.dataset.go; return; }
-  if (t.dataset.actor) return actorTap(t);
   if (t.dataset.w) { piano.sel = +t.dataset.w; piano.idleSince = performance.now(); const el = $('[data-piano]'); if (el) el.innerHTML = pianoInner(); return; }
+  if (t.dataset.today) return tapToday();
   if (t.dataset.banner) { const go = BANNER_GO[+t.dataset.banner]; return go === 'game' ? openGame() : go === '#/izle' ? (location.hash = go) : push(go); }
   if (t.dataset.flip) { flipped.has(t.dataset.flip) ? flipped.delete(t.dataset.flip) : flipped.add(t.dataset.flip); t.outerHTML = signTile(SIGN_CATEGORIES.find(c => c.key === t.dataset.flip)); return; }
   if (t.dataset.iflip) { instrumentFlips.has(t.dataset.iflip) ? instrumentFlips.delete(t.dataset.iflip) : instrumentFlips.add(t.dataset.iflip); return render(); }
@@ -1397,15 +1418,6 @@ document.addEventListener('pointermove', e => {
   if (order[i] !== kbSize()) { profile.keyboard = order[i]; save(); renderGame(); }
 });
 document.addEventListener('pointerup', () => { drag = null; });
-
-function actorTap(el) {
-  const who = el.dataset.actor;
-  el.classList.remove('hop'); void el.offsetWidth; el.classList.add('hop');
-  el.querySelector('.bubble')?.remove();
-  const line = LINES[who][Math.floor(Math.random() * LINES[who].length)];
-  el.insertAdjacentHTML('beforeend', `<span class="bubble">${esc(line)}</span>`);
-  setTimeout(() => el.querySelector('.bubble')?.remove(), 2200);
-}
 
 // ───────────────────────── a hardware keyboard types in the game (ch. 04 §8.4); the deck's keys go back to the deck
 const DECK_KEYS = ['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp', 'Home', 'End'];

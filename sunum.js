@@ -50,9 +50,9 @@ const SLIDES = [
   {
     id: 'kesfet', label: 'Keşfet', theme: 'light', phone: go('#/'),
     html: step('Keşfet: tek düğme, OYNA',
-      'Çocuk okumadan da ne yapacağını bilir. Üstte vakfın duyuruları döner.',
-      [], [['Duyuruyu göster', batch(go('#/'), act('banner.show', { index: 3 }))]]),
-    notes: `<p>Ana ekranda tek büyük eylem: <b>OYNA.</b> Vakfın haberleri üstteki banner'da döner.</p><p>Konu seçimi (işaretler, çalgı aileleri, ustalık yüzdeleriyle) de buradan açılır.</p>`,
+      'Çocuk okumadan da ne yapacağını bilir. Altında konular ve bugünün kartı; üstte vakfın duyuruları döner.',
+      [], [['Konu seç', batch(go('#/'), act('scroll', { to: '.topics' }))], ['Bugünün kartı', batch(go('#/'), act('scroll', { to: '.today' }))]]),
+    notes: `<p>Ana ekranda tek büyük eylem: <b>OYNA.</b> Vakfın haberleri üstteki banner'da döner. Ekranda başka bir şey yok; beyaz ve sade.</p><ol><li><b>Konu seç</b>: her işaret ve çalgı ailesi bir satır; rengi, tek cümlelik bilgisi ve çocuğun ilerlemesi. Tekrar zamanı gelen kart varsa en üstte durur.</li><li><b>Bugünün kartı</b>: her gün sırayla bir çalgı, bir soru, bir işaret. Aynı gün herkes aynı kartı görür; internet gerekmez.</li></ol>`,
   },
   {
     id: 'oyun', label: 'Oyun', theme: 'light', phone: at(1),
@@ -60,7 +60,7 @@ const SLIDES = [
       'Çocuk cevabı kendisi yazar. Bilemezse harf kutuları, sonra dört seçenek gelir; yanlışta kart dönüp anlatır.',
       ["Zorlandıkça Yaz → Seç → Çevir'e iner, bildikçe çıkar", 'Yanlış cevap hiçbir şey kaybettirmez'],
       [['Yanlış yaz: “sol”', play(2)], ['Seçenekler, bilgi kartı', play(6)]]),
-    notes: `<p>Uygulamada tek oyun var; asıl beceri <b>cevabı yazmak</b>.</p><ol><li><b>Yanlış yaz</b>: “sol” olmadı; cevap harf kutularına döndü, yeşil harfler yardım.</li><li><b>Seçenekler</b>: iki yazma denemesi de yanlış olunca dört seçenek gelir; yanlış seçimde kart dönüp anlatır.</li></ol><p>Üstteki şerit merdiven: üst üste iki zorlanmada bir basamak iner; düğmeyle seçilmez. Laptop klavyesiyle de yazabilirsiniz.</p>`,
+    notes: `<p>Uygulamada tek oyun var; asıl beceri <b>cevabı yazmak</b>.</p><ol><li><b>Yanlış yaz</b>: “sol” olmadı; cevap harf kutularına döndü, kartın renginde gelen harfler yardım.</li><li><b>Seçenekler</b>: iki yazma denemesi de yanlış olunca dört seçenek gelir; yanlış seçimde kart dönüp anlatır.</li></ol><p>Üstteki şerit merdiven: üst üste iki zorlanmada bir basamak iner; düğmeyle seçilmez. Laptop klavyesiyle de yazabilirsiniz.</p>`,
   },
   {
     id: 'sonuc', label: 'Tur sonu', theme: 'light', phone: at(10),

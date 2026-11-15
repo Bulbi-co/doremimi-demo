@@ -13,8 +13,25 @@ const BASE = '#F7F6FB';
 const NAVY = '#0A0A3C';
 const C = { blue: '#2B9BFF', cyan: '#3FDAFF', yellow: '#FFCC00', orange: '#FF4D00', orchid: '#E85BE6', magenta: '#E0109E', mint: '#38E08C', indigo: '#14107A', steel: '#1C6FAA' };
 
+/**
+ * Pace of every page outside the game, whatever its colour (BackdropMood.TabPace; ch. 13 §5: "speed changes only in
+ * the game"). Because it never changes, speed off the game carries no meaning the child could misread.
+ */
+export const TAB_PACE = 0.8;
+/**
+ * How strongly a page's field shows (BackdropMood.TabFieldAlpha): 0.06, from 0.10 (ch. 12) and 0.26 before that. The
+ * owner wanted the app "more whiter and cleaner", the notes the colour around the cards and the field only a hint. The
+ * game's moods keep their own, stronger alphas.
+ */
+export const TAB_ALPHA = 0.06;
+/**
+ * The tabs' sparser field (BackdropField.TabShare / TabSize / TabDepthBias): this share of the game's note count, each
+ * this much smaller, the depths bent toward far. The game keeps the full field: there the notes carry the ladder's pace.
+ */
+export const TAB_SHARE = 0.6, TAB_SIZE = 0.88, TAB_DEPTH_BIAS = 1.4;
+
 /** BackdropMood.cs:29-99. Tabs take their wash's three stops; their pace never changes, so speed means nothing there. */
-const tab = (a, b, c) => ({ tints: [a, b, c], notes: [a, b, C.indigo], alpha: 0.26, pace: 0.8, celebrates: false });
+const tab = (a, b, c) => ({ tints: [a, b, c], notes: [a, b, C.indigo], alpha: TAB_ALPHA, pace: TAB_PACE, celebrates: false });
 export const MOODS = {
   kesfet: tab(C.magenta, C.orchid, C.yellow),
   ogren: tab(C.cyan, C.mint, C.blue),
@@ -36,6 +53,27 @@ export const MOODS = {
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, t) => { const x = hex(a), y = hex(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
 const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${a})`; };
+const lum = h => { const [r, g, b] = hex(h).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+
+/**
+ * A page one category owns (BackdropMood.ForAccent; ch. 13 §5): an Öğren family filter, a sign category, a sign's or an
+ * instrument's own page. The field is the colour, a deeper and a paler shade of it; the notes the colour, its deeper
+ * shade and Indigo. Strength and pace stay the tabs': the colour changes, the page does not get louder or faster. The
+ * lead note is deepened only until it shows on the milk base (2:1): brass gold was a near-invisible note in its own
+ * colour, the reason Yaz's notes are not yellow. Memoised, so setMood sees the same object for the same colour.
+ */
+const accents = new Map();
+export function accentMood(color) {
+  const key = color.toUpperCase();
+  if (!accents.has(key)) {
+    let lead = key;
+    for (let step = 1; step <= 10 && contrast(lead, BASE) < 2; step++) lead = mix(key, NAVY, step * 0.06);
+    accents.set(key, { tints: [key, mix(key, NAVY, 0.15), mix(key, '#FFFFFF', 0.35)], notes: [lead, mix(key, NAVY, 0.3), C.indigo],
+      alpha: TAB_ALPHA, pace: TAB_PACE, celebrates: false, accent: key });
+  }
+  return accents.get(key);
+}
 const smooth = x => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
 
 // ───────────── note shapes (BackdropArt.cs:9-136), built once in unit space and centred, one unit tall
@@ -74,8 +112,10 @@ export class Backdrop {
    * @param opts.avoid optional () => {x, y, w, h} | null, in the canvas's own px: notes fade out before they reach it.
    *   The deck passes its phone frame, so the field never peeks out from behind the device (the Eylül deck keeps the
    *   area round its phone clean). Asked every frame, so it follows the device as it slides between layouts.
+   * @param opts.tabs the pages' sparser field (TAB_SHARE); false is the game's
    */
-  constructor(canvas, { seed = 5, mood = 'kesfet', clearTop = 0, reduced = false, avoid = null } = {}) {
+  constructor(canvas, { seed = 5, mood = 'kesfet', clearTop = 0, reduced = false, avoid = null, tabs = false } = {}) {
+    this.tabs = tabs;
     this.canvas = canvas;
     this.avoid = avoid;
     this.ctx = canvas.getContext('2d');
@@ -94,9 +134,13 @@ export class Backdrop {
     this.tick = now => this.#frame(now);
   }
 
-  /** A tab change cross-fades; a level change in the game sweeps (only levels celebrate, BackdropMood.cs:69-70). */
-  setMood(name, { celebrate = true, up = true } = {}) {
-    const next = MOODS[name];
+  /**
+   * A tab change cross-fades; a level change in the game sweeps (only levels celebrate, BackdropMood.cs:69-70).
+   * `accent` (a #RRGGBB) gives the page its category's colour instead of the tab's wash; the shell passes it, the game
+   * never does (its ladder moods stay, owner 2026-11-15).
+   */
+  setMood(name, { celebrate = true, up = true, accent = null } = {}) {
+    const next = accent ? accentMood(accent) : MOODS[name];
     if (!next || next === this.mood) return;
     const prev = this.mood;
     this.mood = next;
@@ -124,15 +168,18 @@ export class Backdrop {
   /** BackdropField.cs:49-71: depth spread far→near, golden / plastic steps for the start, a clef or two mid-depth. */
   #seedNotes() {
     const r = this.rand.unit;
-    const count = 10 + Math.floor(r() * 5);
+    let count = 10 + Math.floor(r() * 5);
+    // From the same roll as the game's count, so a page has fewer notes than the game on every seed.
+    if (this.tabs) count = Math.max(1, Math.round(count * TAB_SHARE));
     const clefs = new Set([Math.floor(count * 0.45)]);
     if (count >= 14) clefs.add(Math.floor(count * 0.7));
     this.notes = Array.from({ length: count }, (_, i) => {
-      const depth = (i + 0.15 + 0.7 * r()) / count;
+      // A power keeps the slot order (and so the layering); it only bends the spread toward far.
+      const depth = ((i + 0.15 + 0.7 * r()) / count) ** (this.tabs ? TAB_DEPTH_BIAS : 1);
       return {
         i, depth, kind: clefs.has(i) ? 'clef' : KINDS[Math.floor(r() * 3)],
         fx: ((i * 0.618034 + 0.1 * r()) % 1), y: ((i * 0.754878 + 0.1 * r()) % 1) * this.h,
-        size: (40 + depth * 64) * (0.9 + 0.2 * r()), phase: r() * Math.PI * 2,
+        size: (40 + depth * 64) * (0.9 + 0.2 * r()) * (this.tabs ? TAB_SIZE : 1), phase: r() * Math.PI * 2,
       };
     });
   }

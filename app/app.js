@@ -10,10 +10,12 @@ import { LevelLadder, Level, Move } from './lib/ladder.js';
 import { Mastery, addXp, toNextLevel, stars as starsOf, pickConcepts, newlyEarned, today } from './lib/progress.js';
 import { seeded, fromClock } from './lib/rng.js';
 import { Backdrop } from './lib/backdrop.js';
+import { pageAccentOf } from './lib/canvas.js';
 import { icon } from './lib/icons.js';
 import { TABS, resolve } from './lib/nav.js';
 import { pick as pickDaily } from './lib/daily.js';
-import { accentSet, INK_SET, darken, edge as edgeOf } from './lib/accent.js';
+// mixHex: the instrument page's header has called it since 1ff003b without the import, so every instrument page threw.
+import { accentSet, INK_SET, darken, edge as edgeOf, mix as mixHex } from './lib/accent.js';
 import { normalise, isLetterOrDigit } from './lib/answers.js';
 import { slug, songFor, sequence, length, keyboardBase, karaokeLines, indexAt, render as renderSong, safeTheme, fromKeys, keyIndex, Sound, ButtonMelody } from './lib/music.js';
 import { DIRECTORY, SONGS, GROUPS, GROUP_COLORS, DIFFICULTY, MANIFESTO, VISION, NEWS, CHARACTERS, BOARD, FOUNDERS, TEAM, ADVISORS, PARTNERS, CONTACTS, LEGAL, DRAFT_NOTE } from './data/site.js';
@@ -65,7 +67,7 @@ const app = $('#app'), topbar = $('#topbar'), page = $('#page'), dock = $('#dock
 if (EMBED) app.classList.add('embed');
 if (STILL) app.classList.add('still');
 const safeTop = () => parseFloat(getComputedStyle(app).getPropertyValue('--safe-top')) || 0;
-const shellBg = new Backdrop($('#bg'), { seed: 5, mood: 'kesfet', clearTop: safeTop(), reduced: REDUCED });
+const shellBg = new Backdrop($('#bg'), { seed: 5, mood: 'kesfet', clearTop: safeTop(), reduced: REDUCED, tabs: true });
 shellBg.start();
 
 if (EMBED) {
@@ -132,7 +134,7 @@ function back() {
 function render() {
   leavePage();
   app.className = app.className.replace(/\btab-\w+/g, '').trim() + ' tab-' + route.tab;
-  shellBg.setMood(route.tab);
+  shellBg.setMood(route.tab, { accent: pageAccent() });
   renderTopbar();
   renderDock();
   const view = route.page ? PAGES[route.page] : null;
@@ -141,6 +143,9 @@ function render() {
   if (route.tab === 'kesfet' && !route.page) startCarousel(); else stopCarousel();
   afterRender();
 }
+
+/** The category colour this page's backdrop takes, or null for the tab's own wash (lib/canvas.js says which and why). */
+const pageAccent = () => pageAccentOf(route, { SIGN_CATEGORIES, SIGN_CARDS, DIRECTORY, GROUPS, GROUP_COLORS, slug });
 
 const childOf = () => CHILDREN.find(c => c.id === profile.child) ?? GUEST;
 function renderTopbar() {
@@ -185,7 +190,7 @@ const menuRow = (ic, color, title, sub, attrs) => `<button class="mrow" ${attrs}
 /** A hub group: its title inside its white card, as the app draws MenuGroupViewModel. */
 const group = (title, rows) => `<div class="card menu"><h3 class="group-title">${esc(title)}</h3>${rows.join('')}</div>`;
 const menu = rows => `<div class="card menu">${rows.join('')}</div>`;
-const chips = (list, on, attr) => `<div class="chips">${list.map(([v, t]) => `<button class="chip-btn${v === on ? ' on' : ''}" ${attr}="${esc(v)}">${esc(t)}</button>`).join('')}</div>`;
+const chips = (list, on, attr, extra = '') => `<div class="chips${extra}">${list.map(([v, t]) => `<button class="chip-btn${v === on ? ' on' : ''}" ${attr}="${esc(v)}">${esc(t)}</button>`).join('')}</div>`;
 const pct = v => `%${Math.round(Math.min(1, v) * 100)}`;
 const videoCard = (v, wide = false) => `<button class="tile video${wide ? ' grid' : ''}" data-video="${esc(v.id)}"><div class="card flush">
   <div class="thumb"><img src="../assets/site/${esc(v.thumb)}" alt="" loading="lazy"><span class="play">${icon('IconPlay')}</span></div>
@@ -207,21 +212,30 @@ function bannerHtml(b, cls = '') {
       <img src="../assets/site/banners/${b.image}" alt=""></div></button>`;
 }
 
-/** Konu seç's rows: every concept of the deck but the single instruments, in the deck's order (HomePageViewModel.Refresh). */
+/*
+ * Konu seç's rows: every concept of the deck but the single instruments, in the deck's order (HomePageViewModel.Refresh),
+ * grouped İŞARETLER then ÇALGILAR (SignTopics / FamilyTopics, ch. 13 §4). A row says only "N kart" until its topic has
+ * been played; then "N kart · %X" and a bar in the topic's colour (ConceptTileViewModel.HasProgress). The old empty bar
+ * and "henüz oynamadın" on every row were most of what made Keşfet look busy.
+ */
+function topicRow(id) {
+  const info = CONCEPTS[id];
+  if (!info) return '';
+  const t = accentSet(info.color);
+  const cards = deck.forConcept(id).length;
+  const m = Math.min(1, Math.max(0, mastery.conceptMastery(id, deck)));
+  const played = deck.forConcept(id).some(q => mastery.of(q.id));
+  const art = info.family ? `<img src="../assets/cards/portrait-${FAMILIES[info.family].art}.png" alt="">` : `<span class="music">${esc(info.symbol)}</span>`;
+  return `<button class="trow" data-play="${id}" aria-label="${esc(info.name)}"><span class="kart" style="background:${t.face};color:${t.label}">${art}</span>
+    <span class="mt"><b>${esc(info.name)}</b><small>${esc(info.fact)}</small></span>
+    <span class="tmeta"><em>${cards} kart${played ? ` · %${Math.round(m * 100)}` : ''}</em>${played ? `<span class="track"><i style="width:${Math.round(m * 100)}%;background:${t.text}"></i></span>` : ''}</span>
+    ${icon('IconChevronRight', 'chev')}</button>`;
+}
 function topicRows() {
-  return deck.concepts.filter(id => !id.startsWith('instrument:')).map(id => {
-    const info = CONCEPTS[id];
-    if (!info) return '';
-    const t = accentSet(info.color);
-    const cards = deck.forConcept(id).length;
-    const m = Math.min(1, Math.max(0, mastery.conceptMastery(id, deck)));
-    const played = deck.forConcept(id).some(q => mastery.of(q.id));
-    const art = info.family ? `<img src="../assets/cards/portrait-${FAMILIES[info.family].art}.png" alt="">` : `<span class="music">${esc(info.symbol)}</span>`;
-    return `<button class="trow" data-play="${id}" aria-label="${esc(info.name)}"><span class="kart" style="background:${t.face};color:${t.label}">${art}</span>
-      <span class="mt"><b>${esc(info.name)}</b><small>${esc(info.fact)}</small>
-        <span class="kbar"><span class="track"><i style="width:${Math.round(m * 100)}%;background:${t.text}"></i></span><em>${cards} kart · ${played ? `%${Math.round(m * 100)}` : 'henüz oynamadın'}</em></span></span>
-      ${icon('IconChevronRight', 'chev')}</button>`;
-  }).join('');
+  const ids = deck.concepts.filter(id => !id.startsWith('instrument:') && CONCEPTS[id]);
+  const signs = ids.filter(id => !CONCEPTS[id].family), families = ids.filter(id => CONCEPTS[id].family);
+  const part = (title, list) => list.length ? `<span class="eyebrow tgroup">${title}</span>${list.map(topicRow).join('')}` : '';
+  return part('İŞARETLER', signs) + part('ÇALGILAR', families);
 }
 
 /*
@@ -257,10 +271,12 @@ function todayHtml() {
   const t = accentSet(c.color);
   const art = c.photo ? `<img src="${c.photo}" alt="">` : c.symbol ? `<span class="music">${esc(c.symbol)}</span>` : icon('IconNote');
   const shown = c.answer && todayShown.answer;
-  return `<button class="tile today" data-today="1" style="--acc:${c.color};--acc-edge:${edge(c.color)}"><div class="tface">
-    <h2 class="h2">Bugünün kartı</h2>
-    <div class="tgrid"><span class="tart" style="background:${t.face};color:${t.label}">${art}</span>
-      <span class="ttxt"><b>${esc(c.title)}</b><small>${esc(c.kind)}</small>${shown ? `<span class="p reply">${esc(c.answer)}</span>` : `<span class="p">${esc(c.body)}</span>`}</span></div>
+  // A plain white card (ch. 13 §4): the colour is only the art window and a 3 px bar down its left edge. The 4 px frame
+  // over a coloured edge went: next to the yellow OYNA and the banner it was a third loud block. The eyebrow names it,
+  // so there is no separate heading.
+  return `<button class="tile today" data-today="1" style="--acc:${c.color}"><div class="tface">
+    <span class="tart" style="background:${t.face};color:${t.label}">${art}</span>
+    <span class="ttxt"><span class="eyebrow">BUGÜNÜN KARTI</span><small>${esc(c.kind)}</small><b>${esc(c.title)}</b>${shown ? `<span class="p reply">${esc(c.answer)}</span>` : `<span class="p">${esc(c.body)}</span>`}</span>
   </div></button>`;
 }
 function tapToday() {
@@ -277,12 +293,14 @@ function home() {
       <div class="banner-slot" id="bslot">${bannerHtml(BANNERS[banner])}</div>
       <div class="dots">${BANNERS.map((b, i) => `<span class="dot${i === banner ? ' on' : ''}"></span>`).join('')}</div>
     </div>
-    <button class="chunky giant oyna" data-do="play"><span class="face">
+    <button class="chunky oyna" data-do="play"><span class="face">
       <span class="sym">♭</span><span class="words"><b>OYNA</b><small>Kartı gör, cevabı yaz!</small></span>${icon('IconPlay')}</span></button>
-    <div class="card topics">
-      <div class="thead"><h2 class="h2">Konu seç</h2><button class="quiet" data-do="howto">Nasıl oynanır?</button></div>
-      ${due.length ? `<button class="trow" data-do="review"><span class="kart icon">${icon('IconReplay')}</span><span class="mt"><b>Tekrar zamanı</b><small>${due.length} kart seni bekliyor</small></span>${icon('IconChevronRight', 'chev')}</button>` : ''}
-      ${topicRows()}
+    <div class="topics-sec">
+      <div class="thead"><h2 class="h2">Konu seç</h2><button class="quiet link" data-do="howto">Nasıl oynanır?</button></div>
+      <div class="card topics">
+        ${due.length ? `<button class="trow" data-do="review"><span class="kart icon">${icon('IconReplay')}</span><span class="mt"><b>Tekrar zamanı</b><small>${due.length} kart seni bekliyor</small></span><span class="tmeta"></span>${icon('IconChevronRight', 'chev')}</button>` : ''}
+        ${topicRows()}
+      </div>
     </div>
     ${todayHtml()}
   </div>`;
@@ -310,7 +328,8 @@ function stopCarousel() { clearInterval(carouselTimer); carouselTimer = null; }
 const flipped = new Set();
 function learn() {
   const seg = route.segment === 'calgilar' ? 'calgilar' : 'isaretler';
-  const segs = `<div class="segs">${[['isaretler', 'İşaretler'], ['calgilar', 'Çalgılar']].map(([k, t]) => `<button class="chunky small ${seg === k ? 'indigo' : 'white'}" data-go="#/ogren/${k}"><span class="face">${t}</span></button>`).join('')}</div>`;
+  // One segmented track, as the game's ladder strip (ch. 13 §3): two ink and white buttons side by side read as two actions.
+  const segs = `<div class="segtrack">${[['isaretler', 'İşaretler'], ['calgilar', 'Çalgılar']].map(([k, t]) => `<button class="seg${seg === k ? ' on' : ''}" data-go="#/ogren/${k}" aria-pressed="${seg === k}">${t}</button>`).join('')}</div>`;
   if (seg === 'isaretler') {
     return `<div class="stack">${segs}${note('Her müzik işaretinin bir rengi var. Bir renge dokun, kart dönsün: anlamını oku, sonra kartları aç.')}
       <div class="signs">${SIGN_CATEGORIES.map(c => signTile(c)).join('')}</div></div>`;
@@ -318,9 +337,9 @@ function learn() {
   const filter = route.query?.get('aile') ?? '';
   const list = DIRECTORY.filter(d => !filter || slug(d.group) === filter);
   return `<div class="stack">${segs}${note('41 çalgı, ailelerine göre. Birine dokun; hikâyesini, sorularını ve video bilmecesini aç.')}
-    ${chips([['', 'Tümü'], ...GROUPS.map(g => [slug(g), g])], filter, 'data-aile')}
+    ${chips([['', 'Tümü'], ...GROUPS.map(g => [slug(g), g])], filter, 'data-aile', ' scroll')}
     <div class="card list">${list.map(d => `<button class="lrow" data-push="#/calgi/${slug(d.name)}">
-      <span class="sq letter" style="background:${GROUP_COLORS[d.group]}">${esc(d.name[0])}</span>
+      <span class="sq letter" style="background:${readable(GROUP_COLORS[d.group])}">${esc(d.name[0])}</span>
       <span class="mt"><b>${esc(d.name)}</b><small>${esc(d.group)}</small></span>
       ${d.riddle ? '<span class="badge xpb">+3 XP BİLMECE</span>' : ''}${icon('IconChevronRight', 'chev')}</button>`).join('')}</div></div>`;
 }
@@ -388,15 +407,15 @@ function instrumentPage(key) {
   const s = songFor(d.name, SONGS);
   const accent = GROUP_COLORS[d.group];
   return `<div class="stack">
-    <div class="inst-hero" style="--accent:${mixHex(accent, '#14107A', 0.35)}"><span class="orb big"></span><span class="orb small"></span>
-      <div class="ph"><img src="${photoOf(d.name)}" alt=""></div><b>${esc(d.name)}</b><small>${esc(FAMILY_OF_GROUP[d.group])}</small></div>
+    <div class="inst-hero" style="--accent:${mixHex(accent, '#14107A', 0.35)}">
+      <div class="ph"><img src="${photoOf(d.name)}" alt=""></div><div class="mt"><b>${esc(d.name)}</b><small>${esc(FAMILY_OF_GROUP[d.group])}</small></div></div>
     <div class="card"><p class="p strong">${esc(d.summary)}</p></div>
     ${d.riddle ? `<button class="chunky purple" data-do="riddle"><span class="face">${icon('IconPlay')}Video bilmeceyi izle</span></button>` : ''}
     <button class="chunky white" data-ext="doremimi.org"><span class="face">${icon('IconBook')}Ayrıntılı çalgı bilgisi</span></button>
     ${vids.length ? `${ribbon('Videolar')}<div class="vgrid">${vids.map(v => videoCard(v, true)).join('')}</div>` : ''}
-    ${s ? `<button class="tile" data-song-in-cal="${s.slug}"><div class="song-card"><span class="sq">${icon('IconNote')}</span><span class="mt"><b>Şarkısını çal</b><small>${esc(s.title)}</small></span>${icon('IconPlay', 'go')}</div></button>` : ''}
+    ${s ? `<button class="tile" data-song-in-cal="${s.slug}"><div class="card due-row song-card"><span class="sq">${icon('IconNote')}</span><span class="mt"><b>Şarkısını çal</b><small>${esc(s.title)}</small></span><span class="go">${icon('IconPlay')}</span></div></button>` : ''}
     ${qs.length ? `${ribbon('Kendini dene')}${qs.map(q => { const open = instrumentFlips.has(q.id); const id = q.id.slice(2); return `<button class="tile" data-iflip="${q.id}"><div class="card self${open ? ' open' : ''}">${open
-      ? `<span class="caption" style="color:var(--cyan)">CEVAP</span><b class="ans-t">${esc(q.answer)}</b>`
+      ? `<span class="eyebrow">CEVAP</span><b class="ans-t">${esc(q.answer)}</b>`
       : `<span class="caption">${esc(DIFFICULTY[id] ?? '')}</span><b class="h3">${esc(q.prompt)}</b><span class="caption" style="color:var(--text-xp)">Cevap için kartı çevir</span>`}</div></button>`; }).join('')}
       <button class="chunky yellow" data-play="instrument:${qk}"><span class="face">${icon('IconCards')}Bu çalgıyla oyna</span></button>` : ''}
   </div>`;
@@ -432,9 +451,9 @@ function playRoot() {
     ${note('Piyanoda serbest çal ya da bir çalgının şarkısını dinle. Her şarkı uygulamanın piyanosuyla çalar.')}
     ${ribbon('Serbest çal')}
     <div class="card kb-card">${keyboardHtml2(60, 'free-keys')}<span class="caption c">Tuşlara dokun, sen de çal. Çaldıkların Melodim'e eklenir.</span></div>
-    <button class="tile" ${melodim.length ? 'data-push="#/melodim"' : ''} id="melodim-card"><div class="card due-row"><span class="sq ink">${icon('IconNote')}</span><span class="mt"><b>Melodim</b><small>${melodim.length ? `${melodim.length} nota` : 'Butonlara dokun, melodin burada birikir'}</small></span>${melodim.length ? icon('IconChevronRight', 'chev') : ''}</div></button>
+    <button class="tile" ${melodim.length ? 'data-push="#/melodim"' : ''} id="melodim-card"><div class="card due-row"><span class="sq">${icon('IconNote')}</span><span class="mt"><b>Melodim</b><small>${melodim.length ? `${melodim.length} nota` : 'Butonlara dokun, melodin burada birikir'}</small></span>${melodim.length ? icon('IconChevronRight', 'chev') : ''}</div></button>
     ${ribbon('Şarkılar')}
-    ${chips([['', 'Tümü'], ...GROUPS.map(g => [slug(g), g])], calFilter, 'data-calf')}
+    ${chips([['', 'Tümü'], ...GROUPS.map(g => [slug(g), g])], calFilter, 'data-calf', ' scroll')}
     <div class="songs">${songs.map(s => `<button class="tile" data-push="#/sarki/${s.slug}"><div class="song-tile"><span class="ph"><img src="${songArt(s)}" alt="" loading="lazy"></span><b>${esc(s.instrument)}</b></div></button>`).join('')}</div>
     ${ribbon('Şarkı sözleri')}
     <div class="hscroll lyr">${LYRICS.map(l => `<button class="tile" data-push="#/sozler/${slug(l.instrument)}"><div class="card lyric"><b>${esc(l.instrument)}</b><small>${esc(l.lines[0])}</small></div></button>`).join('')}</div>
@@ -457,11 +476,11 @@ function songPage(slugName, melodim = false) {
   P.concept = qk ? 'instrument:' + qk : null;
   return `<div class="stack">
     <div class="song-head"><span class="ph">${s ? `<img src="${songArt(s)}" alt="">` : icon('IconNote')}</span>
-      <div class="mt"><span class="badge">${melodim ? 'MELODİM' : 'NOTALAR'}</span><b>${esc(s ? s.instrument : 'Melodim')}</b><small>${esc(s ? s.title : 'Senin çaldığın notalar')}</small></div>
+      <div class="mt"><span class="eyebrow">${melodim ? 'MELODİM' : 'NOTALAR'}</span><b>${esc(s ? s.instrument : 'Melodim')}</b><small>${esc(s ? s.title : 'Senin çaldığın notalar')}</small></div>
       <span class="eq" id="eq">${'<i></i>'.repeat(7)}</span></div>
     <div class="card karaoke" id="karaoke"><div class="now">♪ ♪ ♪</div><div class="next"></div></div>
     <div class="card kb-card">${keyboardHtml2(60, 'song-keys')}<span class="prog"><i id="prog"></i></span><span class="caption c">Tuşlara dokun, sen de çal. Çaldıkların Melodim'e eklenir.</span></div>
-    <div class="two-btn"><button class="chunky magenta large" data-song="toggle" id="song-toggle"><span class="face">${icon('IconPlay')}<span>Çal</span></span></button>
+    <div class="two-btn"><button class="chunky primary large" data-song="toggle" id="song-toggle"><span class="face">${icon('IconPlay')}<span>Çal</span></span></button>
       <button class="chunky white large sq-btn" data-song="stop" aria-label="Durdur"><span class="face"><i class="stopsq"></i></span></button></div>
     ${lyric ? `<button class="chunky white" data-push="#/sozler/${slug(lyric.instrument)}"><span class="face">${icon('IconMic')}Sözleri</span></button>` : ''}
     <button class="chunky yellow" data-play="${P.concept ?? 'karisik'}"><span class="face">${icon('IconCards')}${P.concept ? 'Bu çalgıyla oyna' : 'Karışık oyna'}</span></button>
@@ -650,7 +669,7 @@ function legalPage(key) {
     ${t.sections.map(([h, b]) => `<div class="card"><b class="h3">${esc(h)}</b><p class="p">${esc(b)}</p></div>`).join('')}</div>`;
 }
 const about = () => `<div class="stack"><div class="card about"><img src="../assets/brand/logo.png" alt=""><b class="h1">doremimi</b><span class="caption">Sürüm 0.1.73</span></div>
-  <div class="card"><b class="h3">Lisanslar</b><p class="p">Yazı tipleri: Baloo 2, Nunito ve Noto Music (SIL Open Font License). Oyun görselleri Doremimi için özgün olarak üretilmiştir. İçerik © Dore Mimi Yetenek ve Eğitim Vakfı.</p></div></div>`;
+  <div class="card"><b class="h3">Lisanslar</b><p class="p">Yazı tipleri: Inter, Baloo 2, Nunito ve Noto Music (SIL Open Font License). Oyun görselleri Doremimi için özgün olarak üretilmiştir. İçerik © Dore Mimi Yetenek ve Eğitim Vakfı.</p></div></div>`;
 // The app's Tasarım sistemi page (ch. 03 §18.8) is a long component gallery; the demo shows its palette and buttons only.
 const design = () => `<div class="stack">${note('Renkler, yazı tipleri ve bileşenler.')}
   <div class="card"><div class="swatches">${[['Navy', '#0A0A3C'], ['Indigo', '#14107A'], ['Steel', '#1C6FAA'], ['Blue', '#2B9BFF'], ['Cyan', '#3FDAFF'], ['Yellow', '#FFCC00'], ['Orange', '#FF4D00'], ['Orchid', '#E85BE6'], ['Magenta', '#E0109E'], ['Mint', '#38E08C']].map(([n, c]) => `<span><i style="background:${c}"></i>${n}<small>${c}</small></span>`).join('')}</div></div>
@@ -667,17 +686,18 @@ function profilePage() {
   const totalStars = profile.stars ?? 0;
   const instr = DIRECTORY.length, riddles = DIRECTORY.filter(d => d.riddle).length;
   const general = deck.concepts.length ? deck.concepts.reduce((a, c) => a + mastery.conceptMastery(c, deck), 0) / deck.concepts.length : 0;
-  const bar = (label, v, text) => `<div class="pbar"><span class="pl">${label}</span><span class="pv"><i style="width:${Math.round(Math.min(1, v) * 100)}%"></i><b>${text}</b></span></div>`;
+  // Slim rows on white (ch. 13): the old slate panels put white labels on grey at about 1.4:1.
+  const bar = (label, v, text) => `<div class="prow"><span>${label}</span><em>${text}</em><span class="slim"><i style="width:${Math.round(Math.min(1, v) * 100)}%"></i></span></div>`;
   const earned = BADGES.filter(b => profile.badges.includes(b.id));
   return `<div class="stack">
-    <div class="card child-head"><span class="avatar big"><img src="../assets/site/characters/${kid.image}" alt=""></span><div class="mt"><b class="h2">${esc(kid.name)}</b>${kid.age ? `<small>${esc(kid.age)}</small>` : ''}</div>
-      <button class="chunky white small" data-do="switcher"><span class="face">${icon('IconSmile')}Kim oynuyor?</span></button></div>
-    <div class="prof-hero"><span class="orb big"></span><span class="orb small"></span>
-      <div class="top"><span class="lvbox"><small>SEVİYE</small><b>${profile.level}</b></span><div class="mt"><b>Müzik Kâşifi</b><span class="xpbar"><i style="width:${Math.round(profile.xp / goal * 100)}%"></i></span><small>${profile.xp} / ${goal} XP</small></div></div>
+    <div class="card child-head"><div class="who-line"><span class="avatar big"><img src="../assets/site/characters/${kid.image}" alt=""></span><div class="mt"><b class="h2">${esc(kid.name)}</b>${kid.age ? `<small>${esc(kid.age)}</small>` : ''}</div></div>
+      <button class="chunky white" data-do="switcher"><span class="face">${icon('IconSmile')}Kim oynuyor?</span></button></div>
+    <div class="card prof-level">
+      <div class="top"><span class="lvbox"><small>SEVİYE</small><b>${profile.level}</b></span><div class="mt"><b>Müzik Kâşifi</b><span class="slim"><i style="width:${Math.round(Math.min(1, profile.xp / goal) * 100)}%"></i></span><small>${profile.xp} / ${goal} XP</small></div></div>
       <div class="three"><span><b>${profile.badges.length}</b>rozet</span><span><b>${profile.rounds ?? 0}</b>oynanan tur</span><span><b>${totalStars}</b>yıldız</span></div></div>
-    ${ribbon('İlerleme')}<div class="dark-card">${bar('Genel', general, pct(general))}${bar('Çalgılar', (profile.seen ?? []).length / instr, `${pct((profile.seen ?? []).length / instr)} (${(profile.seen ?? []).length}/${instr})`)}${bar('Bilmeceler', 0, `%0 (0/${riddles})`)}</div>
-    ${ribbon('İstatistikler')}<div class="dark-card stats">${[['Oynanan tur', profile.rounds ?? 0, 'var(--blue)'], ['En iyi tur', profile.best ?? 0, 'var(--orange)'], ['Cevaplanan soru', profile.answered ?? 0, 'var(--mint)']].map(([l, v, c]) => `<div><span class="pl">${l}</span><b style="color:${c}">${v}</b></div>`).join('')}</div>
-    ${ribbon('Rozetler')}<div class="card badges">${earned.map(b => `<span class="bdg">${medalHtml(b)}<small>${esc(b.name)}</small></span>`).join('')}</div>
+    ${ribbon('İlerleme')}<div class="card plist">${bar('Genel', general, pct(general))}${bar('Çalgılar', (profile.seen ?? []).length / instr, `${pct((profile.seen ?? []).length / instr)} (${(profile.seen ?? []).length}/${instr})`)}${bar('Bilmeceler', 0, `%0 (0/${riddles})`)}</div>
+    ${ribbon('İstatistikler')}<div class="card plist stats">${[['Oynanan tur', profile.rounds ?? 0], ['En iyi tur', profile.best ?? 0], ['Cevaplanan soru', profile.answered ?? 0]].map(([l, v]) => `<div class="srow"><span>${l}</span><b>${v}</b></div>`).join('')}</div>
+    ${earned.length ? `${ribbon('Rozetler')}<div class="card badges">${earned.map(b => `<span class="bdg">${medalHtml(b)}<small>${esc(b.name)}</small></span>`).join('')}</div>` : ''}
     <div class="card note"><p class="p strong c">Çalgıları keşfet, bilmece izle, soruları cevapla ve Müzik Kart Oyunu'nu oyna: her şey XP kazandırır.</p></div>
     ${group('Aile ve ayarlar', [
       menuRow('IconGrid', 'var(--slate)', 'Ayarlar', 'Hareket, sesler, bildirimler ve metinler', 'data-push="#/ayarlar"'),
@@ -692,7 +712,7 @@ function settingsPage() {
     ${SETTINGS.map(([k, t, x]) => `<button class="tile" data-set="${k}"><div class="card toggle"><span class="mt"><b>${t}</b><small>${x}</small></span><span class="sw${s[k] ? ' on' : ''}"><i></i></span></div></button>`).join('')}
     ${ribbon('Metinler', ' small')}<div class="card menu plain">${[['Gizlilik politikası', '#/metin/gizlilik'], ['Kullanım koşulları', '#/metin/kosullar'], ['KVKK aydınlatma metni', '#/metin/kvkk'], ['Yardım ve SSS', '#/yardim'], ['Hakkında', '#/hakkinda']].map(([t, h]) => `<button class="mrow" data-push="${h}"><span class="mt"><b>${t}</b></span></button>`).join('')}</div></div>`;
 }
-const account = () => `<div class="stack"><div class="navy-card"><b>Misafir</b><small>Hesap oluşturulmadı</small></div>
+const account = () => `<div class="stack"><div class="card who-card"><b class="h3">Misafir</b><small class="caption">Hesap oluşturulmadı</small></div>
   <button class="chunky green" data-do="soon"><span class="face">Hesap oluştur</span></button>
   ${ribbon('Çocuklar', ' small')}<button class="chunky blue" data-do="soon"><span class="face">Profil ekle</span></button>
   ${ribbon('Ebeveyn kilidi', ' small')}<button class="chunky white" data-do="soon"><span class="face">Ebeveyn PIN'ini değiştir</span></button>
@@ -792,9 +812,11 @@ function closeOverlay() { overlay.kind = null; renderOverlay(); }
 function renderOverlay() {
   if (gate.open) return renderGate();
   if (overlay.kind === 'switcher') {
+    // A list of rows on the canvas (AccountsOverlay, ch. 13): the Navy sheet made every title ink-on-Navy, and the
+    // 96 px portraits fit two children on a small phone, not four.
     overlayHost.innerHTML = `<div class="overlay who-ov"><button class="chunky white close x" data-do="ov-close" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
-      <b class="ttl">Kim oynuyor?</b><div class="kids2">${CHILDREN.map(c => `<button class="tile" data-child="${c.id}"><div class="kid${profile.child === c.id ? ' on' : ''}"><img src="../assets/site/characters/${c.image}" alt=""><b>${c.name}</b><small>${c.age}</small></div></button>`).join('')}</div>
-      <button class="chunky green large" data-do="soon"><span class="face">Profil ekle</span></button></div>`;
+      <b class="ttl">Kim oynuyor?</b><div class="card list kids2">${CHILDREN.map(c => `<button class="lrow kid${profile.child === c.id ? ' on' : ''}" data-child="${c.id}"><span class="avatar"><img src="../assets/site/characters/${c.image}" alt=""></span><span class="mt"><b>${c.name}</b><small>${c.age}</small></span>${profile.child === c.id ? icon('IconCheck', 'chev') : icon('IconChevronRight', 'chev')}</button>`).join('')}</div>
+      <button class="chunky white" data-do="soon"><span class="face">Profil ekle</span></button></div>`;
   } else if (overlay.kind === 'player') {
     const v = VIDEOS.find(x => x.id === overlay.data);
     overlayHost.innerHTML = `<div class="overlay scrim player-ov"><div class="player"><div class="frame"><img src="../assets/site/${esc(v.thumb)}" alt=""><button class="big-play" data-do="vplay" aria-label="Oynat">${icon('IconPlay')}</button></div>

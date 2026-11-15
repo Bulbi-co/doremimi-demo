@@ -9,3 +9,10 @@
 @font-face { font-family: 'Nunito'; src: url('Nunito-ExtraBold.ttf') format('truetype'); font-weight: 800; font-display: block; }
 @font-face { font-family: 'Nunito'; src: url('Nunito-Black.ttf') format('truetype'); font-weight: 900; font-display: block; }
 @font-face { font-family: 'Noto Music'; src: url('NotoMusic-Regular.ttf') format('truetype'); font-weight: 400; font-display: block; }
+/* Inter, the app register (dossier ch. 13 §2): the same four files as the app (Doremimi/Assets/Fonts, carved from
+   Avalonia.Fonts.Inter and subset to Nunito's cmap). 800/900 map to Bold: the app ships no heavier Inter, and a rule
+   that still asks for 800 outside the game must not get a synthesized faux-black. */
+@font-face { font-family: 'Inter'; src: url('Inter-Regular.ttf') format('truetype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Inter'; src: url('Inter-Medium.ttf') format('truetype'); font-weight: 500; font-display: block; }
+@font-face { font-family: 'Inter'; src: url('Inter-SemiBold.ttf') format('truetype'); font-weight: 600; font-display: block; }
+@font-face { font-family: 'Inter'; src: url('Inter-Bold.ttf') format('truetype'); font-weight: 700 900; font-display: block; }

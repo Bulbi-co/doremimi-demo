@@ -5,6 +5,11 @@
  * backdrop's notes; everything a child presses or reads around them is white (#FFFFFF), canvas (#F6F7F9), sunken
  * (#EDEFF3) and ink (#16182C). Where one card owns a screen (the game), its colour is the single accent: --pface etc.,
  * set from lib/accent.js. The Kurzgesagt palette below stays for the notes, the banners and content only.
+ *
+ * v4, dossier ch. 13 (superapp 2c43f0f): two registers. The app's chrome and pages are Inter, compact and flat: 44 px
+ * buttons with no lip, grouped white lists with inset hairlines, a type scale of h1 28 / h2 20 / h3 17 / body 15 /
+ * caption 13 / eyebrow 11. The game, the banner titles and OYNA stay playful: Baloo 2 and Nunito, chunky lips. The
+ * register is chosen by the font variables: Inter at :root, Baloo/Nunito again inside .game (see "two registers").
  */
 :root {
   --navy: #0A0A3C; --indigo: #14107A; --steel: #1C6FAA; --blue: #2B9BFF; --cyan: #3FDAFF;
@@ -27,14 +32,20 @@
   --dock-bg: #FFFFFF;
   --r-s: 6px; --r-m: 10px; --r-card: 12px; --r-l: 14px;
   /* AppStyles.axaml: one soft ink-tinted shadow, never a coloured lip. #24 and #33 alpha are .14 and .20. */
-  --drop-card: 0 6px 20px -6px rgba(22,24,44,.14);
+  /* Palette.axaml ShadowTight / ShadowCard / ShadowRaised (ch. 13): a hairline-close shadow and a soft one under it. */
+  --shadow-tight: 0 1px 2px rgba(22,24,44,.08);
+  --drop-card: 0 1px 2px rgba(22,24,44,.05), 0 4px 14px -6px rgba(22,24,44,.12);
   --drop-hero: 0 6px 20px -6px rgba(22,24,44,.14);
   --drop-dock: 0 14px 36px -12px rgba(22,24,44,.20);
   --drop-toast: 0 14px 36px -12px rgba(22,24,44,.20);
   /* The neutral primary (AccentSet.Ink); the game overrides these with its card's set. */
   --pface: #16182C; --plabel: #FFFFFF; --pedge: #05060F; --ptext: #16182C;
-  --font-body: "Nunito", system-ui, sans-serif;
-  --font-display: "Baloo 2", "Nunito", sans-serif;
+  /* The app register (ch. 13 §2). --font-play / --font-play-body are the game's; .game puts them back in the two
+     variables every rule reads, so the game's rules did not have to change. */
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-play: "Baloo 2", "Nunito", sans-serif;
+  --font-play-body: "Nunito", system-ui, sans-serif;
   --font-music: "Noto Music", serif;
   /* HC-12: no overshoot and no idle loop on chrome. The old back-out ease is now a plain quint-out; the name stays. */
   --ease-back-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -48,7 +59,7 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--canvas); }
-body { color: var(--ink); font: 500 15px/22px var(--font-body); -webkit-font-smoothing: antialiased; }
+body { color: var(--ink); font: 400 15px/21px var(--font-body); -webkit-font-smoothing: antialiased; }
 button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
 img { display: block; }
 .ic { width: 1em; height: 1em; fill: currentColor; display: block; flex: none; }
@@ -75,26 +86,26 @@ img { display: block; }
 /* The tab's colour lives only in its backdrop's notes and wash (lib/backdrop.js); the chrome is the same on every tab. */
 
 /* ───────────────────────── top bar (ShellView.axaml:1239-1275) */
-.topbar { position: relative; z-index: 2; display: flex; align-items: center; gap: 0; margin: calc(14px + var(--safe-top)) 20px 12px; min-height: 48px; }
+.topbar { position: relative; z-index: 2; display: flex; align-items: center; gap: 0; margin: calc(10px + var(--safe-top)) 16px 10px; min-height: 44px; }
 .topbar .backbtn { margin-right: 12px; }
 .topbar .title { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
 .topbar .title img { width: 46px; height: 45px; }
-.topbar h1 { margin: 0; font: 800 30px/34px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar h1 { margin: 0; font: 700 28px/34px var(--font-display); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The level chip and the avatar chip: white, RadiusM, the card shadow (AppStyles.axaml level-chip, avatar-chip). */
-.tile.levelbtn { display: flex; align-items: center; min-height: 44px; padding: 6px 10px 8px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--drop-card); }
-.levelbtn .lv { width: 66px; display: flex; flex-direction: column; gap: 4px; align-items: center; }
-.levelbtn .lv b { font: 800 13px/16px var(--font-display); }
-.slim { width: 100%; height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
+.tile.levelbtn { display: flex; align-items: center; min-height: 40px; padding: 6px 10px 7px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--drop-card); }
+.levelbtn .lv { min-width: 52px; display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.levelbtn .lv b { font: 600 12px/15px var(--font-display); }
+.slim { width: 100%; height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
 .slim i { display: block; height: 100%; background: var(--ink); border-radius: 3px; }
-.avatar { width: 44px; height: 44px; border-radius: var(--r-m); display: grid; place-items: center; box-shadow: inset 0 -4px 0 0 rgba(0,0,0,.20); color: #fff; font: 800 20px var(--font-display); overflow: hidden; flex: none; }
-.who { width: 44px; height: 44px; background: #fff; margin-left: 10px; box-shadow: var(--drop-card); }
+.avatar { width: 40px; height: 40px; border-radius: var(--r-m); display: grid; place-items: center; box-shadow: inset 0 -4px 0 0 rgba(0,0,0,.20); color: #fff; font: 800 20px var(--font-display); overflow: hidden; flex: none; }
+.who { width: 40px; height: 40px; background: #fff; margin-left: 10px; box-shadow: var(--drop-card); }
 .who img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; }
 
 /* ───────────────────────── page container (ShellView.axaml:13-15) */
 .page { position: relative; z-index: 1; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
 .page::-webkit-scrollbar { display: none; }
 /* 56 px at the bottom, not 32: the logo plate overhangs the page by ~22 px (NR-04), and the last row must clear it. */
-.stack { display: flex; flex-direction: column; gap: 18px; padding: 6px 20px 56px; max-width: 680px; margin: 0 auto; }
+.stack { display: flex; flex-direction: column; gap: 16px; padding: 6px 16px 56px; max-width: 680px; margin: 0 auto; }
 .stack.home { gap: 16px; }
 .page-in { animation: pageIn 320ms var(--ease-cubic-out) both; }
 @keyframes pageIn { from { opacity: 0; transform: translateY(14px); } }
@@ -103,15 +114,16 @@ img { display: block; }
    pill with an ink icon and label; the logo is a 68 px white circle with a 2 px ink ring 2 px outside it when selected. */
 .dock { position: relative; z-index: 3; display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; margin: 0 12px calc(10px + var(--safe-bottom)); padding: 8px 6px 10px; border-radius: var(--r-l); background: var(--surface); box-shadow: var(--drop-dock); }
 .tab { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
-.tab .pill { width: 56px; height: 30px; display: grid; place-items: center; border-radius: var(--r-m); color: var(--ink-soft); transition: background 200ms, transform 200ms var(--ease-cubic-out); }
+.tab .pill { width: 52px; height: 28px; display: grid; place-items: center; border-radius: var(--r-m); color: var(--ink-soft); transition: background 200ms, transform 200ms var(--ease-cubic-out); }
 .tab .pill .ic { width: 22px; height: 22px; }
-.tab span { font: 800 12px/16px var(--font-display); color: var(--ink-soft); white-space: nowrap; }
+.tab span { font: 600 11px/14px var(--font-display); color: var(--ink-soft); white-space: nowrap; }
 .tab:active .pill { transform: scale(.92); }
 .tab.active .pill { background: var(--sunken); color: var(--ink); }
 .tab.active span { color: var(--ink); }
 .tab.logo { position: relative; height: 40px; }
-.tab.logo .plate { position: absolute; left: 50%; bottom: 10px; width: 72px; height: 72px; margin-left: -36px; border-radius: 50%; border: 2px solid transparent; padding: 2px; display: grid; place-items: center; transition: transform 200ms var(--ease-cubic-out); }
-.tab.logo .plate img { width: 64px; height: 64px; border-radius: 50%; background: var(--surface); box-shadow: var(--drop-dock); object-fit: contain; padding: 4px; }
+/* The plate is 56 in a 64 ring (ch. 13 §3, from 64 in 72); it still rises over the dock. */
+.tab.logo .plate { position: absolute; left: 50%; bottom: 10px; width: 64px; height: 64px; margin-left: -32px; border-radius: 50%; border: 2px solid transparent; padding: 2px; display: grid; place-items: center; transition: transform 200ms var(--ease-cubic-out); }
+.tab.logo .plate img { width: 56px; height: 56px; border-radius: 50%; background: var(--surface); box-shadow: var(--drop-dock); object-fit: contain; padding: 4px; }
 .tab.logo:active .plate { transform: scale(.94); }
 .tab.logo.active .plate { border-color: var(--ink); }
 
@@ -121,6 +133,16 @@ img { display: block; }
    the pages need not change: blue and indigo were the primaries, so they draw the primary; the rest draw white. */
 .chunky { --face: var(--surface); --lip: var(--edge-white); --label: var(--ink); --lipd: 4px; --sink: 3px;
   display: block; padding: 0 0 var(--lipd); transform-origin: 50% 100%; transition: transform 200ms var(--ease-cubic-out); font: 800 16px/20px var(--font-display); color: var(--label); }
+/* Off the game the lip goes (ch. 13 §3, ControlThemes Action): a 44 px flat face, a hairline round the white one, the
+   label in Inter SemiBold. The game, OYNA and the game's popups keep the chunky lip: that is the playful register. */
+:is(.topbar, .page, .overlay-host) .chunky:not(.oyna) { --lipd: 0px; --sink: 0px; font-weight: 600; font-size: 15px; }
+:is(.topbar, .page, .overlay-host) .chunky:not(.oyna) > .face { padding: 10px 18px; }
+:is(.topbar, .page, .overlay-host) .chunky:not(.oyna, .primary, .blue, .indigo) > .face { box-shadow: inset 0 0 0 1px var(--hairline), var(--shadow-tight); }
+:is(.topbar, .page, .overlay-host) .chunky.large { font-size: 17px; }
+:is(.topbar, .page, .overlay-host) .chunky.large > .face { min-height: 52px; padding: 13px 22px; }
+:is(.topbar, .page, .overlay-host) .chunky.small { font-size: 13px; }
+:is(.topbar, .page, .overlay-host) .chunky.small > .face { min-height: 32px; padding: 6px 12px; }
+:is(.topbar, .page, .overlay-host) .chunky:not(:disabled):active > .face { opacity: .85; }
 .chunky > .face { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 12px 20px; border-radius: var(--r-m); background: var(--face); box-shadow: 0 var(--lipd) 0 0 var(--lip); overflow: hidden; transition: transform 70ms, box-shadow 70ms; }
 .chunky .ic { width: 16px; height: 16px; }
 @media (hover: hover) { .chunky:not(:disabled):hover { transform: translateY(-2px); } }
@@ -173,68 +195,75 @@ img { display: block; }
 /* ───────────────────────── Keşfet (ShellView.axaml:20-170): banner, OYNA, Konu seç, Bugünün kartı */
 .stack.home { gap: 24px; }
 .carousel { display: flex; flex-direction: column; gap: 10px; }
-.banner-slot { position: relative; height: 186px; }
+.banner-slot { position: relative; height: 148px; }
 .banner { position: absolute; inset: 0 0 auto 0; width: 100%; transition: transform 380ms var(--ease-cubic-out); }
 .banner.out { transition-timing-function: cubic-bezier(.32,0,.67,0); }
 /* The badge above each title and the two orbs went (HC-51): the deep accent, a title and a line, the picture. */
-.hero { position: relative; height: 178px; border-radius: var(--r-l); overflow: hidden; background: var(--accent); display: grid; grid-template-columns: 1.15fr 1fr; color: #fff; box-shadow: var(--drop-hero); }
+.hero { position: relative; height: 148px; border-radius: var(--r-card); overflow: hidden; background: var(--accent); display: grid; grid-template-columns: 1.15fr 1fr; color: #fff; box-shadow: var(--drop-hero); }
 .hero .txt { position: relative; margin: 16px 4px 18px 20px; display: flex; flex-direction: column; justify-content: center; gap: 6px; align-items: flex-start; }
-.hero .txt b { font: 800 23px/28px var(--font-display); }
-.hero .txt small { font: 700 13px/17px var(--font-body); color: rgba(255,255,255,.95); }
-.hero img { position: relative; align-self: end; justify-self: center; max-width: calc(100% - 8px); max-height: 168px; margin: 10px 8px -2px 0; object-fit: contain; }
+/* The banner title stays playful (Baloo 22); its line is the app's Inter Medium 13 at 90 % white. */
+.hero .txt b { font: 800 22px/26px var(--font-play); }
+.hero .txt small { font: 500 13px/17px var(--font-body); color: rgba(255,255,255,.9); }
+.hero img { position: relative; align-self: end; justify-self: center; max-width: calc(100% - 8px); max-height: 140px; margin: 10px 8px -2px 0; object-fit: contain; }
 /* The dots are chrome: ink, the current one long. */
 .dots { display: flex; gap: 6px; justify-content: center; }
 .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--ink); opacity: .3; transition: width 250ms var(--ease-cubic-out), opacity 250ms; }
 .dot.on { width: 26px; opacity: 1; }
 /* OYNA keeps its yellow (HC-52), ink on it at 11.6:1. No wiggle, no shine: it waits to be pressed. */
 /* The content is centred as one group (the button's HorizontalContentAlignment), not spread to the edges. */
-.chunky.oyna > .face { padding: 16px 18px; justify-content: center; gap: 14px; }
-.oyna .sym { width: 66px; height: 66px; border-radius: var(--r-m); background: rgba(22,24,44,.12); display: grid; place-items: center; font: 400 44px/1 var(--font-music); padding-bottom: 6px; flex: none; }
+.chunky.oyna > .face { padding: 12px 16px; min-height: 72px; justify-content: center; gap: 12px; border-radius: var(--r-card); }
+/* ~76 tall with its 4 px lip (ch. 13 §4, from ~110 with 8): still the one big yellow action, no longer a slab. */
+.oyna .sym { width: 48px; height: 48px; border-radius: var(--r-m); background: rgba(22,24,44,.12); display: grid; place-items: center; font: 400 32px/1 var(--font-music); padding-bottom: 4px; flex: none; }
 .oyna .words { display: flex; flex-direction: column; align-items: flex-start; }
-.oyna .words b { font: 800 40px/40px var(--font-display); }
-.oyna .words small { font: 700 15px/17px var(--font-body); }
-.oyna .ic { width: 34px; height: 34px; }
-/* Konu seç: every topic in one white card. The topic's colour is its square and its bar, nothing else. */
-.card.topics { padding: 10px 6px 6px; border-radius: var(--r-card); display: flex; flex-direction: column; }
-.topics .thead { display: flex; align-items: center; justify-content: space-between; margin: 0 2px 4px 12px; }
-.topics .h2 { font-size: 22px; }
-.trow { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: var(--r-m); width: 100%; text-align: left; transition: background 120ms; }
-@media (hover: hover) { .trow:hover { background: rgba(22,24,44,.06); } }
-.trow:active { background: rgba(22,24,44,.10); }
-.kart { width: 48px; height: 48px; border-radius: var(--r-m); overflow: hidden; display: grid; place-items: center; align-self: start; font: 400 30px/1 var(--font-music); padding-bottom: 4px; }
+.oyna .words b { font: 800 30px/32px var(--font-play); }
+.oyna .words small { font: 600 13px/16px var(--font-body); }
+.oyna .ic { width: 26px; height: 26px; }
+/* Konu seç (ch. 13 §4): the heading on the canvas, every topic in one white card in two groups. The topic's colour is
+   its square and, once played, its bar; nothing else. */
+.topics-sec { display: flex; flex-direction: column; gap: 8px; scroll-margin-top: 8px; }
+.topics-sec .thead { display: flex; align-items: center; justify-content: space-between; margin: 0 2px 0 2px; }
+/* The canvas halo (ch. 13, CanvasContrastTests): a note passing behind a heading on the canvas read at about 1.1:1; an
+   unshifted glow in the canvas's own colour is invisible on the plain canvas and keeps the heading readable over one. */
+.topics-sec .thead :is(h2, .quiet) { text-shadow: 0 0 6px #F7F6FB, 0 0 12px #F7F6FB, 0 0 18px #F7F6FB; }
+.quiet.link { min-height: 44px; padding: 0 2px; font: 600 13px/18px var(--font-body); color: var(--ink); }
+.card.topics { padding: 4px 0; border-radius: var(--r-card); display: flex; flex-direction: column; overflow: hidden; }
+.tgroup { margin: 12px 16px 2px; }
+.trow { position: relative; display: grid; grid-template-columns: 36px 1fr auto 16px; gap: 12px; align-items: center; min-height: 60px; padding: 8px 14px 8px 16px; width: 100%; text-align: left; transition: background 120ms; }
+@media (hover: hover) { .trow:hover { background: rgba(22,24,44,.04); } }
+.trow:active { background: rgba(22,24,44,.08); }
+.tmeta { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.tmeta em { font: 500 12px/16px var(--font-body); font-style: normal; color: var(--ink-soft); white-space: nowrap; }
+.tmeta .track { width: 44px; height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
+.tmeta .track i { display: block; height: 100%; }
+.kart { width: 36px; height: 36px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; font: 400 22px/1 var(--font-music); padding-bottom: 3px; }
 .kart img { width: 100%; height: 100%; object-fit: cover; }
 .kart:has(img) { padding: 0; }
 .kart.icon { background: var(--sunken); color: var(--ink); padding: 0; align-self: center; }
-.kart.icon .ic { width: 20px; height: 20px; }
+.kart.icon .ic { width: 18px; height: 18px; }
 .trow .mt { gap: 2px; }
 .trow .mt b, .trow .mt small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .trow .mt small { font: 600 13px/17px var(--font-body); color: var(--ink-soft); }
-.kbar { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-top: 3px; }
-.kbar .track { height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
-.kbar .track i { display: block; height: 100%; }
-.kbar em { font: 700 12px/16px var(--font-body); font-style: normal; color: var(--ink-soft); }
 .chev { width: 16px; height: 16px; color: var(--ink-faint); }
-/* Bugünün kartı: the card is the only colour here, a 4 px frame and an art window in the item's colour, over its edge. */
-.today { border-radius: var(--r-card); box-shadow: 0 8px 0 0 var(--acc-edge), var(--drop-card); margin-bottom: 8px; }
-.today .tface { background: var(--surface); border: 4px solid var(--acc); border-radius: var(--r-card); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
-.today .h2 { font-size: 22px; margin: 0 2px; }
-.tgrid { display: grid; grid-template-columns: 96px 1fr; gap: 14px; }
-.tart { width: 96px; height: 112px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; font: 400 60px/1 var(--font-music); padding-bottom: 8px; }
+/* Bugünün kartı (ch. 13 §4): a plain white card. Its colour is the 80×92 art window and a 3 px bar down the left edge. */
+.today { border-radius: var(--r-card); box-shadow: var(--drop-card); scroll-margin-top: 8px; }
+.today .tface { position: relative; overflow: hidden; background: var(--surface); border-radius: var(--r-card); padding: 14px 16px 14px 19px; display: grid; grid-template-columns: 80px 1fr; gap: 14px; }
+.today .tface::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--acc); }
+.tart { width: 80px; height: 92px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; font: 400 48px/1 var(--font-music); padding-bottom: 6px; }
 .tart:has(img) { padding: 0; }
 .tart img { width: 100%; height: 100%; object-fit: cover; }
-.tart .ic { width: 40px; height: 40px; }
-.ttxt { display: flex; flex-direction: column; gap: 4px; justify-content: center; min-width: 0; }
-.ttxt b { font: 800 20px/24px var(--font-display); }
-.ttxt small { font: 700 13px/17px var(--font-body); color: var(--ink-soft); }
-.ttxt .p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.ttxt .p.reply { display: block; font-weight: 700; color: var(--ink); }
+.tart .ic { width: 32px; height: 32px; }
+.ttxt { display: flex; flex-direction: column; gap: 2px; justify-content: center; min-width: 0; }
+.ttxt b { font: 600 17px/22px var(--font-display); margin-top: 2px; }
+.ttxt small { font: 400 12px/16px var(--font-body); color: var(--ink-soft); }
+.ttxt .p { font-size: 13px; line-height: 18px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ttxt .p.reply { display: block; font-weight: 500; color: var(--ink); }
 .hscroll { display: flex; gap: 12px; overflow-x: auto; margin: -12px -20px -4px; padding: 16px 20px; scrollbar-width: none; }
 .hscroll::-webkit-scrollbar { display: none; }
 .video { width: 210px; flex: none; }
 .video .thumb { position: relative; height: 118px; display: grid; place-items: center; overflow: hidden; }
 .video .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.video .play { position: relative; width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.9); display: grid; place-items: center; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
-.video .play .ic { width: 18px; height: 18px; margin-left: 3px; }
+.video .play { position: relative; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.9); display: grid; place-items: center; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+.video .play .ic { width: 14px; height: 14px; margin-left: 2px; }
 .video .meta { padding: 8px 12px 12px; }
 .video .meta b { display: block; font: 800 14px/18px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .video .meta small { font: 700 11px/14px var(--font-body); color: var(--text-muted); }
@@ -250,84 +279,120 @@ img { display: block; }
 .soon .card { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 
 
+/* ───────────────────────── the app register's type scale (ch. 13 §2, AppStyles.axaml): h1 28/34 Bold, h2 20/26 and
+   h3 17/22 SemiBold, body 15/21, soft 13, caption 12, eyebrow 11 in capitals. Scoped off the game, which keeps the
+   heavier Baloo scale above. */
+:is(.topbar, .page, .overlay-host) :is(.ribbon h2, .h2) { font: 600 20px/26px var(--font-display); letter-spacing: -.005em; }
+:is(.topbar, .page, .overlay-host) .h3 { font: 600 17px/22px var(--font-display); }
+:is(.topbar, .page, .overlay-host) .h1 { font: 700 28px/34px var(--font-display); }
+:is(.topbar, .page, .overlay-host) .ribbon.small h2 { font: 600 13px/18px var(--font-display); color: var(--ink-soft); }
+:is(.topbar, .page, .overlay-host) .group-title { margin: 8px 16px 2px; font: 600 13px/18px var(--font-display); color: var(--ink-soft); }
+:is(.topbar, .page, .overlay-host) .p { font: 400 15px/21px var(--font-body); }
+:is(.topbar, .page, .overlay-host) .p.strong { font-weight: 500; }
+:is(.topbar, .page, .overlay-host) .caption { font: 400 13px/18px var(--font-body); }
+:is(.topbar, .page, .overlay-host) .eyebrow { font: 600 11px/14px var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+:is(.topbar, .page, .overlay-host) .mt b { font: 600 15px/20px var(--font-display); }
+:is(.topbar, .page, .overlay-host) .mt small { font: 400 13px/17px var(--font-body); color: var(--ink-soft); }
+/* Radius only: each card variant keeps the padding its own rule gives it. */
+:is(.topbar, .page, .overlay-host) .card { border-radius: var(--r-card); }
+:is(.topbar, .page, .overlay-host) .badge { font-weight: 600; box-shadow: none; }
+:is(.topbar, .page, .overlay-host) .video .meta b { font: 600 13px/17px var(--font-display); }
+:is(.topbar, .page, .overlay-host) .card.lyric b { font: 600 15px/20px var(--font-display); }
+:is(.topbar, .page, .overlay-host) :is(.hub-hero b, .nedir .head b, .navy-card b) { font: 600 17px/22px var(--font-display); }
+:is(.topbar, .page, .overlay-host) ul.mani { font: 500 15px/22px var(--font-body); }
+:is(.topbar, .page, .overlay-host) .swatches span { font: 600 13px var(--font-display); }
+:is(.topbar, .page, .overlay-host) .gate .host { font: 600 12px var(--font-display); }
+
 /* ───────────────────────── shared rows, chips and notes (ShellView.axaml §17.2 menu rows; ch. 02 §3) */
 .p.strong { color: var(--ink); font-weight: 700; }
 .p.ink { color: var(--ink); }
 .c { text-align: center; }
-.caption.on-canvas { margin: -8px 4px 0; color: #fff; text-shadow: 0 1px 2px rgba(10,10,60,.35); }
+/* Was white on the canvas, invisible since ch. 12 made the canvas milk white; ink soft now. */
+.caption.on-canvas { margin: -8px 4px 0; color: var(--ink-soft); }
 .ribbon.small h2 { font-size: 14px; line-height: 18px; }
-.stack > .ribbon { align-self: flex-start; margin: 4px 0 -6px 2px; }
-.sq { width: 40px; height: 40px; border-radius: var(--r-m); display: grid; place-items: center; color: #fff; flex: none; }
+.stack > .ribbon { align-self: flex-start; margin: 6px 0 -6px 2px; }
+.sq { width: 36px; height: 36px; border-radius: var(--r-m); display: grid; place-items: center; color: #fff; flex: none; }
 /* A row's icon is ink on a sunken square (AppStyles.axaml row-icon); Melodim's is an ink face. */
 .mrow .sq, .due-row .sq { background: var(--sunken); color: var(--ink); }
 .sq.ink, .due-row .sq.ink { background: var(--ink); color: #fff; }
-.sq .ic { width: 20px; height: 20px; }
+.sq .ic { width: 18px; height: 18px; }
 .sq.letter { font: 800 18px var(--font-display); }
 .sq.letter.music { font: 400 24px/1 var(--font-music); padding-bottom: 3px; }
 .mt { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: left; }
 .mt b { font: 800 16px/20px var(--font-display); }
 .mt small { font: 600 13px/17px var(--font-body); color: var(--ink-soft); }
-.card.menu { padding: 12px 6px 6px; border-radius: var(--r-card); display: flex; flex-direction: column; gap: 2px; }
-.card.menu:not(:has(.group-title)) { padding-top: 6px; }
-.mrow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; width: 100%; border-radius: var(--r-m); transition: background 120ms; }
-@media (hover: hover) { .mrow:hover { background: rgba(22,24,44,.06); } }
-.mrow:active { background: rgba(22,24,44,.10); }
-.card.menu.plain .mrow { padding: 12px 18px; }
+/* Grouped lists (ch. 13): rows edge to edge in one white card, a 1 px hairline between them that starts where the
+   text does (inset past the icon), none above the first. The settings-list look the owner asked for. */
+.card.menu { padding: 4px 0; border-radius: var(--r-card); display: flex; flex-direction: column; overflow: hidden; }
+.mrow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px 8px 16px; width: 100%; transition: background 120ms; }
+@media (hover: hover) { .mrow:hover { background: rgba(22,24,44,.04); } }
+.mrow:active { background: rgba(22,24,44,.08); }
+.mrow .sq { width: 32px; height: 32px; border-radius: 8px; }
+.mrow .sq .ic { width: 16px; height: 16px; }
+.card.menu.plain .mrow { padding: 12px 16px; }
+:is(.mrow, .lrow, .trow, .srow, .prow) + :is(.mrow, .lrow, .trow, .srow, .prow)::before { content: ''; position: absolute; top: 0; right: 0; left: var(--rule, 60px); height: 1px; background: var(--hairline); }
+.mrow { --rule: 60px; } .card.menu.plain .mrow { --rule: 16px; } .trow { --rule: 64px; } .lrow { --rule: 64px; } .srow, .prow { --rule: 0px; }
 .due-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-/* Chips (ControlThemes.axaml Chip): white on a grey edge; the active one ink with a white label. */
-.chip-btn { padding: 7px 14px; margin-bottom: 4px; border-radius: var(--r-s); background: #fff; font: 800 13px/18px var(--font-display); box-shadow: 0 4px 0 0 var(--edge-white); }
-.chip-btn.on { background: var(--ink); color: #fff; box-shadow: 0 4px 0 0 #05060F; }
-.segs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.segs .chunky { font-size: 15px; }
-.card.list { padding: 6px 0; }
-.lrow { display: flex; align-items: center; gap: 14px; padding: 10px 18px; width: 100%; }
+/* One row that scrolls sideways (ch. 13): seven wrapped chips took three lines above the list. No colour on them. */
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 0 16px; scrollbar-width: none; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+/* Chips: flat, sunken; the active one ink with a white label. */
+.chip-btn { flex: none; height: 32px; padding: 0 12px; border-radius: 8px; background: var(--sunken); color: var(--ink); font: 500 13px/32px var(--font-display); white-space: nowrap; }
+.chip-btn.on { background: var(--ink); color: #fff; }
+/* Öğren's İşaretler · Çalgılar: one segmented track, as the game's ladder strip. */
+.segtrack { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: var(--r-m); background: var(--sunken); }
+.seg { height: 34px; border-radius: 8px; font: 600 14px/34px var(--font-display); color: var(--ink-soft); transition: background 160ms; }
+.seg.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(22,24,44,.12); }
+.card.list { padding: 4px 0; overflow: hidden; }
+.lrow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px 8px 16px; width: 100%; text-align: left; }
 .lrow .mt small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.badge.xpb { background: var(--orchid); color: var(--ink); box-shadow: 0 0 0 1px rgba(10,10,60,.25) inset; font-size: 10px; padding: 2px 7px; }
+.badge.xpb { background: var(--sunken); color: var(--ink-soft); box-shadow: none; font-size: 10px; padding: 2px 7px; }
 .badge.soonb { background: #FFF4D6; color: var(--text-gold); align-self: flex-start; }
 .pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .pills span { padding: 5px 10px; border-radius: var(--r-m); background: var(--sunken); font: 700 13px/18px var(--font-body); }
 .two-btn { display: grid; grid-template-columns: 1fr auto; gap: 12px; }
 .two-btn.eq2 { grid-template-columns: 1fr 1fr; }
-.chunky.large.sq-btn > .face { width: 60px; padding: 16px 0; }
+.chunky.large.sq-btn > .face { width: 52px; padding: 0; }
 .stopsq { width: 18px; height: 18px; border-radius: 5px; background: var(--ink); display: block; flex: none; }
-.field { width: 100%; border: 0; border-radius: var(--r-m); background: #F1F2FA; padding: 12px 14px; font: 600 15px var(--font-body); color: var(--ink); resize: none; box-shadow: inset 0 3px 0 0 rgba(10,10,60,.15); }
+.field { width: 100%; min-height: 44px; border: 0; border-radius: var(--r-m); background: var(--field); padding: 11px 14px; font: 400 15px var(--font-body); color: var(--ink); resize: none; box-shadow: none; }
 .card.form { display: flex; flex-direction: column; gap: 10px; }
-.card.news { background: var(--indigo); color: #fff; box-shadow: 0 5px 0 0 var(--lip-indigo), var(--drop-card); display: flex; flex-direction: column; gap: 8px; }
-.card.news .p { color: rgba(255,255,255,.9); }
+/* White now (ch. 13): "Abone ol" was a white-on-white button the moment the buttons went flat on the Indigo card. */
+.card.news { display: flex; flex-direction: column; gap: 8px; }
 .card.news .sub { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
-.navy-card { background: var(--indigo); color: #fff; border-radius: var(--r-m); padding: 16px 18px; box-shadow: 0 5px 0 0 var(--cyan), var(--drop-card); display: flex; flex-direction: column; }
-.navy-card b { font: 800 18px/22px var(--font-display); }
-.navy-card small { font: 700 15px/20px var(--font-body); opacity: .9; }
+.card.who-card { display: flex; flex-direction: column; gap: 2px; }
 
 /* Öğren › İşaretler: the flip tiles (ch. 02 §3.2) */
 .signs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.sign-tile { position: relative; height: 92px; border-radius: var(--r-m); background: var(--c); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; padding: 8px 6px 12px; box-shadow: 0 6px 0 0 var(--e, rgba(0,0,0,.3)); filter: saturate(.9) brightness(.92); }
-.sign-tile .g { font-size: 34px; line-height: 1; margin-bottom: 4px; }
-.sign-tile b { font: 800 13px/16px var(--font-display); text-align: center; }
-.sign-tile small { font: 800 13px/16px var(--font-display); }
-.sign-tile.back { background: #fff; color: var(--ink); filter: none; border: 3px solid var(--c); box-shadow: 0 6px 0 0 var(--c); justify-content: space-between; animation: unfold 380ms var(--ease-back-out); }
+/* Flat tiles (ch. 13): no 6 px lip, one tight shadow; the deepened sign colour kept. */
+.sign-tile { position: relative; height: 92px; border-radius: var(--r-m); background: var(--c); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; padding: 8px 6px 12px; box-shadow: var(--shadow-tight); filter: saturate(.9) brightness(.92); }
+.sign-tile .g { font-size: 32px; line-height: 1; margin-bottom: 4px; }
+.sign-tile b { font: 600 13px/16px var(--font-display); text-align: center; }
+.sign-tile small { font: 600 13px/16px var(--font-display); }
+.sign-tile.back { background: #fff; color: var(--ink); filter: none; border: 2px solid var(--c); box-shadow: var(--shadow-tight); justify-content: space-between; animation: unfold 380ms var(--ease-back-out); }
 .sign-tile.back { padding: 6px 6px 8px; }
-.sign-tile.back .m { font: 800 11px/13px var(--font-display); text-align: center; margin-top: 2px; }
+.sign-tile.back .m { font: 600 11px/13px var(--font-display); text-align: center; margin-top: 2px; }
 .sign-tile.back .open { width: 100%; }
-.sign-tile.back .open { --lipd: 3px; }
-.sign-tile.back .open .face { padding: 4px 0; min-height: 26px; }
+.sign-tile.back .open .face { padding: 4px 0; min-height: 28px; }
 .signs:has(small) .sign-tile { height: 112px; }
-.sign-hero { display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: var(--r-l); background: var(--c); color: #fff; box-shadow: 0 8px 0 0 var(--e), var(--drop-hero); }
-.sign-hero .g { font-size: 56px; line-height: 1; }
-.sign-hero b { display: block; font: 800 24px/28px var(--font-display); }
-.sign-hero small { font: 700 14px/18px var(--font-body); opacity: .95; }
-.face-card.big { border-radius: var(--r-card); box-shadow: 0 6px 0 0 var(--accent-deep); min-height: 210px; }
+/* The colour header stays, flat (ch. 13): no lip, no orbs. */
+.sign-hero { display: flex; align-items: center; gap: 16px; padding: 16px; border-radius: var(--r-card); background: var(--c); color: #fff; box-shadow: var(--drop-card); }
+.sign-hero .g { font-size: 48px; line-height: 1; }
+.sign-hero b { display: block; font: 700 22px/28px var(--font-display); }
+.sign-hero small { font: 500 13px/18px var(--font-body); opacity: .95; }
+/* A sign's own page shows its card as a white card with no coloured frame; the game's card keeps its frame. */
+.face-card.big { border-radius: var(--r-card); box-shadow: var(--drop-card); min-height: 210px; border: 0; }
 .face-card.big .symbol { font-size: 96px; margin: -6px 0 6px; }
 .card.ans { box-shadow: var(--drop-card); }
 .big-sym { font: 400 96px/1.2 var(--font-music); text-align: center; }
 
 /* Öğren › Çalgılar, the instrument page (ch. 02 §3.5-3.6) */
-.inst-hero { position: relative; overflow: hidden; border-radius: var(--r-l); background: var(--accent); color: #fff; padding: 22px 22px 20px; display: flex; flex-direction: column; gap: 4px; box-shadow: var(--drop-hero); }
-.inst-hero .ph { width: 150px; height: 150px; border-radius: var(--r-l); background: #fff; display: grid; place-items: center; overflow: hidden; margin-bottom: 14px; position: relative; box-shadow: 0 6px 0 0 rgba(0,0,0,.18); }
+/* The photo beside the name, not above it (ch. 13): the header is a third of the screen shorter. */
+.inst-hero { position: relative; overflow: hidden; border-radius: var(--r-card); background: var(--accent); color: #fff; padding: 14px; display: flex; align-items: center; gap: 14px; box-shadow: var(--drop-card); }
+.inst-hero .ph { width: 88px; height: 88px; border-radius: var(--r-m); background: #fff; display: grid; place-items: center; overflow: hidden; flex: none; }
 .inst-hero .ph img { max-width: 92%; max-height: 92%; object-fit: contain; }
-.inst-hero b { font: 800 30px/34px var(--font-display); position: relative; }
-.inst-hero small { font: 700 14px/18px var(--font-body); position: relative; opacity: .95; }
+.inst-hero b { font: 700 24px/30px var(--font-display); }
+.inst-hero small { font: 500 13px/18px var(--font-body); opacity: .95; color: #fff; }
 .vgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .video.grid { width: auto; }
 /* 96 px, not 16:9: İzle's grid cards are wider than tall in 05b-izle-phone.png (ShellView.axaml video template). */
@@ -335,13 +400,12 @@ img { display: block; }
 .video.grid .meta { padding: 8px 10px 10px; background: var(--surface); }
 .video.grid .meta b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 13px; line-height: 17px; }
 .video .play { color: #7A4FD6; }
-.song-card { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: var(--r-m); background: var(--magenta-face); color: #fff; box-shadow: 0 6px 0 0 var(--lip-magenta), var(--drop-card); }
-.song-card .sq { background: rgba(255,255,255,.2); }
-.song-card .mt small { color: rgba(255,255,255,.9); }
-.song-card .go { width: 22px; height: 22px; }
+/* Şarkısını çal and Melodim: white rows with a round ink play mark (ch. 13), not magenta and ink cards. */
+.go { width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; flex: none; }
+.go .ic { width: 13px; height: 13px; margin-left: 2px; }
 .card.self { display: flex; flex-direction: column; gap: 6px; }
-.card.self.open { background: var(--indigo); box-shadow: 0 5px 0 0 var(--cyan), var(--drop-card); }
-.card.self .ans-t { color: #fff; font: 800 18px/24px var(--font-display); }
+.card.self.open { background: var(--sunken); box-shadow: none; }
+.card.self .ans-t { color: var(--ink); font: 600 17px/22px var(--font-display); }
 
 /* İzle and the player sheet (NR-40) */
 .player-ov { display: grid; place-items: center; padding: 20px; }
@@ -361,31 +425,30 @@ img { display: block; }
 .bk { position: absolute; top: 0; width: 6.4%; height: 60%; background: #221F33; border-radius: 0 0 4px 4px; box-shadow: inset 0 -5px 0 #403B5C; cursor: pointer; z-index: 1; }
 .wk.lit { background: var(--yellow); box-shadow: inset 0 -6px 0 #C29500; }
 .bk.lit { background: var(--orange); box-shadow: inset 0 -5px 0 #B23600; }
-.kb-card .prog { height: 8px; border-radius: 4px; background: rgba(10,10,60,.12); overflow: hidden; }
+.kb-card .prog { height: 4px; border-radius: 2px; background: rgba(10,10,60,.12); overflow: hidden; }
 .kb-card .prog i { display: block; height: 100%; width: 0; background: var(--ink); }
 .songs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .song-tile { border-radius: var(--r-card); overflow: hidden; background: #fff; box-shadow: var(--drop-card); }
 .song-tile .ph { display: grid; place-items: center; height: 82px; background: #fff; }
 .song-tile .ph img { max-width: 86%; max-height: 74px; object-fit: contain; }
-.song-tile b { display: block; padding: 8px 4px 10px; font: 800 13px/16px var(--font-display); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-tile b { display: block; padding: 8px 4px 10px; font: 600 13px/16px var(--font-display); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hscroll.lyr { padding-bottom: 20px; }
 .card.lyric { width: 190px; padding: 14px; display: flex; flex-direction: column; gap: 4px; }
 .card.lyric b { font: 800 16px var(--font-display); }
 .card.lyric small { font: 700 13px/17px var(--font-body); color: var(--text-muted); }
-.song-head { display: flex; align-items: center; gap: 16px; padding: 18px; border-radius: var(--r-m); background: var(--indigo); color: #fff; box-shadow: 0 5px 0 0 var(--steel), var(--drop-card); }
-.song-head .ph { width: 84px; height: 84px; border-radius: var(--r-m); background: #fff; display: grid; place-items: center; overflow: hidden; flex: none; color: var(--magenta); }
+/* A white card (ch. 13); the piano below is the page's one playful element. */
+.song-head { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: var(--r-card); background: var(--surface); color: var(--ink); box-shadow: var(--drop-card); }
+.song-head .ph { width: 72px; height: 72px; border-radius: var(--r-m); background: var(--sunken); display: grid; place-items: center; overflow: hidden; flex: none; color: var(--magenta); }
 .song-head .ph img { max-width: 90%; max-height: 90%; object-fit: contain; }
 .song-head .ph .ic { width: 40px; height: 40px; }
-.song-head .badge { background: rgba(255,255,255,.18); align-self: flex-start; margin-bottom: 4px; }
-.song-head .mt b { font: 800 24px/28px var(--font-display); }
-.song-head .mt small { color: rgba(255,255,255,.92); font-weight: 800; }
+.song-head .mt b { font: 700 22px/28px var(--font-display); }
 .eq { display: flex; gap: 3px; align-items: flex-end; height: 18px; align-self: center; }
-.eq i { width: 5px; height: 5px; border-radius: 3px; background: var(--yellow); }
+.eq i { width: 4px; height: 5px; border-radius: 2px; background: var(--ink); }
 .eq.on i { animation: eqb 600ms ease-in-out infinite alternate; }
 .eq.on i:nth-child(2n) { animation-delay: -200ms; } .eq.on i:nth-child(3n) { animation-delay: -400ms; }
 @keyframes eqb { to { height: 18px; } }
 .card.karaoke { min-height: 92px; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
-.karaoke .now { font: 800 22px/28px var(--font-display); color: var(--text-muted); }
+.karaoke .now { font: 700 22px/28px var(--font-display); color: var(--text-muted); }
 .karaoke .now .sung { color: var(--ink); }
 .karaoke .now .on { color: var(--magenta); }
 .karaoke .next { font: 700 15px/20px var(--font-body); color: var(--text-muted); }
@@ -415,37 +478,35 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 
 /* Profilim (NR-60) */
 .child-head { display: flex; align-items: center; gap: 14px; }
-.avatar.big { width: 64px; height: 64px; background: #fff; box-shadow: 0 4px 0 0 var(--lip-white); }
+.avatar.big { width: 56px; height: 56px; background: var(--sunken); box-shadow: none; }
 .avatar.big img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; }
 .child-head .mt .p { font-size: 14px; }
-.prof-hero { position: relative; overflow: hidden; border-radius: var(--r-l); background: var(--steel); color: #fff; padding: 20px; box-shadow: var(--drop-hero); display: flex; flex-direction: column; gap: 14px; }
-.prof-hero .top { position: relative; display: flex; gap: 16px; align-items: center; }
-.lvbox { width: 76px; height: 76px; border-radius: var(--r-m); background: #fff; color: var(--steel); display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 5px 0 0 var(--lip-white); flex: none; }
-.lvbox small { font: 800 11px var(--font-display); letter-spacing: 1px; }
-.lvbox b { font: 800 34px/30px var(--font-display); color: var(--steel); }
-.prof-hero .mt b { font: 800 24px/28px var(--font-display); }
-.xpbar { height: 12px; border-radius: 6px; background: rgba(10,10,60,.25); margin: 8px 0 4px; overflow: hidden; }
-.xpbar i { display: block; height: 100%; background: var(--cyan); }
-.prof-hero .mt small { color: #fff; font: 800 13px var(--font-display); }
-.prof-hero .three { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font: 700 14px var(--font-body); }
-.prof-hero .three b { display: block; font: 800 26px/30px var(--font-display); }
-.dark-card { background: var(--indigo); border-radius: var(--r-m); padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 5px 0 0 #07072A, var(--drop-card); }
-.pbar { display: grid; grid-template-columns: 120px 1fr; gap: 8px; align-items: center; }
-.pl { padding: 5px 10px; border-radius: var(--r-s); background: var(--steel); color: #fff; font: 800 14px var(--font-display); }
-.pbar:first-child .pl { background: none; font-size: 17px; }
-.pv { position: relative; height: 24px; border-radius: var(--r-s); background: #0A0A3C; overflow: hidden; }
-.pv i { position: absolute; inset: 0 auto 0 0; background: var(--blue); }
-.pv b { position: relative; padding-left: 10px; font: 800 13px/24px var(--font-display); color: #fff; }
-.dark-card.stats > div { display: grid; grid-template-columns: 1fr 110px; gap: 8px; }
-.dark-card.stats b { border-radius: var(--r-s); background: #0A0A3C; text-align: center; font: 800 18px/28px var(--font-display); }
+/* Profilim in white cards (ch. 13): the slate panels put white bar labels on grey at about 1.4:1. */
+.card.child-head { flex-direction: column; align-items: stretch; gap: 12px; }
+.who-line { display: flex; align-items: center; gap: 14px; }
+.card.prof-level { display: flex; flex-direction: column; gap: 14px; }
+.prof-level .top { display: flex; gap: 14px; align-items: center; }
+.lvbox { width: 56px; height: 56px; border-radius: var(--r-m); background: var(--sunken); color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
+.lvbox small { font: 600 10px/12px var(--font-display); letter-spacing: .06em; color: var(--ink-soft); }
+.lvbox b { font: 700 24px/26px var(--font-display); }
+.prof-level .mt { gap: 6px; }
+.prof-level .mt small { font: 500 12px/16px var(--font-body); color: var(--ink-soft); }
+.prof-level .three { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font: 400 12px/16px var(--font-body); color: var(--ink-soft); padding-top: 12px; border-top: 1px solid var(--hairline); }
+.prof-level .three b { display: block; font: 700 20px/26px var(--font-display); color: var(--ink); }
+.card.plist { padding: 2px 16px; display: flex; flex-direction: column; }
+.prow { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 6px 8px; align-items: center; padding: 12px 0; font: 600 15px/20px var(--font-body); }
+.prow em { font: 500 12px/16px var(--font-body); font-style: normal; color: var(--ink-soft); }
+.prow .slim { grid-column: 1 / -1; }
+.srow { position: relative; display: flex; justify-content: space-between; align-items: center; padding: 13px 0; font: 400 15px/20px var(--font-body); }
+.srow b { font: 700 15px/20px var(--font-display); }
 .card.badges { min-height: 44px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .card.badges:empty { padding: 18px; }
 .bdg { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
-.bdg small { font: 800 11px/13px var(--font-display); }
+.bdg small { font: 600 11px/13px var(--font-display); }
 .card.toggle { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
 .sw { width: 40px; height: 22px; border-radius: 11px; border: 2px solid var(--ink); position: relative; flex: none; background: #fff; }
 .sw i { position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); transition: left 160ms; }
-.sw.on { background: #1C7BE0; border-color: #1C7BE0; }
+.sw.on { background: var(--ink); border-color: var(--ink); }
 .sw.on i { left: 21px; background: #fff; }
 
 /* overlays: Ebeveyn kilidi (ch. 01 §9), Kim oynuyor?, the theme pill */
@@ -454,7 +515,7 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .overlay.scrim { position: absolute; inset: 0; background: var(--scrim); display: grid; place-items: center; padding: calc(30px + var(--safe-top)) 22px 22px; animation: fadeIn 200ms ease both; }
 @keyframes fadeIn { from { opacity: 0; } }
 .gate { position: relative; width: 100%; max-width: 400px; background: var(--clay-cream); border-radius: var(--r-l); padding: 70px 18px 18px; display: flex; flex-direction: column; gap: 12px; align-items: stretch; box-shadow: var(--drop-hero); animation: popIn 380ms var(--ease-back-out); }
-.gate .pop-ribbon { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 16px 8px; border-radius: var(--r-m); background: var(--indigo); color: #fff; font: 800 20px var(--font-display); white-space: nowrap; box-shadow: 0 4px 0 0 #07072A; }
+.gate .pop-ribbon { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 7px 16px; border-radius: var(--r-m); background: var(--ink); color: #fff; font: 700 17px/22px var(--font-display); white-space: nowrap; box-shadow: var(--drop-card); }
 .gate .pop-ribbon .ic { width: 18px; height: 18px; color: var(--yellow); }
 .gate .close.x { position: absolute; right: 12px; top: 12px; }
 .gate .host { align-self: center; display: inline-flex; gap: 6px; align-items: center; padding: 2px 10px; border-radius: var(--r-s); background: var(--surface-alt); font: 800 12px var(--font-display); }
@@ -467,15 +528,13 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .pad .chunky { font-size: 22px; }
 .pad .chunky > .face { padding: 12px 0; }
-.overlay.who-ov { position: absolute; inset: 0; background: #0B0A3E; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 18px; padding: calc(20px + var(--safe-top)) 20px 20px; animation: fadeIn 200ms ease both; }
+.overlay.who-ov { position: absolute; inset: 0; background: var(--canvas); display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 18px; padding: calc(20px + var(--safe-top)) 20px 20px; animation: fadeIn 200ms ease both; }
 .who-ov .close.x { align-self: flex-end; }
-.who-ov .ttl { color: #fff; text-align: center; font: 800 30px var(--font-display); margin-top: -18px; }
-.kids2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.kid { background: var(--clay-cream); border-radius: var(--r-l); padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: 0 5px 0 0 #D9B850; }
-.kid.on { box-shadow: 0 0 0 4px var(--mint), 0 5px 0 4px var(--mint); }
-.kid img { height: 106px; width: auto; }
-.kid b { font: 800 18px var(--font-display); }
-.kid small { font: 700 14px var(--font-body); color: var(--text-muted); }
+.who-ov .ttl { color: var(--ink); font: 700 28px/34px var(--font-display); margin: -12px 2px 0; }
+/* Rows, not 96 px portraits (AccountsOverlay, ch. 13): four children fit a small phone. The picked one is ticked. */
+.kid .avatar { width: 44px; height: 44px; background: var(--sunken); box-shadow: none; }
+.kid .avatar img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; }
+.kid.on .chev { color: var(--ink); }
 .theme-pill { position: absolute; z-index: 25; left: 50%; transform: translateX(-50%); bottom: calc(128px + var(--safe-bottom)); display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border-radius: var(--r-l); background: var(--navy); color: #fff; box-shadow: var(--drop-toast); animation: popIn 380ms var(--ease-back-out); }
 .theme-pill .body { display: flex; align-items: center; gap: 10px; }
 .theme-pill .mt small { color: rgba(255,255,255,.85); font-size: 12px; }
@@ -488,8 +547,8 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 /* ───────────────────────── toast (Controls.axaml:241-250; ch. 01 M-06) */
 .toast-host { position: absolute; z-index: 60; left: 0; right: 0; top: calc(74px + var(--safe-top)); display: flex; justify-content: center; pointer-events: none; }
 .toast { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 16px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--drop-toast); color: var(--ink); animation: toast 1.5s var(--ease-cubic-out) both; text-align: center; }
-.toast b { font: 800 20px/24px var(--font-display); }
-.toast small { font: 800 13px/16px var(--font-display); }
+.toast b { font: 700 17px/22px var(--font-display); }
+.toast small { font: 500 13px/16px var(--font-display); }
 .toast.bad { background: var(--surface); }
 @keyframes toast { 0% { opacity: 0; transform: scale(.9); } 15% { opacity: 1; transform: scale(1); } 80% { opacity: 1; transform: translateY(-8px); } 100% { opacity: 0; transform: translateY(-24px); } }
 @keyframes pop { from { opacity: 0; transform: translateX(-50%) scale(.3); } }
@@ -497,13 +556,18 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 /* ───────────────────────── the game (MusicCardGameView.axaml, f8c3a52): white and ink around one card; the card's
    colour (--pface/--plabel/--ptext from lib/accent.js) on Gönder, Kartı çevir, Devam, Anladım, the caret, the chip
    and the given letter tiles. */
-.game { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; background: var(--canvas); animation: pageIn 320ms var(--ease-cubic-out) both; }
+.game { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; background: var(--canvas); animation: pageIn 320ms var(--ease-cubic-out) both;
+  /* The playful register (ch. 13 §2): every rule inside the game reads these two, so the game is Baloo 2 and Nunito
+     again, card, keyboard, popups and all. Its buttons keep their lips: the flat rule above is scoped off the game. */
+  --font-display: var(--font-play); --font-body: var(--font-play-body); }
 .game[hidden] { display: none; }
-.g-head { position: relative; z-index: 5; display: grid; grid-template-columns: auto 1fr auto; align-items: center; margin: calc(10px + var(--safe-top)) 14px 6px; }
+.g-head { position: relative; z-index: 5; display: grid; grid-template-columns: auto 1fr auto; align-items: center; margin: calc(6px + var(--safe-top)) 12px 6px; }
+/* ch. 13: the ✕ is 44 (popup ✕s stay 48), the Sv chip 32 tall; the title stays 20. */
+.g-head .chunky.close > .face { width: 44px; height: 44px; }
 .g-head .t { margin: 0 0 2px 12px; display: flex; flex-direction: column; min-width: 0; }
 .g-head .t b { font: 800 20px/24px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .g-head .t small { font: 700 13px/15px var(--font-body); color: var(--text-body); }
-.g-head .sv { height: 36px; min-width: 58px; width: auto; padding: 0 10px; background: var(--sunken); color: var(--ink); font-size: 15px; box-shadow: none; }
+.g-head .sv { height: 32px; min-width: 54px; width: auto; padding: 0 10px; background: var(--sunken); color: var(--ink); font-size: 14px; box-shadow: none; }
 /* The bottom margin keeps the safe-area inset on purpose. The dossier's game shots were taken on desktop with no inset, so
    their keyboard and choices end ~25 px lower; on an iPhone the app pads the same way (ShellView TopLevel.AutoSafeAreaPadding). */
 .g-body { position: relative; z-index: 2; flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 12px calc(10px + var(--safe-bottom)); }
@@ -723,3 +787,5 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 .still *, .still *::before, .still *::after { animation: none !important; transition: none !important; }
+/* The child's name is the page's h2 (20), not a row title: .mt b would otherwise set it at 15. */
+:is(.topbar, .page, .overlay-host) .who-line .mt b.h2 { font: 600 20px/26px var(--font-display); }

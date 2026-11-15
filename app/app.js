@@ -1452,7 +1452,23 @@ const flashButton = async el => { if (!el || FAST) return; el.classList.add('dow
 let queue = Promise.resolve();
 function receive(m) {
   if (!m || typeof m !== 'object' || !m.type) return;
-  queue = queue.then(() => run(m)).catch(err => console.warn('[demo]', m, err));
+  queue = queue.then(() => run(m)).catch(err => console.warn('[demo]', m, err))
+    .then(() => (m.id != null ? done(m.id) : null));
+}
+
+/*
+ * The deck's lock (deck/flow.js) waits for this: a message with an id is answered once its presses have run AND the
+ * screen has stopped moving, so the presenter cannot move on while the audience is still watching the phone act.
+ * Answered after a failure too: a step that threw must not leave the deck locked until its watchdog.
+ */
+async function done(id) {
+  if (!(EMBED && parent !== window)) return;
+  // Wait for finite CSS/Web animations (page slide-in, card deal, flips, scroll). Infinite ones (the backdrop's
+  // notes) never finish, so they are left out; 1.5 s caps an animation that runs longer than anything here should.
+  const moving = document.getAnimations().filter(a => a.playState === 'running' && Number.isFinite(a.effect?.getComputedTiming?.().endTime));
+  if (moving.length) await Promise.race([Promise.all(moving.map(a => a.finished.catch(() => {}))), sleep(1500)]);
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  parent.postMessage({ type: 'dm-done', id }, '*');
 }
 addEventListener('message', e => { if (e.source === parent || e.source === window) receive(e.data); });
 try { new BroadcastChannel('doremimi-demo').onmessage = e => receive(e.data); } catch { /* no second-tab mirroring */ }
@@ -1496,7 +1512,9 @@ const ACTS = {
   'gate.open': async m => { await pressDo(`[data-do="${m.row}"]`); },
   /** Types the demo PIN (G-06), or the one given, on the gate's pad. */
   'gate.type': async m => { for (const d of (m.pin ?? DEMO_PIN)) { await pressDo(`[data-pin="${d}"]`); await sleep(160); } },
-  'scroll': m => { const el = m.to ? document.querySelector(m.to) : null; if (el) el.scrollIntoView({ behavior: REDUCED || FAST ? 'auto' : 'smooth', block: 'start' }); else page.scrollTo({ top: m.y ?? 0, behavior: REDUCED ? 'auto' : 'smooth' }); },
+  // A smooth scroll is not a Web Animation, so done() cannot see it: the step waits out its own ~0.6 s here, or the
+  // deck would unlock while the page is still sliding to the section being shown.
+  'scroll': async m => { const el = m.to ? document.querySelector(m.to) : null; if (el) el.scrollIntoView({ behavior: REDUCED || FAST ? 'auto' : 'smooth', block: 'start' }); else page.scrollTo({ top: m.y ?? 0, behavior: REDUCED ? 'auto' : 'smooth' }); await sleep(REDUCED ? 0 : 700); },
   'game.start': m => openGame({ concept: m.deck ?? null, level: m.level ?? null, intro: m.intro }),
   'intro.finish': async () => {
     while (G.intro) { await sleep(800); await pressG('intro-next'); if (G.intro && G.intro.step < 2) { G.intro.step++; renderGame(); } else if (G.intro) closeIntro(); }
@@ -1522,7 +1540,7 @@ const ACTS = {
   'game.flip': async () => { await pressG('flip'); flip(); },
   'game.grade': async m => { await pressG(m.knew ? 'knew' : 'didnot'); grade(!!m.knew); },
   'game.next': async () => { await pressG('next'); next(); },
-  'results.scroll': () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); },
+  'results.scroll': async () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); await sleep(REDUCED ? 0 : 700); },
   /** A sequence with a visible pause between presses (0.8–1.2 s, W-03), for slides that play several steps at once. */
   'seq': async m => { for (const step of m.steps) { await run({ type: 'act', ...step }); await sleep(m.gap ?? 900); } },
 };

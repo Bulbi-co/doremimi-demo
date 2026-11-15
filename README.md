@@ -27,7 +27,7 @@ load, and one failed import leaves the whole deck or phone blank (9 of 12 cold l
 small Node server with no dependencies (Node's backlog is 511).
 
 - Deck: http://localhost:4175
-- The phone on its own: http://localhost:4175/app/
+- The phone on its own (for development; the deck no longer links to it): http://localhost:4175/app/
 
 Opening `index.html` from the file system does not work, because the phone loads its songs and lists with `fetch`. Use
 the server.
@@ -44,6 +44,10 @@ the server.
 | R | resets the phone to this slide's starting state |
 | swipe | next / previous slide on a touch screen |
 
+- **The deck waits for the phone.** While the phone is playing a step, or a slide is still coming in, every control
+  (→ ←, the dots, the step buttons, swipe, Home/End, R) is disabled and the step being played shows a spinner. Presses
+  in that time are ignored, not queued, so nothing can skip what the audience is watching (`deck/flow.js`; the phone
+  answers `dm-done` when it has finished). A phone that never answers frees the deck after 20 s.
 - **Slide 1 resets the phone.** Going back to it starts the demo over.
 - **Sound:** click **Sesi aç** (top right) once before you start. Browsers start audio only after a click.
 - **Typing in the game:** while the game asks for a typed answer, the laptop keyboard types into it. During that time
@@ -85,7 +89,8 @@ the game as `#/oyun?deste=karisik`. The old `#/oyunlar`, `#/daha`, `#/ogren/vide
 ## Checks
 
 ```
-npm test                 # node --test tests/: the game rules, the music, the navigation
+npm test                 # node --test tests/: the game rules, the music, the navigation, the deck's flow lock
+npm run e2e              # with npm start running: mashes → in headless Chrome; the deck must wait for the phone
 npm run mutants          # every mutant must be "caught" and every CONTROL "SURVIVED"
 npm run shots            # with the server running: screenshots into docs/screens/
 ```

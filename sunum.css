@@ -107,8 +107,9 @@ h1.title em { font-style: normal; color: var(--magenta); }
 .open-app svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .open-app b { display: block; font: 800 16px/1 var(--display); }
 .open-app .oa-go { color: var(--muted); }
-/* S-04: the sound pill sits left of Uygulamayı aç; browsers start audio only after a gesture in the deck. */
-.sound-btn { right: 222px; border: 0; cursor: pointer; font: inherit; text-align: left; }
+/* S-04: the sound pill sits top right, where Uygulamayı aç was until the owner took it out (2026-11-15: a
+   presentation, not an app showcase); browsers start audio only after a gesture in the deck. */
+.sound-btn { right: 28px; border: 0; cursor: pointer; font: inherit; text-align: left; }
 .sound-btn.on { box-shadow: inset 0 0 0 2px var(--ok), 0 10px 26px rgba(10, 10, 60, .10); }
 /* the new dock, drawn small on the navigation slide (dossier ch. 11 NR-02) */
 .dockpic { display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; gap: 6px; width: 520px; margin: 40px 0 10px; padding: 12px 10px 14px; border-radius: 16px; background: linear-gradient(#fff, #ECEFFB); box-shadow: 0 5px 0 0 #14107A, 0 14px 26px -6px rgba(10,10,60,.35); }
@@ -152,3 +153,15 @@ h1.title.tour { font-size: 60px; margin: 40px 0 18px; }
 
 @media (hover: none) { .act:hover, .open-app:hover { transform: none; } .nav button { width: 54px; height: 54px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* The flow lock (deck/flow.js): while the phone plays a step or a slide comes in, the controls are disabled and say
+   so, rather than taking a press that would skip what the audience is watching. Dimmed, not hidden: the presenter
+   should see the deck is waiting, not that it broke. */
+.nav button:disabled, .dots button:disabled { opacity: .45; cursor: default; transform: none; }
+.act:disabled { cursor: default; transform: none; }
+.act:disabled:not(.playing) { opacity: .55; }
+.act.playing { outline: 3px solid var(--magenta); outline-offset: 3px; }
+.act.playing .a-go svg { display: none; }
+.act.playing .a-go::after { content: ''; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: act-spin .8s linear infinite; }
+@keyframes act-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .act.playing .a-go::after { animation: none; border-right-color: currentColor; opacity: .6; } }

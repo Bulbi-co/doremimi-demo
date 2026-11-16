@@ -23,8 +23,7 @@ app (`docs/PLAN.md` §3). They are used here for the foundation's own demo; the 
 | `site/youtube/<id>.jpg` (74) | `Doremimi/Assets/Content/site/youtube/` | 1.4 MB | every card of İzle, Keşfet's video strip, the instrument page, the player sheet |
 | `site/instruments/<slug>.jpg` (41) | `Doremimi/Assets/Content/site/instruments/` (48 files; the 7 no code reaches are skipped, ch. 10 AS-13) | 0.7 MB | Çalgılar, the instrument page, Çal's song tiles, the song page |
 | `cards/portrait-*.png` (5) | `Doremimi/Assets/Content/cards/` | 276 KB | `MÜZİK BİLGİN` rows, family badges |
-| `screens/12g-game-yaz-tablet-1366x1024.png` | `docs/dossier/screens/` | 216 KB | the landscape tablet frame of the platforms slide only (no dock in it) |
-| `screens/phone-kesfet-new-nav.png`, `tablet-kesfet-new-nav.png` | this demo: `tools/shoot.mjs` (`phone-01-kesfet`, `tablet-01-kesfet`) | 528 KB | the phone and portrait-tablet frames of the platforms slide; captured from the demo, not the app, because the app at `c33d9ff` still has the old four-tab dock |
+| `screens/phone-kesfet-new-nav.png`, `tablet-kesfet-new-nav.png`, `12g-game-yaz-tablet-1366x1024.png` | this demo's phone: `tools/shoot.mjs <base> <dir> '^frames/'`, copied in by hand after looking | 717 KB | the three still frames of the platforms slide. They are pictures, so no test reads them: re-shoot them whenever the top bar, the dock, Oyna or the game's first card changes (last: 2026-11-16, after ch. 14 §14 took the "Seviye 1" chip off the top bar and the old frames still showed it) |
 
 Also copied, outside `assets/`: the 42 song files (`Doremimi/Assets/Content/music/*.json` → `app/data/songs/`, AS-17)
 and the three site lists (`Doremimi/Assets/Content/site/{videos,lyrics,library}.json` → `app/data/site/`, AS-18),

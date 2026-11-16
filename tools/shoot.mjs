@@ -193,10 +193,13 @@ const CH14 = [
 // The Platformlar slide's three still frames (index.html #frames), at the sizes they were first taken. Until ch. 14 they
 // still showed the OYNA bar, Konu seç and the game's Çevir · Seç · Yaz strip. Copy them into assets/screens/ by hand
 // after looking at them: `node … tools/shoot.mjs <base> <dir> '^frames/'`.
+// Nothing reads a picture: after ch. 14 §14 the slide went on showing the "Seviye 1" chip until someone looked at it
+// (2026-11-16). Re-shoot when the top bar, the dock, Oyna or the game's first card changes.
 const FRAMES = [
-  // &dil=tr: on its own (no &embed, so no fake status bar) the phone opens in the browser's language, and headless
-  // Chrome's is English: the frame came out as "Play · Play now" beside two Turkish ones (2026-11-16).
-  { name: 'frames/phone-kesfet-new-nav', url: app('#/', '&dil=tr'), steps: [], wait: 1500, w: 430, h: 932 },
+  // &embed on all three: it gives the status bar and the safe areas, and it opens in Türkçe (i18n pickLang) where a
+  // bare page takes headless Chrome's English ("Play · Play now" beside two Turkish frames, 2026-11-16). The phone
+  // frame was shot bare until the same day: its title, avatar and dock ran into the frame's rounded corners.
+  { name: 'frames/phone-kesfet-new-nav', url: app('#/', '&embed'), steps: [], wait: 1500, w: 430, h: 932 },
   { name: 'frames/tablet-kesfet-new-nav', url: app('#/', '&embed'), steps: [], wait: 1500, w: 1024, h: 1366 },
   { name: 'frames/12g-game-yaz-tablet-1366x1024', url: app('#/', '&embed'), steps: [msg({ type: 'act', name: 'goto', step: 1 })], wait: 5000, w: 1366, h: 1024 },
 ];

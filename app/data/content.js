@@ -67,17 +67,20 @@ export const SIGN_CARDS = [
  * Four family colours moved in dossier ch. 14 §1: Keşfet now shows the 7 sign categories and the 5 families in one
  * grid, and Telli sat on Bemol's red (CIEDE2000 ΔE 6.7), Vurmalı on Fa's orange (5.6), Yaylı on Porte's purple (8.4) and
  * Nefesli on Natürel's blue (5.8). Sign colours are content and stay; the families took the palette's free colours
- * (signs.json "Ayrıldı": koyu yeşil, magenta-mor, füme kahve, lacivert-mor), each the free colour nearest its old hue.
- * Measured with tests/ch14.test.mjs: every family against every other Keşfet category ≥ 16.4 (Nefesli–Porte), the
- * 7 directory groups ≥ 20.4 (Vurmalı–Diğer). Diyez–Fa is 14.6, a sign pair, content, out of this change's reach.
- * Keep GROUP_COLORS (data/site.js) and the family badges below in step.
+ * (signs.json "Ayrıldı": magenta-mor, lacivert-mor, koyu yeşil, füme kahve). Which family wears which is the app's
+ * (tokens.json at 08f8cd3: Telli magenta, Yaylı indigo, Nefesli green, Vurmalı brown). The demo first gave the same
+ * four to the wrong families (Telli green, Yaylı magenta, Nefesli indigo), so the phone in the deck disagreed with
+ * the phone in the testers' hands; tests/app-parity.test.mjs now reads the app's files and fails on that.
+ * Measured with tests/ch14.test.mjs: every family against every other Keşfet category ≥ 16.4 (Yaylı–Porte), the
+ * 7 directory groups ≥ 20.4 (Vurmalı–Diğer), the same as the app's FamilyColourTests. Diyez–Fa is 14.6, a sign pair,
+ * content, out of this change's reach. Keep GROUP_COLORS (data/site.js) and the family badges below in step.
  */
 export const FAMILIES = {
-  TelliCalgilar: { name: 'Telli Çalgılar', color: '#1E7A4C', art: 'strings', description: 'Parmak ya da mızrap teli titreştirir, ses gövdede büyür. Bağlamanın ezgisinden gitarın akorlarına kadar sahnenin en tanıdık sesleri bu ailede.' },
-  YayliCalgilar: { name: 'Yaylı Çalgılar', color: '#C2379B', art: 'bowed', description: 'Yay tele sürtündükçe ses uzar, büyür, incelir. Bir notayı istediği kadar taşıyabilen bu aile, orkestranın şarkı söyleyen kalbidir.' },
+  TelliCalgilar: { name: 'Telli Çalgılar', color: '#C2379B', art: 'strings', description: 'Parmak ya da mızrap teli titreştirir, ses gövdede büyür. Bağlamanın ezgisinden gitarın akorlarına kadar sahnenin en tanıdık sesleri bu ailede.' },
+  YayliCalgilar: { name: 'Yaylı Çalgılar', color: '#3E3A9E', art: 'bowed', description: 'Yay tele sürtündükçe ses uzar, büyür, incelir. Bir notayı istediği kadar taşıyabilen bu aile, orkestranın şarkı söyleyen kalbidir.' },
   VurmaliCalgilar: { name: 'Vurmalı Çalgılar', color: '#7A5C4E', art: 'percussion', description: 'Tokmak, baget ya da el vurur; ritim doğar. Bu aile oyunun temposunu belirler ve herkesi aynı adımda buluşturur.' },
   TusluCalgilar: { name: 'Tuşlu Çalgılar', color: '#12B5C9', art: 'keys', description: 'Bir tuşa basmak içeride koca bir mekanizmayı uyandırır. Aynı anda birçok nota çalabilen bu aile, akorlarla sahneyi inşa eder.' },
-  NefesliUflemeliCalgilar: { name: 'Nefesli Çalgılar', color: '#3E3A9E', art: 'wind', description: 'Nefes; kamış, ağızlık ya da bir delikle şekillenir ve havada şarkıya dönüşür. Bu aile en hafif fısıltıdan en parlak çağrıya kadar uzanır.' },
+  NefesliUflemeliCalgilar: { name: 'Nefesli Çalgılar', color: '#1E7A4C', art: 'wind', description: 'Nefes; kamış, ağızlık ya da bir delikle şekillenir ve havada şarkıya dönüşür. Bu aile en hafif fısıltıdan en parlak çağrıya kadar uzanır.' },
 };
 
 /*
@@ -187,15 +190,15 @@ export const BADGES = [
   { id: 'diyez-dedektifi', name: 'Diyez Dedektifi', description: 'Diyezi buldun: notayı yarım ses incelten işaret.', artKey: 'sign:diyez', color: '#B8763E', rule: { kind: 'LearnQuestions', count: 1 }, conceptId: 'signcat:diyez', sortOrder: 3 },
   { id: 'baba-sesler', name: 'Baba Sesler Bilgini', description: 'Fa anahtarını tanıdın: kalın, baba sesleri gösterir.', artKey: 'sign:fa-anahtari', color: '#FF8A1E', rule: { kind: 'LearnQuestions', count: 1 }, conceptId: 'signcat:fa', sortOrder: 4 },
   { id: 'sol-anahtari-ustasi', name: 'Sol Anahtarı Ustası', description: 'Sol anahtarını iki farklı günde ilk denemede yazdın.', artKey: 'sign:sol-anahtari', color: '#3DBE5C', rule: { kind: 'MasterQuestions', count: 1 }, conceptId: 'signcat:sol', sortOrder: 5 },
-  { id: 'telli-kasif', name: 'Telli Kaşif', description: 'Telli çalgılarla ilgili 3 soruyu öğrendin.', artKey: 'family:TelliCalgilar', color: '#1E7A4C', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:TelliCalgilar', sortOrder: 6 },
-  { id: 'yayli-sarkici', name: 'Yaylı Şarkıcı', description: 'Yaylı çalgılarla ilgili 3 soruyu öğrendin.', artKey: 'family:YayliCalgilar', color: '#C2379B', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:YayliCalgilar', sortOrder: 7 },
+  { id: 'telli-kasif', name: 'Telli Kaşif', description: 'Telli çalgılarla ilgili 3 soruyu öğrendin.', artKey: 'family:TelliCalgilar', color: '#C2379B', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:TelliCalgilar', sortOrder: 6 },
+  { id: 'yayli-sarkici', name: 'Yaylı Şarkıcı', description: 'Yaylı çalgılarla ilgili 3 soruyu öğrendin.', artKey: 'family:YayliCalgilar', color: '#3E3A9E', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:YayliCalgilar', sortOrder: 7 },
   { id: 'vurmali-ritimci', name: 'Vurmalı Ritimci', description: 'Vurmalı çalgılarla ilgili 3 soruyu öğrendin.', artKey: 'family:VurmaliCalgilar', color: '#7A5C4E', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:VurmaliCalgilar', sortOrder: 8 },
   { id: 'tuslu-mimar', name: 'Tuşlu Mimar', description: 'Tuşlu çalgılarla ilgili 3 soruyu öğrendin.', artKey: 'family:TusluCalgilar', color: '#12B5C9', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:TusluCalgilar', sortOrder: 9 },
-  { id: 'nefes-gezgini', name: 'Nefes Gezgini', description: 'Nefesli çalgılarla ilgili 3 soruyu öğrendin.', artKey: 'family:NefesliUflemeliCalgilar', color: '#3E3A9E', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:NefesliUflemeliCalgilar', sortOrder: 10 },
+  { id: 'nefes-gezgini', name: 'Nefes Gezgini', description: 'Nefesli çalgılarla ilgili 3 soruyu öğrendin.', artKey: 'family:NefesliUflemeliCalgilar', color: '#1E7A4C', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:NefesliUflemeliCalgilar', sortOrder: 10 },
   { id: 'aile-gezgini', name: 'Orkestra Gezgini', description: 'Beş çalgı ailesinin hepsinden bir soru oynadın.', artKey: 'icon:IconCards', color: '#14107A', rule: { kind: 'TryEveryFamily', count: 0 }, sortOrder: 11 },
   { id: 'harf-ustasi', name: 'Harf Ustası', description: 'Bir turda 5 cevabı ilk denemede yazdın.', artKey: 'icon:IconPencil', color: '#2B9BFF', rule: { kind: 'TypedFirstTryInRound', count: 5 }, sortOrder: 12 },
   { id: 'yazma-zirvesi', name: 'Zirve', description: 'Zorlandın ama yine en üste tırmandın!', artKey: 'icon:IconStar', color: '#E0109E', rule: { kind: 'ClimbToLevel', level: 'Yaz' }, sortOrder: 13 },
-  { id: 'cevir-kahramani', name: 'Kart Kahramanı', description: "Kartları çevirip üç kez 'Bildim' dedin", artKey: 'icon:IconReplay', color: '#1C6FAA', rule: { kind: 'FlipKnew', count: 3 }, sortOrder: 14 },
+  { id: 'cevir-kahramani', name: 'Kart Kahramanı', description: 'Kartları çevirip üç kez "Bildim" dedin.', artKey: 'icon:IconReplay', color: '#1C6FAA', rule: { kind: 'FlipKnew', count: 3 }, sortOrder: 14 },
   { id: 'uc-gun-muzik', name: 'Müzik Dostu', description: 'Üç farklı günde müzik oynadın.', artKey: 'icon:IconHeart', color: '#E85BE6', rule: { kind: 'PlayDays', count: 3 }, sortOrder: 15 },
 ];
 

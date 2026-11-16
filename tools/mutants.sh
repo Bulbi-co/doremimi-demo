@@ -16,6 +16,21 @@ mutatef() { # name path-from-root perl-substitution
   rm -rf "$tmp"
 }
 mutate() { mutatef "$1" "app/lib/$2" "$3"; } # name file-in-app/lib perl-substitution
+# One mutant over several files: name, then path perl-substitution pairs. For a drift that is consistent inside the
+# demo (so the demo's own guards agree with it) and only the app's files can expose.
+mutatem() {
+  local name="$1"; shift
+  local tmp; tmp="$(mktemp -d)"
+  cp -R "$root/app" "$root/tests" "$root/deck" "$root/sunum.js" "$root/index.html" "$root/package.json" "$tmp/"; ln -s "$root/assets" "$tmp/assets"
+  local changed=0
+  while [ $# -ge 2 ]; do perl -0pi -e "$2" "$tmp/$1"; cmp -s "$root/$1" "$tmp/$1" || changed=1; shift 2; done
+  if [ $changed = 0 ]; then echo "NOT APPLIED  $name"; rm -rf "$tmp"; return; fi
+  if (cd "$tmp" && node --test tests/ >/dev/null 2>&1); then echo "SURVIVED     $name"; else echo "caught       $name"; fi
+  rm -rf "$tmp"
+}
+# tests/app-parity.test.mjs finds the app relative to its own file, which a temp copy is not; point it at the app here,
+# or every parity mutant would "survive" on a skipped test.
+export DOREMIMI_APP="${DOREMIMI_APP:-$(cd "$root/../../doremimi-superapp" 2>/dev/null && pwd)/}"
 mutate "CONTROL: comment only"                 answers.js 's/Walks UTF-16 code units/Walks the UTF-16 code units/'
 mutate "drop the ı → i fold"                   answers.js "s/'ı': 'i', //"
 mutate "short answers forgive a typo"          answers.js 's/n.length <= 4 \? 0/n.length <= 3 ? 0/'
@@ -75,9 +90,9 @@ mutatef "a sign card has no difficulty"          app/data/content.js "s/\{ diffi
 mutatef "Natürel is Başlangıç"                   app/data/content.js "s/\{ difficulty: 'ileri', id: 'naturel'/{ difficulty: 'baslangic', id: 'naturel'/"
 mutatef "the badge says Yazma Zirvesi again"     app/data/content.js "s/name: 'Zirve'/name: 'Yazma Zirvesi'/"
 mutatef "the intro names a level"                app/data/content.js "s/title: 'Cevabı bul'/title: 'Yaz ya da seç'/"
-mutatef "Nefesli back on Natürel's blue"         app/data/content.js "s/NefesliUflemeliCalgilar: \{ name: 'Nefesli Çalgılar', color: '#3E3A9E'/NefesliUflemeliCalgilar: { name: 'Nefesli Çalgılar', color: '#1E9BFF'/"
+mutatef "Nefesli back on Natürel's blue"         app/data/content.js "s/NefesliUflemeliCalgilar: \{ name: 'Nefesli Çalgılar', color: '#1E7A4C'/NefesliUflemeliCalgilar: { name: 'Nefesli Çalgılar', color: '#1E9BFF'/"
 mutatef "Vurmalı group back on Fa's orange"      app/data/site.js   "s/'Vurmalı': '#7A5C4E'/'Vurmalı': '#FF9A1F'/"
-mutatef "Telli badge keeps the old red"          app/data/content.js "s/color: '#1E7A4C', rule: \{ kind: 'LearnQuestions', count: 3 \}, conceptId: 'family:TelliCalgilar'/color: '#FF5A4E', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:TelliCalgilar'/"
+mutatef "Telli badge keeps the old red"          app/data/content.js "s/color: '#C2379B', rule: \{ kind: 'LearnQuestions', count: 3 \}, conceptId: 'family:TelliCalgilar'/color: '#FF5A4E', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:TelliCalgilar'/"
 mutatef "the newsletter opens İletişim again"    app/data/hub.js    "s/'Bültene abone ol', 'Yeniliklerden ilk sen haberdar ol', \{ push: '#\/bulten' \}/'Bültene abone ol', 'Yeniliklerden ilk sen haberdar ol', { push: '#\/iletisim' }/"
 mutatef "a hub row leads to no page"             app/data/hub.js    "s/push: '#\/destekciler'/push: '#\/sponsorlar'/"
 mutatef "Öğren back to five tabs"                app/lib/nav.js     "s/, \{ key: 'notalar', label: 'Notalar' \}//"
@@ -106,3 +121,11 @@ mutatef "Çal's round not played on Çal"          deck/slides.js     "s/\['Kema
 mutatef "Çal told before Öğren"                  deck/slides.js     "s/id: 'ogren'/id: 'TMP'/; s/id: 'cal'/id: 'ogren'/; s/id: 'TMP'/id: 'cal'/"
 mutatef "the ladder bullet is back"              deck/slides.js     "s/'Ancak üst üste dört zorlanmada kolaylaşır'/\"Zorlandıkça Yaz → Seç → Çevir'e iner, bildikçe çıkar\"/"
 mutatef "the script picks a level"               app/data/script.js "s/origin: 'kesfet', intro: true/origin: 'kesfet', level: 'yaz', intro: true/"
+# the demo against the app's own files (tests/app-parity.test.mjs)
+mutatef "CONTROL: family comment only"           app/data/content.js 's/Which family wears which is the app.s/Which family wears which colour is the app\x27s/'
+mutatem "the families swap colours, consistently" \
+  app/data/content.js "s/(TelliCalgilar: \{ name: 'Telli Çalgılar', color: )'#C2379B'/\$1'#1E7A4C'/; s/(NefesliUflemeliCalgilar: \{ name: 'Nefesli Çalgılar', color: )'#1E7A4C'/\$1'#C2379B'/; s/(family:TelliCalgilar', color: )'#C2379B'/\$1'#1E7A4C'/; s/(family:NefesliUflemeliCalgilar', color: )'#1E7A4C'/\$1'#C2379B'/" \
+  app/data/site.js    "s/'Telli': '#C2379B'/'Telli': '#1E7A4C'/; s/'Nefesli': '#1E7A4C'/'Nefesli': '#C2379B'/"
+mutatef "Bakır nefesli drifts"                   app/data/site.js    "s/'Bakır nefesli': '#F6B53A'/'Bakır nefesli': '#F6B53B'/"
+mutatef "a badge colour drifts"                  app/data/content.js "s/color: '#2B9BFF', rule: \{ kind: 'TypedFirstTryInRound'/color: '#2B9BFE', rule: { kind: 'TypedFirstTryInRound'/"
+mutatef "a badge line drifts"                    app/data/content.js "s/Üç farklı günde müzik oynadın\./Üç ayrı günde müzik oynadın./"

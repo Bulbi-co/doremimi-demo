@@ -172,7 +172,7 @@ test('no level name reaches the screen: the game, its intro, results and badges 
   for (const s of INTRO_STEPS) assert.doesNotMatch(`${s.title} ${s.text}`, LEVEL_WORD, s.title);
   for (const b of BADGES) assert.doesNotMatch(`${b.name} ${b.description}`, LEVEL_WORD, b.id);
   assert.deepEqual(BADGES.filter(b => ['yazma-zirvesi', 'cevir-kahramani'].includes(b.id)).map(b => [b.name, b.description]),
-    [['Zirve', 'Zorlandın ama yine en üste tırmandın!'], ['Kart Kahramanı', "Kartları çevirip üç kez 'Bildim' dedin"]]);
+    [['Zirve', 'Zorlandın ama yine en üste tırmandın!'], ['Kart Kahramanı', 'Kartları çevirip üç kez "Bildim" dedin.']]);
   // Keşfet's OYNA shows the moves, never their names
   assert.doesNotMatch(code(slice('function oynaHtml(', '\n}')), LEVEL_WORD);
   // the verbs a child presses are not level names and stay

@@ -98,6 +98,8 @@ the game as `#/oyun?deste=karisik`. The old `#/oyunlar`, `#/daha`, `#/ogren/vide
 
 ```
 npm test                 # node --test tests/: the game rules, the music, the navigation, the deck's flow lock
+                         # tests/app-parity.test.mjs reads the app's own files (../doremimi-superapp, or DOREMIMI_APP);
+                         # without the app checked out it is skipped, not passed
 npm run e2e              # with npm start running: mashes → in headless Chrome; the deck must wait for the phone
 npm run mutants          # every mutant must be "caught" and every CONTROL "SURVIVED"
 npm run shots            # with the server running: screenshots into docs/screens/
@@ -151,7 +153,8 @@ category's cards turned over; Çal and an instrument's page play at the choices;
 is on screen (no ladder strip, no move toast, results count right answers). Every question has a difficulty; the first
 game asks the child's level, Ayarlar › Zorluk changes it, and rounds deal under it as a ceiling. Öğren has six tabs
 (İşaretler, a photo grid of Çalgılar, Aileler, Bilmeceler, Değerler, Notalar); the logo's page leads everywhere once.
-Four family colours moved so the 12 categories can be told apart (`app/data/content.js` FAMILIES says by how much).
+Four family colours moved so the 12 categories can be told apart, each family wearing the colour the app's tokens.json
+gives it (`app/data/content.js` FAMILIES says by how much; `tests/app-parity.test.mjs` holds it to the app).
 Guards: `tests/ch14.test.mjs`, mutants in `tools/mutants.sh`, and `tools/ch14-e2e.mjs` in headless Chrome.
 
 **Simplified:**

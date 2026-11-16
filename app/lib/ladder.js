@@ -7,8 +7,13 @@ export const Move = Object.freeze({ None: 'None', Up: 'Up', Down: 'Down' });
 export const Signal = Object.freeze({ Struggle: 'Struggle', Neutral: 'Neutral', Right: 'Right' });
 
 export class LevelLadder {
-  constructor(config, start = Level.Yaz) {
+  /**
+   * `fixed` (dossier ch. 14 §3): Öğren's and Çal's rounds keep the level their way in gave them; only Keşfet's round
+   * climbs and falls. The counters still run so a fixed ladder answers the same questions, it just never moves.
+   */
+  constructor(config, start = Level.Yaz, { fixed = false } = {}) {
     this.config = config;
+    this.fixed = fixed;
     this.level = start;
     this.rightInARow = 0;
     this.strugglesInARow = 0;
@@ -37,5 +42,5 @@ export class LevelLadder {
     }
   }
 
-  #move(to, move) { this.level = to; this.rightInARow = 0; this.strugglesInARow = 0; return move; }
+  #move(to, move) { if (this.fixed) { this.rightInARow = 0; this.strugglesInARow = 0; return Move.None; } this.level = to; this.rightInARow = 0; this.strugglesInARow = 0; return move; }
 }

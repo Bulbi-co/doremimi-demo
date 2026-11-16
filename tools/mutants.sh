@@ -5,14 +5,17 @@
 #   bash tools/mutants.sh
 set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
-mutate() { # name file perl-substitution
+# deck/, sunum.js and index.html are copied too: tests/flow.test.mjs reads them, and without them every run failed, the
+# CONTROLs included, so no mutant could survive and the table proved nothing.
+mutatef() { # name path-from-root perl-substitution
   local tmp; tmp="$(mktemp -d)"
-  cp -R "$root/app" "$root/tests" "$root/package.json" "$tmp/"; ln -s "$root/assets" "$tmp/assets"
-  perl -0pi -e "$3" "$tmp/app/lib/$2"
-  if cmp -s "$root/app/lib/$2" "$tmp/app/lib/$2"; then echo "NOT APPLIED  $1"; rm -rf "$tmp"; return; fi
+  cp -R "$root/app" "$root/tests" "$root/deck" "$root/sunum.js" "$root/index.html" "$root/package.json" "$tmp/"; ln -s "$root/assets" "$tmp/assets"
+  perl -0pi -e "$3" "$tmp/$2"
+  if cmp -s "$root/$2" "$tmp/$2"; then echo "NOT APPLIED  $1"; rm -rf "$tmp"; return; fi
   if (cd "$tmp" && node --test tests/ >/dev/null 2>&1); then echo "SURVIVED     $1"; else echo "caught       $1"; fi
   rm -rf "$tmp"
 }
+mutate() { mutatef "$1" "app/lib/$2" "$3"; } # name file-in-app/lib perl-substitution
 mutate "CONTROL: comment only"                 answers.js 's/Walks UTF-16 code units/Walks the UTF-16 code units/'
 mutate "drop the ı → i fold"                   answers.js "s/'ı': 'i', //"
 mutate "short answers forgive a typo"          answers.js 's/n.length <= 4 \? 0/n.length <= 3 ? 0/'
@@ -21,7 +24,7 @@ mutate "prefill rounds instead of ceil"        tiles.js   's/Math.ceil\(letters 
 mutate "consonants before vowels"              tiles.js   "s/\['a', 'e', 'i', 'o', 'u'\].includes/!['a', 'e', 'i', 'o', 'u'].includes/"
 mutate "hash offset dropped"                   tiles.js   's/const offset = \(seed % 1000\) \/ 1000 \* step;/const offset = 0;/'
 mutate "backspace removes green letters"       tiles.js   's/this.tiles\[i\].typed != null\) \{ this.tiles\[i\].typed = null;/this.tiles[i].kind === "Letter") { this.tiles[i].typed = null; this.tiles[i].prefilled = false;/'
-mutate "down after one struggle"               ladder.js  's/>= this.config.downAfterStruggles/>= this.config.downAfterStruggles - 1/'
+mutate "down after three struggles"            ladder.js  's/>= this.config.downAfterStruggles/>= this.config.downAfterStruggles - 1/'
 mutate "comeback one card later"               round.js   's/this.index \+ 1 \+ this.config.comebackAfterCards/this.index + 2 + this.config.comebackAfterCards/'
 mutate "Bildim counts as a struggle"           round.js   's/Resolution.TypedWithTiles, Resolution.Knew\]\.includes\(r\)\) return Signal.Right/Resolution.TypedWithTiles].includes(r)) return Signal.Right/'
 mutate "two stars need more than half"         progress.js 's/accuracy >= cfg.twoAt/accuracy > cfg.twoAt + 0.1/'
@@ -52,3 +55,42 @@ mutate "the hour moves the day"                daily.js   's/Date.UTC\(date.getF
 # (Trying white before ink is not a mutant: no colour reads 4.5:1 under both, so the order cannot be observed.)
 mutate "the old rule: white labels only"       accent.js  's/\[face, label\] = \[c, INK\];/[face, label] = [darken(c), WHITE];/'
 mutate "every accent is deepened"              accent.js  's/if \(contrast\(INK, c\) >= MIN\) \[face, label\] = \[c, INK\];/if (false) [face, label] = [c, INK];/'
+# dossier ch. 14 (tests/ch14.test.mjs, and ch13/rules where they pin the same thing)
+mutatef "CONTROL: modes comment only"            app/lib/modes.js   's/Pure, with the deck and the mastery/Pure, with deck and mastery/'
+mutatef "CONTROL: app.js comment only"           app/app.js         's/nothing else\. The owner: Keşfet/nothing more. The owner: Keşfet/'
+mutatef "CONTROL: content comment only"          app/data/content.js 's/a content default the content team may change/a content default that the content team may change/'
+mutatef "Keşfet starts at Seç"                   app/lib/modes.js   's/\[RoundOrigin.Kesfet\]: \{ start: Level.Yaz/[RoundOrigin.Kesfet]: { start: Level.Sec/'
+mutatef "Öğren's ladder moves"                   app/lib/modes.js   's/\[RoundOrigin.Ogren\]: \{ start: Level.Cevir, fixed: true \}/[RoundOrigin.Ogren]: { start: Level.Cevir, fixed: false }/'
+mutatef "Çal starts at Yaz"                      app/lib/modes.js   's/\[RoundOrigin.Cal\]: \{ start: Level.Sec/[RoundOrigin.Cal]: { start: Level.Yaz/'
+mutatef "a fixed ladder moves anyway"            app/lib/ladder.js  's/if \(this.fixed\) \{/if (false) {/'
+mutatef "down after two struggles again"         app/data/content.js 's/downAfterStruggles: 4/downAfterStruggles: 2/'
+mutatef "the ceiling ignores the level"          app/lib/modes.js   's/if \(L < 0\) return cards.slice\(\);/return cards.slice();/'
+mutatef "the levels below before the own"        app/lib/modes.js   's/d === L \? 0 :/d === L ? 5 :/'
+mutatef "the level above before the ones below"  app/lib/modes.js   's/10 \+ \(d - L\)/0.5 + (d - L)/'
+mutatef "the top-up ignores the ceiling"         app/lib/modes.js   's/cards.push\(\.\.\.byCeiling\(all\(null\)\.filter\(c => kinds.has\(c.kind\) && !cards.includes\(c\)\), level\)/cards.push(...all(null).filter(c => kinds.has(c.kind) \&\& !cards.includes(c))/'
+mutatef "Öğren deals a round, not the category"  app/lib/modes.js   's/: all\(concept\);/: all(concept).slice(0, count);/'
+mutatef "the sheet counts a round's worth"       app/lib/modes.js   's/export const prepCount = \(deck, concept\) => deck.forConcept\(concept\).length;/export const prepCount = (deck, concept) => Math.min(6, deck.forConcept(concept).length);/'
+mutatef "Keşfet shows only the signs"            app/lib/modes.js   "s/!id.startsWith\('instrument:'\) && concepts\[id\]/id.startsWith('signcat:') \&\& concepts[id]/"
+mutatef "a sign card has no difficulty"          app/data/content.js "s/\{ difficulty: 'orta', id: 'bemol'/{ id: 'bemol'/"
+mutatef "Natürel is Başlangıç"                   app/data/content.js "s/\{ difficulty: 'ileri', id: 'naturel'/{ difficulty: 'baslangic', id: 'naturel'/"
+mutatef "the badge says Yazma Zirvesi again"     app/data/content.js "s/name: 'Zirve'/name: 'Yazma Zirvesi'/"
+mutatef "the intro names a level"                app/data/content.js "s/title: 'Cevabı bul'/title: 'Yaz ya da seç'/"
+mutatef "Nefesli back on Natürel's blue"         app/data/content.js "s/NefesliUflemeliCalgilar: \{ name: 'Nefesli Çalgılar', color: '#3E3A9E'/NefesliUflemeliCalgilar: { name: 'Nefesli Çalgılar', color: '#1E9BFF'/"
+mutatef "Vurmalı group back on Fa's orange"      app/data/site.js   "s/'Vurmalı': '#7A5C4E'/'Vurmalı': '#FF9A1F'/"
+mutatef "Telli badge keeps the old red"          app/data/content.js "s/color: '#1E7A4C', rule: \{ kind: 'LearnQuestions', count: 3 \}, conceptId: 'family:TelliCalgilar'/color: '#FF5A4E', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:TelliCalgilar'/"
+mutatef "the newsletter opens İletişim again"    app/data/hub.js    "s/'Bültene abone ol', 'Yeniliklerden ilk sen haberdar ol', \{ push: '#\/bulten' \}/'Bültene abone ol', 'Yeniliklerden ilk sen haberdar ol', { push: '#\/iletisim' }/"
+mutatef "a hub row leads to no page"             app/data/hub.js    "s/push: '#\/destekciler'/push: '#\/sponsorlar'/"
+mutatef "Öğren back to five tabs"                app/lib/nav.js     "s/, \{ key: 'notalar', label: 'Notalar' \}//"
+mutatef "the round starts from the saved ladder" app/app.js         's/ladderFor\(G.origin, LEARNING.ladder\), LEARNING, G.random/ladderFor(G.origin, LEARNING.ladder, profile.ladder), LEARNING, G.random/'
+mutatef "a song's round is Keşfet's"             app/app.js         's/data-play="\$\{P.concept \?\? .karisik.\}" data-origin="cal"/data-play="\${P.concept ?? "karisik"}" data-origin="kesfet"/'
+mutatef "the sign page skips the sheet"          app/app.js         's/data-prep="signcat:\$\{key\}"/data-play="signcat:\${key}" data-origin="kesfet"/'
+mutatef "the level toast is back"                app/app.js         "s/  if \(o.move !== Move.None\) gameBg/  if (o.move !== Move.None) G.line = 'Harika! Yazma seviyesine çıktın';\n  if (o.move !== Move.None) gameBg/"
+mutatef "the results tile shows the level"       app/app.js         's/<small>Yıldız<\/small><b>\$\{R.stars\}\/3<\/b>/<small>Seviye<\/small><b>Yaz<\/b>/'
+mutatef "the first game does not ask the level"  app/app.js         "s/\.\.\.\(profile.difficulty \? \[\] : \['level'\]\)/...([])/"
+mutatef "the chosen level is not saved"          app/app.js         's/profile.difficulty = key; save\(\);/save();/'
+mutatef "Zorluk does not change the level"       app/app.js         's/profile.difficulty = t.dataset.zorluk; save\(\);/save();/'
+mutatef "the round ignores the child's level"    app/app.js         's/level: profile.difficulty, mastery/level: null, mastery/'
+mutatef "Tekrar oyna forgets the way in"         app/app.js         's/openGame\(\{ concept: c, origin: G.origin, intro: false \}\)/openGame({ concept: c, intro: false })/'
+mutatef "the Tekrar row is back"                 app/app.js         's/    \$\{oynaHtml\(\)\}/    \${oynaHtml()}<button class="trow" data-do="review">Tekrar zamanı<\/button>/'
+mutatef "the sheet promises a round's worth"     app/app.js         's/Bu kategoride \$\{n\} kart var/Bu kategoride \${LEARNING.cardsPerRound} kart var/'
+mutatef "OYNA is a bar again"                    app/style.css      's/width: min\(56%, 220px\); aspect-ratio: 1;/width: 100%;/'

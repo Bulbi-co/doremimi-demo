@@ -209,41 +209,52 @@ img { display: block; }
 .dots { display: flex; gap: 6px; justify-content: center; }
 .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--ink); opacity: .3; transition: width 250ms var(--ease-cubic-out), opacity 250ms; }
 .dot.on { width: 26px; opacity: 1; }
-/* OYNA keeps its yellow (HC-52), ink on it at 11.6:1. No wiggle, no shine: it waits to be pressed. */
-/* The content is centred as one group (the button's HorizontalContentAlignment), not spread to the edges. */
-.chunky.oyna > .face { padding: 12px 16px; min-height: 72px; justify-content: center; gap: 12px; border-radius: var(--r-card); }
-/* ~76 tall with its 4 px lip (ch. 13 §4, from ~110 with 8): still the one big yellow action, no longer a slab. */
-.oyna .sym { width: 48px; height: 48px; border-radius: var(--r-m); background: rgba(22,24,44,.12); display: grid; place-items: center; font: 400 32px/1 var(--font-music); padding-bottom: 4px; flex: none; }
-.oyna .words { display: flex; flex-direction: column; align-items: flex-start; }
-.oyna .words b { font: 800 30px/32px var(--font-play); }
-.oyna .words small { font: 600 13px/16px var(--font-body); }
-.oyna .ic { width: 26px; height: 26px; }
-/* Konu seç (ch. 13 §4): the heading on the canvas, every topic in one white card in two groups. The topic's colour is
-   its square and, once played, its bar; nothing else. */
-.topics-sec { display: flex; flex-direction: column; gap: 8px; scroll-margin-top: 8px; }
-.topics-sec .thead { display: flex; align-items: center; justify-content: space-between; margin: 0 2px 0 2px; }
-/* The canvas halo (ch. 13, CanvasContrastTests): a note passing behind a heading on the canvas read at about 1.1:1; an
-   unshifted glow in the canvas's own colour is invisible on the plain canvas and keeps the heading readable over one. */
-.topics-sec .thead :is(h2, .quiet) { text-shadow: 0 0 6px #F7F6FB, 0 0 12px #F7F6FB, 0 0 18px #F7F6FB; }
-.quiet.link { min-height: 44px; padding: 0 2px; font: 600 13px/18px var(--font-body); color: var(--ink); }
-.card.topics { padding: 4px 0; border-radius: var(--r-card); display: flex; flex-direction: column; overflow: hidden; }
-.tgroup { margin: 12px 16px 2px; }
-.trow { position: relative; display: grid; grid-template-columns: 36px 1fr auto 16px; gap: 12px; align-items: center; min-height: 60px; padding: 8px 14px 8px 16px; width: 100%; text-align: left; transition: background 120ms; }
-@media (hover: hover) { .trow:hover { background: rgba(22,24,44,.04); } }
-.trow:active { background: rgba(22,24,44,.08); }
-.tmeta { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-.tmeta em { font: 500 12px/16px var(--font-body); font-style: normal; color: var(--ink-soft); white-space: nowrap; }
-.tmeta .track { width: 44px; height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
-.tmeta .track i { display: block; height: 100%; }
-.kart { width: 36px; height: 36px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; font: 400 22px/1 var(--font-music); padding-bottom: 3px; }
-.kart img { width: 100%; height: 100%; object-fit: cover; }
-.kart:has(img) { padding: 0; }
-.kart.icon { background: var(--sunken); color: var(--ink); padding: 0; align-self: center; }
-.kart.icon .ic { width: 18px; height: 18px; }
-.trow .mt { gap: 2px; }
-.trow .mt b, .trow .mt small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.trow .mt small { font: 600 13px/17px var(--font-body); color: var(--ink-soft); }
-.chev { width: 16px; height: 16px; color: var(--ink-faint); }
+/*
+ * OYNA (dossier ch. 14 §1): a yellow circle, min(56 % of the content width, 220 px), with its lip (the playful
+ * register). Inside, a small white card loops through the game's three moves in 4.5 s: it turns over (0-22 %), four
+ * answer bars come and one lights (30-60 %), letters type into a line (66-95 %). Every state but the resting one
+ * lives only inside a keyframe, so with animations off (reduced motion, ?still) the card simply shows its ♭.
+ */
+.oyna-sec { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: -4px; }
+.chunky.oyna.circle { --lipd: 7px; --sink: 5px; width: min(56%, 220px); aspect-ratio: 1; padding-bottom: var(--lipd); }
+.chunky.oyna.circle > .face { width: 100%; height: 100%; border-radius: 50%; padding: 0; flex-direction: column; gap: 6px; min-height: 0;
+  background: radial-gradient(circle at 50% 38%, #FFE066 0%, var(--yellow) 62%); }
+.oyna .word { font: 800 34px/34px var(--font-play); letter-spacing: .02em; }
+.oyna .mini { position: relative; width: 36%; aspect-ratio: 3 / 4; perspective: 300px; }
+.oyna .flipper { position: absolute; inset: 0; transform-style: preserve-3d; animation: okFlip 4.5s var(--ease-sine-in-out) infinite; }
+.oyna .side { position: absolute; inset: 0; border-radius: 9px; background: #fff; box-shadow: 0 4px 0 0 #D6B000, 0 6px 10px rgba(22,24,44,.18); display: grid; place-items: center; backface-visibility: hidden; color: var(--ink); }
+.oyna .side.front { font-size: 60px; line-height: 1; padding-bottom: 22px; }
+.oyna .side.back { transform: rotateY(180deg); font: 800 34px/1 var(--font-play); background: var(--ink); color: var(--yellow); box-shadow: 0 4px 0 0 #000, 0 6px 10px rgba(22,24,44,.18); }
+.oyna .bars { position: absolute; left: 11%; right: 11%; bottom: 9%; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; opacity: 0; animation: okBars 4.5s ease infinite; }
+.oyna .bars i { height: 9px; border-radius: 3px; background: var(--modifier); }
+.oyna .bars i:nth-child(3) { animation: okPick 4.5s ease infinite; }
+.oyna .typed { position: absolute; left: 8%; right: 8%; bottom: 9%; display: flex; justify-content: center; gap: 1px; padding-bottom: 3px; border-bottom: 2px solid var(--ink); font: 800 13px/1 var(--font-play); color: var(--ink); }
+.oyna .typed { opacity: 0; animation: okLine 4.5s steps(1) infinite; }
+.oyna .typed i { font-style: normal; opacity: 0; animation: okType 4.5s steps(1) infinite; animation-delay: calc(var(--i) * .12s); }
+@keyframes okFlip { 0%, 6% { transform: rotateY(180deg); } 20%, 100% { transform: rotateY(0); } }
+@keyframes okBars { 0%, 28% { opacity: 0; transform: translateY(4px); } 34%, 58% { opacity: 1; transform: none; } 64%, 100% { opacity: 0; } }
+@keyframes okPick { 0%, 44% { background: var(--modifier); } 48%, 100% { background: var(--magenta); } }
+@keyframes okLine { 0%, 65% { opacity: 0; } 66%, 93% { opacity: 1; } 94%, 100% { opacity: 0; } }
+@keyframes okType { 0%, 66% { opacity: 0; } 67%, 92% { opacity: 1; } 93%, 100% { opacity: 0; } }
+.oyna-cap { margin: 4px 0 0; font: 600 15px/20px var(--font-body); color: var(--ink); }
+.quiet.link { min-height: 36px; padding: 0 8px; font: 500 13px/18px var(--font-body); color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px; }
+/* The canvas halo (ch. 13, CanvasContrastTests): a note passing behind text on the canvas read at about 1.1:1; an
+   unshifted glow in the canvas's own colour is invisible on the plain canvas and keeps the line readable over one. */
+:is(.oyna-cap, .quiet.link, .khead) { text-shadow: 0 0 6px #F7F6FB, 0 0 12px #F7F6FB, 0 0 18px #F7F6FB; }
+/* Kategoriler (ch. 14 §1): two columns of toy cards, each in its category's own colour over its edge (Motion.Edge). */
+.kats-sec { display: flex; flex-direction: column; gap: 10px; }
+.khead { margin: 0 2px; }
+.kats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 12px; scroll-margin-top: 8px; }
+.kat { display: block; padding-bottom: 5px; text-align: left; transition: transform 160ms var(--ease-cubic-out); }
+.kface { position: relative; display: flex; flex-direction: column; gap: 2px; min-height: 124px; padding: 12px 12px 12px; border-radius: var(--r-card); background: var(--kf); color: var(--kl); box-shadow: 0 5px 0 0 var(--ke), var(--shadow-tight); overflow: hidden; transition: transform 70ms, box-shadow 70ms; }
+.kat:active .kface { transform: translateY(4px); box-shadow: 0 1px 0 0 var(--ke); }
+.kart-art { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,.92); color: var(--ink); display: grid; place-items: center; overflow: hidden; margin-bottom: 6px; font-size: 42px; line-height: 1; padding-bottom: 10px; }
+.kart-art:has(img) { padding: 0; }
+.kart-art img { width: 100%; height: 100%; object-fit: cover; }
+.kface b { font: 700 15px/19px var(--font-display); }
+.kface small { font: 500 12px/16px var(--font-body); opacity: .9; }
+.ktrack { margin-top: auto; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--kl) 25%, transparent); overflow: hidden; }
+.ktrack i { display: block; height: 100%; background: var(--kl); border-radius: 3px; }
 /* Bugünün kartı (ch. 13 §4): a plain white card. Its colour is the 80×92 art window and a 3 px bar down the left edge. */
 .today { border-radius: var(--r-card); box-shadow: var(--drop-card); scroll-margin-top: 8px; }
 .today .tface { position: relative; overflow: hidden; background: var(--surface); border-radius: var(--r-card); padding: 14px 16px 14px 19px; display: grid; grid-template-columns: 80px 1fr; gap: 14px; }
@@ -330,8 +341,8 @@ img { display: block; }
 .mrow .sq { width: 32px; height: 32px; border-radius: 8px; }
 .mrow .sq .ic { width: 16px; height: 16px; }
 .card.menu.plain .mrow { padding: 12px 16px; }
-:is(.mrow, .lrow, .trow, .srow, .prow) + :is(.mrow, .lrow, .trow, .srow, .prow)::before { content: ''; position: absolute; top: 0; right: 0; left: var(--rule, 60px); height: 1px; background: var(--hairline); }
-.mrow { --rule: 60px; } .card.menu.plain .mrow { --rule: 16px; } .trow { --rule: 64px; } .lrow { --rule: 64px; } .srow, .prow { --rule: 0px; }
+:is(.mrow, .lrow, .srow, .prow) + :is(.mrow, .lrow, .srow, .prow)::before { content: ''; position: absolute; top: 0; right: 0; left: var(--rule, 60px); height: 1px; background: var(--hairline); }
+.mrow { --rule: 60px; } .card.menu.plain .mrow { --rule: 16px; } .lrow { --rule: 64px; } .srow, .prow { --rule: 0px; }
 .due-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 /* One row that scrolls sideways (ch. 13): seven wrapped chips took three lines above the list. No colour on them. */
@@ -340,10 +351,16 @@ img { display: block; }
 /* Chips: flat, sunken; the active one ink with a white label. */
 .chip-btn { flex: none; height: 32px; padding: 0 12px; border-radius: 8px; background: var(--sunken); color: var(--ink); font: 500 13px/32px var(--font-display); white-space: nowrap; }
 .chip-btn.on { background: var(--ink); color: #fff; }
-/* Öğren's İşaretler · Çalgılar: one segmented track, as the game's ladder strip. */
-.segtrack { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: var(--r-m); background: var(--sunken); }
-.seg { height: 34px; border-radius: 8px; font: 600 14px/34px var(--font-display); color: var(--ink-soft); transition: background 160ms; }
-.seg.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(22,24,44,.12); }
+/* Öğren's six tabs (ch. 14 §5): a row that scrolls sideways, the current one ink and underlined. Text tabs, not chips,
+   so they do not read as the same control as Çalgılar's family chips under them. */
+.otabs { display: flex; gap: 2px; overflow-x: auto; margin: -4px -16px 0; padding: 0 12px; border-bottom: 1px solid var(--hairline); scrollbar-width: none; }
+.otabs::-webkit-scrollbar { display: none; }
+/* The row fades out at its right edge, so a cut tab reads as "there is more this way". */
+.otabs { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.otabs.end { -webkit-mask-image: none; mask-image: none; }
+.otab { flex: none; position: relative; height: 40px; padding: 0 10px; font: 600 15px/40px var(--font-display); color: var(--ink-soft); white-space: nowrap; }
+.otab.on { color: var(--ink); }
+.otab.on::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 3px; border-radius: 2px; background: var(--ink); }
 .card.list { padding: 4px 0; overflow: hidden; }
 .lrow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px 8px 16px; width: 100%; text-align: left; }
 .lrow .mt small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -571,14 +588,6 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 /* The bottom margin keeps the safe-area inset on purpose. The dossier's game shots were taken on desktop with no inset, so
    their keyboard and choices end ~25 px lower; on an iPhone the app pads the same way (ShellView TopLevel.AutoSafeAreaPadding). */
 .g-body { position: relative; z-index: 2; flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 12px calc(10px + var(--safe-bottom)); }
-/* The ladder strip (HC-22): a sunken track; the current level a white pill in ink, the others ink soft. */
-.ladder .in { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 3px; background: var(--sunken); border-radius: var(--r-m); padding: 3px; }
-.step { height: 34px; padding: 0 4px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; color: var(--ink-soft); font: 800 14px/18px var(--font-display); transition: background 240ms; }
-.step .ic { width: 13px; height: 13px; }
-.step.lit { background: var(--surface); color: var(--ink); box-shadow: 0 2px 6px -2px rgba(22,24,44,.12); }
-.ldots { display: flex; gap: 4px; margin: 0 8px 0 6px; align-items: center; }
-.ldots i { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--ink-soft); }
-.ldots i.on { background: var(--ink); border-color: var(--ink); }
 .card-area { position: relative; flex: 1; min-height: 0; margin: 8px 0; display: flex; flex-direction: column; justify-content: center; }
 /* The card is a toy card over its own edge (EdgeDepth 10, Motion.Edge); it is dealt in, and then it stays still. */
 .qcard { position: relative; border-radius: var(--r-card); box-shadow: 0 10px 0 0 var(--edge), 0 16px 22px rgba(22,24,44,.18); margin: 2px 0 14px; }
@@ -610,8 +619,6 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .xp-chip .toastb { padding: 8px 22px 10px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--drop-toast); font: 800 32px/36px var(--font-display); }
 .xp-chip small { padding: 3px 12px 5px; border-radius: var(--r-m); background: var(--sunken); color: var(--ink-soft); font: 800 13px/16px var(--font-display); }
 @keyframes xpChip { 0% { opacity: 0; transform: translate(-50%, 0) scale(.9); } 19% { opacity: 1; transform: translate(-50%, 0) scale(1); } 76% { opacity: 1; transform: translate(-50%, -50px); } 100% { opacity: 0; transform: translate(-50%, -56px); } }
-.ladder-line { position: absolute; left: 50%; top: 2px; z-index: 11; transform: translateX(-50%); max-width: calc(100% - 16px); padding: 6px 12px 7px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--drop-toast); font: 800 14px/18px var(--font-display); text-align: center; animation: lineIn 3.2s ease both; pointer-events: none; }
-@keyframes lineIn { 0% { opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
 
 /* the back: the information card (RevealCardView.axaml), white in a 4 px frame of the card's colour */
 .back-scroll { overflow-y: auto; height: 100%; margin: 0 -4px; padding: 2px 4px 6px; scrollbar-width: none; }
@@ -789,3 +796,71 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .still *, .still *::before, .still *::after { animation: none !important; transition: none !important; }
 /* The child's name is the page's h2 (20), not a row title: .mt b would otherwise set it at 15. */
 :is(.topbar, .page, .overlay-host) .who-line .mt b.h2 { font: 600 20px/26px var(--font-display); }
+
+/* ───────────────────────── dossier ch. 14: Öğren's grids, the Hazırlan sheet, Zorluk, the level question, the hub */
+/* Çalgılar: a photo grid; the instrument on white, its name, a slim bar in its group colour. */
+.igrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.itile { display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r-card); box-shadow: var(--drop-card); overflow: hidden; text-align: left; }
+.itile:active { transform: translateY(1px) scale(.99); }
+.iph { height: 116px; background: #fff; padding: 10px 10px 0; overflow: hidden; }
+.iph img { width: 100%; height: 100%; object-fit: contain; }
+.imeta { display: flex; flex-direction: column; padding: 8px 12px 10px; }
+.imeta b { font: 600 15px/20px var(--font-display); }
+.imeta small { font: 400 12px/16px var(--font-body); color: var(--ink-soft); }
+.ibar { height: 4px; margin: 0 12px 10px; border-radius: 2px; }
+/* Aileler: large colour cards over their edge, portrait, name, first sentence, the true count. */
+.fams { display: flex; flex-direction: column; gap: 14px; }
+.fam { display: block; padding-bottom: 5px; text-align: left; }
+.fface { display: grid; grid-template-columns: 88px 1fr; gap: 14px; align-items: center; padding: 14px; border-radius: var(--r-card); background: var(--kf); color: var(--kl); box-shadow: 0 5px 0 0 var(--ke), var(--shadow-tight); transition: transform 70ms, box-shadow 70ms; }
+.fam:active .fface { transform: translateY(4px); box-shadow: 0 1px 0 0 var(--ke); }
+.fart { width: 88px; height: 88px; border-radius: var(--r-m); overflow: hidden; background: rgba(255,255,255,.92); }
+.fart img { width: 100%; height: 100%; object-fit: cover; }
+.ftxt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ftxt b { font: 700 18px/22px var(--font-display); }
+.ftxt small { font: 400 13px/18px var(--font-body); opacity: .92; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ftxt em { font: 600 13px/18px var(--font-body); font-style: normal; }
+/* Değerler */
+.card.values { display: flex; flex-direction: column; gap: 8px; }
+.vpart { position: relative; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px 8px 16px; width: 100%; text-align: left; --rule: 60px; }
+.vpart .sq { width: 32px; height: 32px; border-radius: 8px; background: var(--sunken); color: var(--ink); }
+.vpart .sq .ic { width: 16px; height: 16px; }
+.vpart.wait { cursor: default; }
+.vpart.wait .mt b { color: var(--ink-soft); }
+.vpart + .vpart::before { content: ''; position: absolute; top: 0; right: 0; left: var(--rule); height: 1px; background: var(--hairline); }
+.vpart .badge.soonb, .wait-card .badge.soonb { font-size: 10px; padding: 2px 7px; }
+.card.wait-card { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+/* The Hazırlan sheet: from the bottom, the category's colour on its face, the count large. */
+.overlay.scrim.prep-ov { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; padding: 0; }
+.prep { position: relative; width: 100%; max-width: 520px; margin: 0 auto; background: var(--surface); border-radius: 18px 18px 0 0; padding: 18px 18px calc(18px + var(--safe-bottom)); display: flex; flex-direction: column; gap: 14px; box-shadow: var(--drop-hero); animation: sheetUp 320ms var(--ease-cubic-out) both; }
+@keyframes sheetUp { from { transform: translateY(40%); opacity: 0; } }
+.prep > .x { position: absolute; right: 12px; top: 12px; z-index: 2; }
+.prep-face { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 16px 20px; border-radius: var(--r-card); background: var(--kf); color: var(--kl); box-shadow: 0 6px 0 0 var(--ke); margin-bottom: 6px; }
+.prep-face .part { width: 92px; height: 92px; border-radius: 16px; background: rgba(255,255,255,.94); color: var(--ink); display: grid; place-items: center; overflow: hidden; font-size: 56px; line-height: 1; padding-bottom: 8px; }
+.prep-face .part:has(img) { padding: 0; }
+.prep-face .part img { width: 100%; height: 100%; object-fit: cover; }
+.prep-face .pname { font: 700 22px/28px var(--font-display); text-align: center; }
+.prep-face .pcount { font: 600 15px/20px var(--font-body); padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--kl) 16%, transparent); }
+/* Ayarlar › Zorluk */
+.card.zorluk { display: flex; flex-direction: column; gap: 12px; }
+.ztrack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; border-radius: var(--r-m); background: var(--sunken); }
+.zopt { height: 36px; border-radius: 8px; font: 600 14px/36px var(--font-display); color: var(--ink-soft); }
+.zopt.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(22,24,44,.12); }
+/* The first game's level question: three large choices, the stars only a picture of "harder". */
+.levels { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.chunky.lvl > .face { justify-content: flex-start; gap: 14px; padding: 12px 16px; text-align: left; }
+.lvl .lstars { width: 56px; flex: none; color: #E0A800; font-size: 18px; letter-spacing: -1px; }
+.lvl .ltxt { display: flex; flex-direction: column; }
+.lvl .ltxt b { font: 800 20px/24px var(--font-display); }
+.lvl .ltxt small { font: 700 14px/18px var(--font-body); color: var(--text-body); }
+.intro .pic .see { width: 64px; height: 84px; border-radius: 10px; background: #fff; display: grid; place-items: center; box-shadow: 0 4px 0 0 var(--edge-white); }
+.intro .pic .see .m { font: 400 46px/1 var(--font-music); color: var(--ink); padding-bottom: 8px; }
+.intro .pic .stars3 { display: flex; align-items: flex-end; gap: 6px; color: #E0A800; font-size: 40px; line-height: 1; }
+.intro .pic .stars3 .mid { font-size: 54px; }
+/* The hub (ch. 14 §6): the foundation as the header, Faaliyetler as three cards, then the grouped lists. */
+.hub .tile .hub-hero { box-shadow: var(--drop-card); }
+.group-title.on-canvas { margin: 4px 16px -8px; }
+.acts3 { display: flex; flex-direction: column; gap: 10px; }
+.act-card .card { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; }
+.act-card .sq { width: 40px; height: 40px; border-radius: 10px; background: var(--ink); color: #fff; }
+
+.intro .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

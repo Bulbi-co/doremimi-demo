@@ -12,6 +12,14 @@ export const TABS = [
   { key: 'cal', hash: '#/cal', label: 'Çal', icon: 'IconNote', title: 'Çal' },
 ];
 export const TAB_OF = { '': 'kesfet', ogren: 'ogren', doremimi: 'doremimi', izle: 'izle', cal: 'cal' };
+/**
+ * Öğren's tabs (dossier ch. 14 §5), each a root at #/ogren/<key>. Six, so they scroll sideways: the two-button
+ * segmented track they replace does not fit more than two.
+ */
+export const OGREN_TABS = [
+  { key: 'isaretler', label: 'İşaretler' }, { key: 'calgilar', label: 'Çalgılar' }, { key: 'aileler', label: 'Aileler' },
+  { key: 'bilmeceler', label: 'Bilmeceler' }, { key: 'degerler', label: 'Değerler' }, { key: 'notalar', label: 'Notalar' },
+];
 // Old routes stay as redirects so a stale deep link (a bookmark, an old slide) still lands (NR-91). The game's own
 // page went in the clean-up (superapp f8c3a52): its topics are Keşfet's Konu seç now, so both of its links land there.
 export const REDIRECTS = { oyunlar: '#/', 'oyun-merkezi': '#/', daha: '#/doremimi', 'ogren/videolar': '#/izle', 'ogren/kitaplik': '#/cal', 'kim-oynuyor': '#/profil' };
@@ -23,7 +31,9 @@ export const REDIRECTS = { oyunlar: '#/', 'oyun-merkezi': '#/', daha: '#/doremim
  */
 export const PAGE_HOME = { calgi: 'ogren', isaret: 'ogren', 'isaret-kategori': 'ogren', sarki: 'cal', sozler: 'cal', melodim: 'cal',
   'doremimi-nedir': 'doremimi', kitaplar: 'doremimi', 'dore-ve-mimi': 'doremimi', vakif: 'doremimi', ekip: 'doremimi',
-  burslar: 'doremimi', gonullu: 'doremimi', iletisim: 'doremimi', yardim: 'doremimi', metin: 'doremimi', hakkinda: 'doremimi', tasarim: 'doremimi' };
+  burslar: 'doremimi', gonullu: 'doremimi', iletisim: 'doremimi', yardim: 'doremimi', metin: 'doremimi', hakkinda: 'doremimi', tasarim: 'doremimi',
+  // the hub's own pages since dossier ch. 14 §6
+  etkinlikler: 'doremimi', bulten: 'doremimi', destek: 'doremimi', destekciler: 'doremimi', yasal: 'doremimi' };
 
 export function parse(hash) {
   const [path, query] = (hash.replace(/^#\/?/, '') || '').split('?');

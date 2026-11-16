@@ -123,8 +123,11 @@ export const CONTACTS = [['Genel Yetkili', 'Funda Özyurt', 'doremimitv@gmail.co
 /** InMemoryContentCatalog.cs:72-110, the difficulty of each instrument question (Difficulty.DisplayName). */
 export const DIFFICULTY = { 'guitar-family': 'Başlangıç Seviyesi', 'guitar-strings': 'Başlangıç Seviyesi', 'baglama-cura': 'Başlangıç Seviyesi', 'guitar-frets': 'Orta Seviye', 'baglama-technique': 'Orta Seviye', 'guitar-composer': 'İleri Seviye', 'violin-family': 'Başlangıç Seviyesi', 'violin-strings': 'Başlangıç Seviyesi', 'cello-posture': 'Başlangıç Seviyesi', 'bow-rosin': 'Orta Seviye', 'pizzicato': 'Orta Seviye', 'cello-role': 'Orta Seviye', 'violin-history': 'İleri Seviye', 'davul-tokmak': 'Başlangıç Seviyesi', 'davul-zurna': 'Başlangıç Seviyesi', 'tempo': 'Başlangıç Seviyesi', 'marimba-bars': 'Orta Seviye', 'marimba-rhythm': 'Orta Seviye', 'davul-culture': 'İleri Seviye', 'piano-colors': 'Başlangıç Seviyesi', 'piano-keys': 'Başlangıç Seviyesi', 'accordion-bellows': 'Başlangıç Seviyesi', 'piano-count': 'Orta Seviye', 'piano-pedal': 'Orta Seviye', 'accordion-compare': 'İleri Seviye', 'flute-air': 'Başlangıç Seviyesi', 'clarinet-reed': 'Başlangıç Seviyesi', 'ney-identity': 'Orta Seviye', 'clarinet-care': 'Orta Seviye', 'flute-woodwind': 'İleri Seviye', 'flute-notation': 'İleri Seviye' };
 
-/** ShellViewModel.cs:22-31 (GroupAccent): the letter square of each Çalgılar row. */
-export const GROUP_COLORS = { 'Yaylı': '#9B6BDB', 'Telli': '#FF5A4E', 'Tuşlu': '#12B5C9', 'Nefesli': '#1E9BFF', 'Bakır nefesli': '#F6B53A', 'Vurmalı': '#FF9A1F', 'Diğer': '#6B6E85' };
+/**
+ * ShellViewModel.cs:22-31 (GroupAccent): each instrument's group colour. Four of them moved in dossier ch. 14 §1
+ * (data/content.js FAMILIES says why and what was measured).
+ */
+export const GROUP_COLORS = { 'Yaylı': '#C2379B', 'Telli': '#1E7A4C', 'Tuşlu': '#12B5C9', 'Nefesli': '#3E3A9E', 'Bakır nefesli': '#F6B53A', 'Vurmalı': '#7A5C4E', 'Diğer': '#6B6E85' };
 
 /*
  * Doremimi/Accounts/LegalTexts.cs. Three sentences name the old paths through Daha fazla; with the navigation

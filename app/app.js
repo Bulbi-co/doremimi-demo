@@ -4,15 +4,17 @@
  * Every on-screen string is copied from the source line named next to it. Copy written for the demo itself (the
  * "yakında" notes) is marked PROPOSED.
  */
-import { QUESTIONS, LEARNING, SUNUM_DECK, BADGES, BANNERS, INTRO_STEPS, CONCEPTS, SIGN_CARDS, SIGN_CATEGORIES, INSTRUMENTS, FAMILIES } from './data/content.js';
+import { QUESTIONS, LEARNING, SUNUM_DECK, BADGES, BANNERS, INTRO_STEPS, LEVEL_QUESTION, CONCEPTS, SIGN_CARDS, SIGN_CATEGORIES, INSTRUMENTS, FAMILIES } from './data/content.js';
 import { QuestionDeck, LearningRound, Stage, Resolution, isRight } from './lib/round.js';
-import { LevelLadder, Level, Move } from './lib/ladder.js';
+import { Move } from './lib/ladder.js';
+import { RoundOrigin, ORIGIN_OF_LEVEL, ladderFor, rulesOf, dealRound, prepCount, kesfetCategories, DIFFICULTIES } from './lib/modes.js';
+import { HUB, HUB_HEADER } from './data/hub.js';
 import { Mastery, addXp, toNextLevel, stars as starsOf, pickConcepts, newlyEarned, today } from './lib/progress.js';
 import { seeded, fromClock } from './lib/rng.js';
 import { Backdrop } from './lib/backdrop.js';
 import { pageAccentOf } from './lib/canvas.js';
 import { icon } from './lib/icons.js';
-import { TABS, resolve } from './lib/nav.js';
+import { TABS, OGREN_TABS, resolve } from './lib/nav.js';
 import { pick as pickDaily } from './lib/daily.js';
 // mixHex: the instrument page's header has called it since 1ff003b without the import, so every instrument page threw.
 import { accentSet, INK_SET, darken, edge as edgeOf, mix as mixHex } from './lib/accent.js';
@@ -39,7 +41,9 @@ const store = {
   wipe() { try { localStorage.removeItem(KEY); } catch { /* nothing to wipe */ } },
 };
 if (params.has('reset')) store.wipe();
-const freshProfile = () => ({ xp: 0, level: 1, mastery: {}, badges: [], ladder: 'Yaz', seenIntro: false, keyboard: 'auto', days: [],
+// `ladder` is still saved after every card but no longer read for a round's start (dossier ch. 14 §3: Keşfet starts at
+// Yaz every time). `difficulty` is the child's Zorluk, null until the first game asks it (§4).
+const freshProfile = () => ({ xp: 0, level: 1, mastery: {}, badges: [], ladder: 'Yaz', difficulty: null, seenIntro: false, keyboard: 'auto', days: [],
   child: null, melodim: [], seen: [], rounds: 0, best: 0, answered: 0, stars: 0,
   settings: { motion: false, buttons: true, music: true, notify: false } });   // Ayarlar's four switches (ch. 03 §13)
 let profile = Object.assign(freshProfile(), store.load()?.profile);
@@ -60,7 +64,6 @@ const edge = h => edgeOf(h);
 const toneVars = t => `--pface:${t.face};--plabel:${t.label};--pedge:${t.edge};--ptext:${t.text}`;
 const upperTr = s => s.toLocaleUpperCase('tr');
 const levelName = l => ['Cevir', 'Sec', 'Yaz'][l];
-const levelLabel = l => ['Çevir', 'Seç', 'Yaz'][l];
 const moodOf = l => ['cevir', 'sec', 'yaz'][l];
 
 const app = $('#app'), topbar = $('#topbar'), page = $('#page'), dock = $('#dock'), gameEl = $('#game'), toastHost = $('#toast');
@@ -105,7 +108,9 @@ function navigate() {
   if (r.kind === 'game') {
     // The game is a layer over the page it was opened from (A-02), so the hash goes back to that page.
     history.replaceState(null, '', stack.at(-1) ?? TABS.find(t => t.key === route.tab).hash);
-    openGame({ concept: r.query.get('deste'), level: r.query.get('seviye'), intro: r.query.has('tanitim') ? true : undefined });
+    // ?yer=kesfet|ogren|cal names the way in; the older ?seviye= names it by its level (lib/modes.js ORIGIN_OF_LEVEL).
+    const yer = Object.values(RoundOrigin).includes(r.query.get('yer')) ? r.query.get('yer') : null;
+    openGame({ concept: r.query.get('deste'), origin: yer, level: r.query.get('seviye'), intro: r.query.has('tanitim') ? true : undefined });
     return;
   }
   if (r.kind === 'redirect') { history.replaceState(null, '', r.to); return navigate(); }
@@ -125,7 +130,7 @@ function openIn(tabKey, hash) { leavePage(); route = { tab: tabKey, page: null }
 function back() {
   if (gate.open) return closeGate();
   if (overlay.kind) return closeOverlay();
-  if (!gameEl.hidden) { if (G.levelUp) { G.levelUp = null; renderGame(); } else if (G.intro) closeIntro(); else exitGame(); return; }
+  if (!gameEl.hidden) { if (G.levelUp) { G.levelUp = null; renderGame(); } else if (G.intro && profile.difficulty) closeIntro(); else exitGame(); return; }
   if (stack.length) { stack.pop(); location.hash = stack.at(-1) ?? TABS.find(t => t.key === route.tab).hash; return; }
   if (route.tab !== 'kesfet') location.hash = '#/';   // back on any other root, the logo's included, goes to Keşfet (OC-24)
 }
@@ -197,14 +202,11 @@ const videoCard = (v, wide = false) => `<button class="tile video${wide ? ' grid
   <div class="meta"><b>${esc(v.title)}</b>${wide ? '' : `<small>${esc(KIND_NAMES[v.kind] ?? '')}</small>`}</div></div></button>`;
 const KIND_NAMES = { riddle: 'Bilmece videoları', clip: 'Klipler', interview: 'Dore soruyor, müzisyen cevaplıyor', karaoke: 'Karaoke', intro: 'Jenerikler' };
 
-// ───────────────────────── Keşfet (superapp f8c3a52, ShellView.axaml:20-170): the banner, OYNA, Konu seç and
-// Bugünün kartı, nothing else. The owner asked for it "really simpler"; Doremimi nedir?, the three pillars, the quick
-// tiles and the video row went, and so did the banner's badge and orbs.
+// ───────────────────────── Keşfet = Oyna (dossier ch. 14 §1): the banner, OYNA, the categories and Bugünün kartı,
+// nothing else. The owner: Keşfet "still doesn't feel like it includes the main game", so the whole tab is the game's.
 let banner = 0, carouselTimer = null;
 // Banner targets after the revision (NR-10): 3 opens İzle, 5 the hub's Kitaplar ve notalar page.
 const BANNER_GO = ['game', '#/dore-ve-mimi', '#/izle', '#/vakif', '#/kitaplar'];
-/** Cards the child has met that are due again: the Tekrar zamanı row, shown only when there are some (NR-80). */
-const dueCards = () => deck.all.filter(q => mastery.of(q.id) && mastery.isDue(q.id));
 
 function bannerHtml(b, cls = '') {
   return `<button class="tile banner ${cls}" data-banner="${BANNERS.indexOf(b)}" style="--accent:${readable(b.accent)}">
@@ -213,29 +215,53 @@ function bannerHtml(b, cls = '') {
 }
 
 /*
- * Konu seç's rows: every concept of the deck but the single instruments, in the deck's order (HomePageViewModel.Refresh),
- * grouped İŞARETLER then ÇALGILAR (SignTopics / FamilyTopics, ch. 13 §4). A row says only "N kart" until its topic has
- * been played; then "N kart · %X" and a bar in the topic's colour (ConceptTileViewModel.HasProgress). The old empty bar
- * and "henüz oynamadın" on every row were most of what made Keşfet look busy.
+ * OYNA as a circle. The little card inside loops through the three ways the game can ask (it turns over; four answer
+ * bars come and one lights; letters type into a line) without naming any of them: as names they read as three games
+ * (ch. 14 §2). One loop is 4.5 s. Under reduced motion every animation stops and what is left is the card with its ♭,
+ * which is why the ♭ face is the card's resting side and the other states only exist inside the keyframes.
  */
-function topicRow(id) {
+function oynaHtml() {
+  const letters = [...'BEMOL'].map((c, i) => `<i style="--i:${i}">${c}</i>`).join('');
+  return `<div class="oyna-sec">
+    <button class="chunky oyna circle" data-do="play" data-origin="kesfet" aria-label="Oyna"><span class="face">
+      <span class="mini" aria-hidden="true"><span class="flipper"><span class="side front music">♭</span><span class="side back">?</span></span>
+        <span class="bars"><i></i><i></i><i></i><i></i></span><span class="typed">${letters}</span></span>
+      <b class="word">OYNA</b></span></button>
+    <p class="oyna-cap">Kartı gör, cevabı yaz!</p>
+    <button class="quiet link howto" data-do="howto">Nasıl oynanır?</button>
+  </div>`;
+}
+
+/*
+ * One category card (ch. 14 §1): a toy card in the category's own colour, its symbol or family portrait, its name and
+ * "N kart"; a bar only once the category has been played. Signs and families sit in one grid with no İşaretler /
+ * Çalgılar split: to the child they are all categories of the one game.
+ */
+function categoryCard(id) {
   const info = CONCEPTS[id];
-  if (!info) return '';
   const t = accentSet(info.color);
   const cards = deck.forConcept(id).length;
   const m = Math.min(1, Math.max(0, mastery.conceptMastery(id, deck)));
   const played = deck.forConcept(id).some(q => mastery.of(q.id));
   const art = info.family ? `<img src="../assets/cards/portrait-${FAMILIES[info.family].art}.png" alt="">` : `<span class="music">${esc(info.symbol)}</span>`;
-  return `<button class="trow" data-play="${id}" aria-label="${esc(info.name)}"><span class="kart" style="background:${t.face};color:${t.label}">${art}</span>
-    <span class="mt"><b>${esc(info.name)}</b><small>${esc(info.fact)}</small></span>
-    <span class="tmeta"><em>${cards} kart${played ? ` · %${Math.round(m * 100)}` : ''}</em>${played ? `<span class="track"><i style="width:${Math.round(m * 100)}%;background:${t.text}"></i></span>` : ''}</span>
-    ${icon('IconChevronRight', 'chev')}</button>`;
+  return `<button class="kat" data-play="${id}" data-origin="kesfet" aria-label="${esc(info.name)}, ${cards} kart" style="--kf:${t.face};--kl:${t.label};--ke:${t.edge}">
+    <span class="kface"><span class="kart-art">${art}</span><b>${esc(info.name)}</b><small>${cards} kart${played ? ` · %${Math.round(m * 100)}` : ''}</small>
+    ${played ? `<span class="ktrack"><i style="width:${Math.round(m * 100)}%"></i></span>` : ''}</span></button>`;
 }
-function topicRows() {
-  const ids = deck.concepts.filter(id => !id.startsWith('instrument:') && CONCEPTS[id]);
-  const signs = ids.filter(id => !CONCEPTS[id].family), families = ids.filter(id => CONCEPTS[id].family);
-  const part = (title, list) => list.length ? `<span class="eyebrow tgroup">${title}</span>${list.map(topicRow).join('')}` : '';
-  return part('İŞARETLER', signs) + part('ÇALGILAR', families);
+
+// No "Tekrar zamanı" row any more (ch. 14 §1): every round deals the cards that are due first (QuestionDeck.Deal), so
+// the review happens inside OYNA. `.topics` stays on the grid because the deck's Keşfet slide scrolls to it.
+function home() {
+  return `<div class="stack home">
+    <div class="carousel">
+      <div class="banner-slot" id="bslot">${bannerHtml(BANNERS[banner])}</div>
+      <div class="dots">${BANNERS.map((b, i) => `<span class="dot${i === banner ? ' on' : ''}"></span>`).join('')}</div>
+    </div>
+    ${oynaHtml()}
+    <div class="kats-sec"><h2 class="h2 khead">Kategoriler</h2>
+      <div class="kats topics">${kesfetCategories(deck, CONCEPTS).map(categoryCard).join('')}</div></div>
+    ${todayHtml()}
+  </div>`;
 }
 
 /*
@@ -286,26 +312,6 @@ function tapToday() {
   if (c.go) push(c.go);
 }
 
-function home() {
-  const due = dueCards();
-  return `<div class="stack home">
-    <div class="carousel">
-      <div class="banner-slot" id="bslot">${bannerHtml(BANNERS[banner])}</div>
-      <div class="dots">${BANNERS.map((b, i) => `<span class="dot${i === banner ? ' on' : ''}"></span>`).join('')}</div>
-    </div>
-    <button class="chunky oyna" data-do="play"><span class="face">
-      <span class="sym">♭</span><span class="words"><b>OYNA</b><small>Kartı gör, cevabı yaz!</small></span>${icon('IconPlay')}</span></button>
-    <div class="topics-sec">
-      <div class="thead"><h2 class="h2">Konu seç</h2><button class="quiet link" data-do="howto">Nasıl oynanır?</button></div>
-      <div class="card topics">
-        ${due.length ? `<button class="trow" data-do="review"><span class="kart icon">${icon('IconReplay')}</span><span class="mt"><b>Tekrar zamanı</b><small>${due.length} kart seni bekliyor</small></span><span class="tmeta"></span>${icon('IconChevronRight', 'chev')}</button>` : ''}
-        ${topicRows()}
-      </div>
-    </div>
-    ${todayHtml()}
-  </div>`;
-}
-
 /** The carousel rotates every 5 s and slides 380 ms (ShellViewModel.cs:318-320); it cannot be swiped (ch. 01 X-07). */
 function setBanner(i) {
   const slot = $('#bslot');
@@ -324,33 +330,70 @@ function setBanner(i) {
 function startCarousel() { stopCarousel(); if (!STILL) carouselTimer = setInterval(() => setBanner(banner + 1), 5000); }
 function stopCarousel() { clearInterval(carouselTimer); carouselTimer = null; }
 
-// ───────────────────────── Öğren (NR-20): two segments, İşaretler · Çalgılar (OC-07)
+// ───────────────────────── Öğren (dossier ch. 14 §5): six tabs, İşaretler · Çalgılar · Aileler · Bilmeceler ·
+// Değerler · Notalar. Every way from here into the game goes through the Hazırlan sheet and plays the cards turned over.
 const flipped = new Set();
 function learn() {
-  const seg = route.segment === 'calgilar' ? 'calgilar' : 'isaretler';
-  // One segmented track, as the game's ladder strip (ch. 13 §3): two ink and white buttons side by side read as two actions.
-  const segs = `<div class="segtrack">${[['isaretler', 'İşaretler'], ['calgilar', 'Çalgılar']].map(([k, t]) => `<button class="seg${seg === k ? ' on' : ''}" data-go="#/ogren/${k}" aria-pressed="${seg === k}">${t}</button>`).join('')}</div>`;
-  if (seg === 'isaretler') {
-    return `<div class="stack">${segs}${note('Her müzik işaretinin bir rengi var. Bir renge dokun, kart dönsün: anlamını oku, sonra kartları aç.')}
-      <div class="signs">${SIGN_CATEGORIES.map(c => signTile(c)).join('')}</div></div>`;
-  }
-  const filter = route.query?.get('aile') ?? '';
-  const list = DIRECTORY.filter(d => !filter || slug(d.group) === filter);
-  return `<div class="stack">${segs}${note('41 çalgı, ailelerine göre. Birine dokun; hikâyesini, sorularını ve video bilmecesini aç.')}
-    ${chips([['', 'Tümü'], ...GROUPS.map(g => [slug(g), g])], filter, 'data-aile', ' scroll')}
-    <div class="card list">${list.map(d => `<button class="lrow" data-push="#/calgi/${slug(d.name)}">
-      <span class="sq letter" style="background:${readable(GROUP_COLORS[d.group])}">${esc(d.name[0])}</span>
-      <span class="mt"><b>${esc(d.name)}</b><small>${esc(d.group)}</small></span>
-      ${d.riddle ? '<span class="badge xpb">+3 XP BİLMECE</span>' : ''}${icon('IconChevronRight', 'chev')}</button>`).join('')}</div></div>`;
+  const seg = OGREN_TABS.some(t => t.key === route.segment) ? route.segment : 'isaretler';
+  const tabs = `<div class="otabs" role="tablist">${OGREN_TABS.map(t => `<button class="otab${seg === t.key ? ' on' : ''}" role="tab" data-go="#/ogren/${t.key}" aria-selected="${seg === t.key}">${t.label}</button>`).join('')}</div>`;
+  return `<div class="stack learn">${tabs}${LEARN_TABS[seg]()}</div>`;
+}
+const LEARN_TABS = {
+  isaretler: () => `${note('Her müzik işaretinin bir rengi var. Bir renge dokun, kart dönsün: anlamını oku, sonra kartları aç.')}
+    <div class="signs">${SIGN_CATEGORIES.map(c => signTile(c)).join('')}</div>`,
+  // A grid of photos (ch. 14 §5): the 41-row list was the screen testers called hardest to use. The bar under each
+  // name is the instrument's group colour, the only colour on the tile, so the photo stays the thing that is read.
+  calgilar: () => {
+    const filter = route.query?.get('aile') ?? '';
+    const list = DIRECTORY.filter(d => !filter || slug(d.group) === filter);
+    return `${chips([['', 'Tümü'], ...GROUPS.map(g => [slug(g), g])], filter, 'data-aile', ' scroll')}
+      <div class="igrid">${list.map(d => `<button class="itile" data-push="#/calgi/${slug(d.name)}"><span class="iph"><img src="${photoOf(d.name)}" alt="" loading="lazy"></span>
+        <span class="imeta"><b>${esc(d.name)}</b><small>${esc(d.group)}</small></span><span class="ibar" style="background:${GROUP_COLORS[d.group]}"></span></button>`).join('')}</div>`;
+  },
+  aileler: () => `${note('Her çalgı ailesinin kendi kartları var. Bir aileye dokun, kartlarını çevirip oku.')}
+    <div class="fams">${Object.keys(FAMILIES).map(k => familyCard(k)).join('')}</div>`,
+  bilmeceler: () => `${note('Dore soruyor: bu hangi çalgı? Videoyu izle, çalgıyı sesinden bul.')}
+    <div class="vgrid">${VIDEOS.filter(v => v.kind === 'riddle').map(v => videoCard(v, true)).join('')}</div>`,
+  degerler: () => valuesTab(),
+  notalar: () => {
+    const lib = t => LIBRARY.filter(l => t.includes(l.title)).map(l => menuRow('IconBook', l.color, l.title, l.subtitle, 'data-ext="doremimi.org"'));
+    return `${group('Kitaplar ve notalar', lib(['İlkokul kitapları', 'Ortaokul kitapları', 'Notalar']))}
+      ${group('Metodlar', lib(['Metodlar']))}
+      ${group('Şarkı sözleri', LYRICS.map(l => menuRow('IconMic', '', l.instrument, l.lines[0], `data-push="#/sozler/${slug(l.instrument)}"`)))}`;
+  },
+};
+
+/** An Aileler card: the family's portrait on its colour, its name, its first sentence and its true card count. */
+function familyCard(key) {
+  const f = FAMILIES[key], t = accentSet(f.color), id = 'family:' + key;
+  return `<button class="fam" data-prep="${id}" style="--kf:${t.face};--kl:${t.label};--ke:${t.edge}"><span class="fface">
+    <span class="fart"><img src="../assets/cards/portrait-${f.art}.png" alt=""></span>
+    <span class="ftxt"><b>${esc(f.name)}</b><small>${esc(CONCEPTS[id].fact)}</small><em>${prepCount(deck, id)} kart</em></span></span></button>`;
+}
+
+/*
+ * Değerler (ch. 14 §5): the foundation's Dore Mimi Müzikle Değerler Eğitimi. What it is comes from the site's own
+ * vision text; the parts the app already has open them, and the part it does not have yet says so ("Hazırlanıyor"),
+ * rather than a page that pretends.
+ */
+function valuesTab() {
+  const part = (ic, title, line, attrs) => `<button class="vpart${attrs ? '' : ' wait'}" ${attrs ?? 'disabled'}><span class="sq">${icon(ic)}</span>
+    <span class="mt"><b>${esc(title)}</b><small>${esc(line)}</small></span>${attrs ? icon('IconChevronRight', 'chev') : '<span class="badge soonb">HAZIRLANIYOR</span>'}</button>`;
+  return `<div class="card values"><span class="eyebrow">Dore Mimi Müzikle Değerler Eğitimi</span><p class="p ink">${esc(VISION)}</p></div>
+    ${ribbon('Parçaları', ' small')}
+    <div class="card menu">${[
+      part('IconNote', 'Şarkılar', 'Her çalgının şarkısı, karaoke sözleriyle', 'data-go="#/cal"'),
+      part('IconCards', 'Oyunlar', 'Müzik Kart Oyunu', 'data-do="play" data-origin="kesfet"'),
+      part('IconBook', 'Etkinlik ve dikkat kitapları', 'Uygulamaya ekleniyor', null),
+    ].join('')}</div>`;
 }
 const SIGN_GLYPH = { bemol: '♭', diyez: '♯', fa: '𝄢', sol: '𝄞', naturel: '♮', porte: '𝄚', cizgi: '𝄂' };
-function signTile(c, withPct = null) {
-  const back = flipped.has(c.key);
+function signTile(c) {
   const color = c.color;
-  if (back && withPct == null) {
+  if (flipped.has(c.key)) {
     return `<button class="sign-tile back" data-flip="${c.key}" style="--c:${color}"><span class="m">${esc(c.meaning)}</span><span class="chunky indigo small open" data-push="#/isaret-kategori/${c.key}"><span class="face">Aç</span></span></button>`;
   }
-  return `<button class="sign-tile" ${withPct == null ? `data-flip="${c.key}"` : `data-play="signcat:${c.key}"`} style="--c:${color};--e:${edge(color)}"><span class="g music">${SIGN_GLYPH[c.key]}</span><b>${esc(c.name)}</b>${withPct == null ? '' : `<small>${pct(withPct)}</small>`}</button>`;
+  return `<button class="sign-tile" data-flip="${c.key}" style="--c:${color};--e:${edge(color)}"><span class="g music">${SIGN_GLYPH[c.key]}</span><b>${esc(c.name)}</b></button>`;
 }
 
 const CATEGORY_INTRO = 'Bu işaretin kartları. Birine dokun, tanımını ve çocuk anlatımını oku.';   // PROPOSED
@@ -362,7 +405,7 @@ function signCategory(key) {
     <div class="sign-hero" style="--c:${c.color};--e:${edge(c.color)}"><span class="g music">${SIGN_GLYPH[key]}</span><div><b>${esc(c.name)}</b><small>${esc(c.meaning)}</small></div></div>
     ${note(CATEGORY_INTRO)}
     <div class="card list">${cards.map(k => `<button class="lrow" data-push="#/isaret/${k.id}"><span class="sq letter music" style="background:${c.color}">${esc(k.symbol)}</span><span class="mt"><b>${esc(k.name)}</b><small>${esc(k.definition)}</small></span>${icon('IconChevronRight', 'chev')}</button>`).join('')}</div>
-    <button class="chunky blue large" data-play="signcat:${key}"><span class="face">${icon('IconPlay')}Pratik yap</span></button></div>`;
+    <button class="chunky blue large" data-prep="signcat:${key}"><span class="face">${icon('IconCards')}Kartları çalış</span></button></div>`;
 }
 
 let signTab = 1;
@@ -374,7 +417,7 @@ function signCard(id) {
     <div class="face-card big" style="--accent:${q.accent};--accent-deep:${readable(q.accent)}"><span class="chip">${esc(q.answer)}</span><div class="symbol">${esc(q.symbol)}</div></div>
     <div class="card ans" style="--accent-deep:${readable(q.accent)}"><span class="s">${esc(q.symbol)}</span><div><small>Bu işaretin adı:</small><b>${esc(q.answer)}</b><small>${esc(c.name)}</small></div></div>
     ${explainHtml(q, signTab, 'data-sekme')}
-    <button class="chunky blue large" data-play="signcat:${c.key}"><span class="face">${icon('IconPlay')}Kendini dene</span></button></div>`;
+    <button class="chunky blue large" data-prep="signcat:${c.key}"><span class="face">${icon('IconCards')}Kendini dene</span></button></div>`;
 }
 
 /** The sign's Tanım / Çocuk anlatımı block, shared by the sign card page and the game's information card. */
@@ -417,7 +460,7 @@ function instrumentPage(key) {
     ${qs.length ? `${ribbon('Kendini dene')}${qs.map(q => { const open = instrumentFlips.has(q.id); const id = q.id.slice(2); return `<button class="tile" data-iflip="${q.id}"><div class="card self${open ? ' open' : ''}">${open
       ? `<span class="eyebrow">CEVAP</span><b class="ans-t">${esc(q.answer)}</b>`
       : `<span class="caption">${esc(DIFFICULTY[id] ?? '')}</span><b class="h3">${esc(q.prompt)}</b><span class="caption" style="color:var(--text-xp)">Cevap için kartı çevir</span>`}</div></button>`; }).join('')}
-      <button class="chunky yellow" data-play="instrument:${qk}"><span class="face">${icon('IconCards')}Bu çalgıyla oyna</span></button>` : ''}
+      <button class="chunky yellow" data-play="instrument:${qk}" data-origin="cal"><span class="face">${icon('IconCards')}Bu çalgıyla oyna</span></button>` : ''}
   </div>`;
 }
 const FAMILY_OF_GROUP = { 'Yaylı': 'Yaylı çalgılar', 'Telli': 'Telli çalgılar', 'Tuşlu': 'Tuşlu çalgılar', 'Nefesli': 'Nefesli çalgılar', 'Bakır nefesli': 'Bakır nefesli çalgılar', 'Vurmalı': 'Vurmalı çalgılar', 'Diğer': 'Diğer' };
@@ -483,7 +526,7 @@ function songPage(slugName, melodim = false) {
     <div class="two-btn"><button class="chunky primary large" data-song="toggle" id="song-toggle"><span class="face">${icon('IconPlay')}<span>Çal</span></span></button>
       <button class="chunky white large sq-btn" data-song="stop" aria-label="Durdur"><span class="face"><i class="stopsq"></i></span></button></div>
     ${lyric ? `<button class="chunky white" data-push="#/sozler/${slug(lyric.instrument)}"><span class="face">${icon('IconMic')}Sözleri</span></button>` : ''}
-    <button class="chunky yellow" data-play="${P.concept ?? 'karisik'}"><span class="face">${icon('IconCards')}${P.concept ? 'Bu çalgıyla oyna' : 'Karışık oyna'}</span></button>
+    <button class="chunky yellow" data-play="${P.concept ?? 'karisik'}" data-origin="cal"><span class="face">${icon('IconCards')}${P.concept ? 'Bu çalgıyla oyna' : 'Karışık oyna'}</span></button>
   </div>`;
 }
 async function setupSong(slugName, melodim = false) {
@@ -579,45 +622,25 @@ function tapKey(el) {
   if (card) { card.dataset.push = '#/melodim'; card.querySelector('small').textContent = `${profile.melodim.length} nota`; }
 }
 
-// ───────────────────────── the logo's hub, Doremimi (NR-30)
+// ───────────────────────── the logo's hub, Doremimi (dossier ch. 14 §6; the rows are data/hub.js)
+const whereAttr = w => w.push ? `data-push="${w.push}"` : w.go ? `data-go="${w.go}"` : `data-ext="${w.ext}"`;
+const firstSentenceOf = t => t.slice(0, t.indexOf('. ') + 1) || t;
 function hub() {
-  return `<div class="stack">
-    <div class="card hub-hero"><div><b>Dore Mimi Yetenek ve Eğitim Vakfı</b><small>Müziği çocuklarla buluşturuyoruz.</small></div><img src="../assets/site/characters/group.png" alt="Dore ve Mimi"></div>
-    ${group('Doremimi', [
-      menuRow('IconBulb', '', 'Hakkımızda', 'Uygulama ve vakıf hakkında', 'data-push="#/doremimi-nedir"'),
-      menuRow('IconSmile', 'var(--magenta)', 'Dore ve Mimi', 'Karakterlerle tanış', 'data-push="#/dore-ve-mimi"')])}
-    ${group('Vakıf', [
-      menuRow('IconHeart', 'var(--orange)', 'Vakıf', 'Yetenek ve Eğitim Vakfı', 'data-push="#/vakif"'),
-      menuRow('IconUsers', 'var(--indigo)', 'Ekip', 'Projeyi hayata geçirenler', 'data-push="#/ekip"'),
-      menuRow('IconBolt', 'var(--magenta)', 'Burslar', 'Si Bemol ve Mi Bemol', 'data-push="#/burslar"')])}
-    ${group('Katıl', [
-      menuRow('IconHand', 'var(--steel)', 'Gönüllü ol', 'D. M. Gönüllüleri başvurusu', 'data-push="#/gonullu"'),
-      menuRow('IconMail', 'var(--indigo)', 'Bültene abone ol', 'Yeniliklerden ilk sen haberdar ol', 'data-push="#/iletisim"')])}
-    ${group('Kitaplar', [
-      menuRow('IconBook', 'var(--orange)', 'Kitaplar ve notalar', 'Kitaplar, metodlar, notalar ve satış noktaları', 'data-push="#/kitaplar"')])}
-    ${group('Bize ulaş', [
-      menuRow('IconPhone', 'var(--navy)', 'İletişim', 'Telefon, e-posta ve mesaj formu', 'data-push="#/iletisim"'),
-      menuRow('IconPlay', 'var(--orange)', 'YouTube', 'Tüm klipler ve bilmeceler', 'data-ext="youtube.com"'),
-      menuRow('IconCamera', 'var(--magenta)', 'Instagram', '@dore_mimi_music', 'data-ext="instagram.com"'),
-      menuRow('IconUsers', 'var(--steel)', 'Facebook', 'doremimitv', 'data-ext="facebook.com"'),
-      menuRow('IconGlobe', 'var(--indigo)', 'Web sitesi', 'doremimi.org', 'data-ext="doremimi.org"')])}
-    ${group('Yardım', [
-      menuRow('IconHelp', 'var(--orange)', 'Yardım ve SSS', 'Sık sorulan sorular', 'data-push="#/yardim"'),
-      menuRow('IconLock', 'var(--slate)', 'Gizlilik politikası', 'Taslak', 'data-push="#/metin/gizlilik"'),
-      menuRow('IconBook', 'var(--slate)', 'Kullanım koşulları', 'Taslak', 'data-push="#/metin/kosullar"'),
-      menuRow('IconInfo', 'var(--slate)', 'KVKK aydınlatma metni', 'Taslak', 'data-push="#/metin/kvkk"')])}
-    ${group('Uygulama', [
-      menuRow('IconInfo', 'var(--steel)', 'Uygulama bilgisi', 'Sürüm ve lisanslar', 'data-push="#/hakkinda"'),
-      menuRow('IconPalette', 'var(--orchid)', 'Tasarım sistemi', 'Renkler, yazı tipleri ve bileşenler', 'data-push="#/tasarim"')])}
+  const rows = g => g.rows.map(([ic, title, line, w]) => menuRow(ic, '', title, line, whereAttr(w)));
+  const cards = g => `<h3 class="group-title on-canvas">${esc(g.title)}</h3><div class="acts3">${g.rows.map(([ic, title, line, w]) => `<button class="tile act-card" ${whereAttr(w)}><div class="card">
+    <span class="sq">${icon(ic)}</span><span class="mt"><b>${esc(title)}</b><small>${esc(line)}</small></span>${icon('IconChevronRight', 'chev')}</div></button>`).join('')}</div>`;
+  return `<div class="stack hub">
+    <button class="tile" ${whereAttr(HUB_HEADER)}><div class="card hub-hero"><div><b>${esc(HUB_HEADER.title)}</b><small>${esc(firstSentenceOf(VISION))}</small></div><img src="../assets/site/characters/group.png" alt="Dore ve Mimi"></div></button>
+    ${HUB.map(g => g.cards ? cards(g) : group(g.title, rows(g))).join('')}
   </div>`;
 }
 
 function whatIs() {
-  const rows = [['IconHome', 'var(--magenta)', 'Keşfet', 'OYNA, bugünün kartı ve duyurular', 'data-go="#/"'],
-    ['IconBook', 'var(--cyan)', 'Öğren', 'Müzik işaretleri ve 41 çalgı', 'data-go="#/ogren/isaretler"'],
+  const rows = [['IconHome', 'var(--magenta)', 'Keşfet', 'OYNA, kategoriler, bugünün kartı ve duyurular', 'data-go="#/"'],
+    ['IconBook', 'var(--cyan)', 'Öğren', 'İşaretler, çalgılar, aileler, bilmeceler, değerler ve notalar', 'data-go="#/ogren/isaretler"'],
     ['IconEye', 'var(--orchid)', 'İzle', 'Bilmece videoları, klipler ve röportajlar', 'data-go="#/izle"'],
     ['IconNote', 'var(--blue)', 'Çal', 'Piyano, 41 şarkı ve Melodim', 'data-go="#/cal"'],
-    ['IconCards', 'var(--yellow-deep)', 'Müzik Kart Oyunu', 'Kartı gör, cevabı yaz!', 'data-do="play"']];
+    ['IconCards', 'var(--yellow-deep)', 'Müzik Kart Oyunu', 'Kartı gör, cevabı yaz!', 'data-do="play" data-origin="kesfet"']];
   return `<div class="stack">
     <div class="toy nedir"><div class="in"><div class="head"><img src="../assets/brand/logo.png" alt=""><div><div class="eyebrow">DOREMİMİ NEDİR?</div><b>Dore ve Mimi ile müziği oynayarak öğren!</b></div></div>
       <p class="lead">Nota işaretlerini ve çalgıları tanı, cevabını kendin yaz, şarkı ve bilmece videolarıyla dinle.</p></div></div>
@@ -641,10 +664,8 @@ function foundation() {
   return `<div class="stack">
     <div class="card"><span class="eyebrow" style="color:var(--text-gold)">DUYURU</span><b class="h2">${esc(NEWS)}</b></div>
     <div class="card"><span class="eyebrow">GELECEK VİZYONU</span><p class="p ink">${esc(VISION)}</p></div>
-    <div class="two-btn eq2"><button class="chunky blue" data-push="#/gonullu"><span class="face">Gönüllü ol</span></button><button class="chunky white" data-push="#/burslar"><span class="face">Burslar</span></button></div>
     ${ribbon('Yönetim Kurulu')}${people(BOARD)}
-    ${ribbon('Kurucu Üyeler')}${pills(FOUNDERS)}
-    ${ribbon('Destekçiler')}${pills(PARTNERS)}</div>`;
+    ${ribbon('Kurucu Üyeler')}${pills(FOUNDERS)}</div>`;
 }
 const teamPage = () => `<div class="stack">${note("Şarkılardan animasyonlara, kitaplardan çevirilere: Doremimi'yi birlikte üretiyoruz.")}${people(TEAM)}${ribbon('Danışmanlar')}${pills(ADVISORS)}</div>`;
 const scholarships = () => `<div class="stack">${note('Dore Mimi Müzikle Değerler Eğitimi projesini destekleyen iki burs programı hazırlanıyor.')}
@@ -658,10 +679,21 @@ function contact() {
   return `<div class="stack">
     <div class="card list">${CONTACTS.map(([t, p, mail]) => `<div class="lrow static"><span class="sq" style="background:var(--navy)">${icon('IconPhone')}</span><span class="mt"><small>${esc(t)}</small><b>${esc(p)}</b>${mail ? `<small>${esc(mail)}</small>` : ''}</span>
       <button class="chunky white small" data-ext="e-posta"><span class="face">${icon('IconMail')}</span></button></div>`).join('')}</div>
-    ${ribbon('Bize yaz')}<div class="card form">${field('E-posta')}${field('Mesajın', true)}<button class="chunky indigo" data-ext="e-posta"><span class="face">Gönder</span></button></div>
-    <div class="card news"><b class="h3">Bültene abone ol</b><p class="p">Yeni klipler, oyunlar ve konserlerden ilk sen haberdar ol.</p>
-      <div class="sub">${field('E-posta adresin')}<button class="chunky yellow" data-ext="e-posta"><span class="face">Abone ol</span></button></div></div></div>`;
+    ${ribbon('Bize yaz')}<div class="card form">${field('E-posta')}${field('Mesajın', true)}<button class="chunky indigo" data-ext="e-posta"><span class="face">Gönder</span></button></div></div>`;
 }
+// The hub's pages of ch. 14 §6. Where the foundation has nothing to show yet the page says it is being prepared
+// ("Hazırlanıyor"), never a made-up date or amount.
+const newsletter = () => `<div class="stack"><div class="card news"><b class="h3">Bültene abone ol</b><p class="p">Yeni klipler, oyunlar ve konserlerden ilk sen haberdar ol.</p>
+  <div class="sub">${field('E-posta adresin')}<button class="chunky yellow" data-ext="e-posta"><span class="face">Abone ol</span></button></div></div></div>`;
+const waiting = (title, text) => `<div class="card wait-card"><span class="badge soonb">HAZIRLANIYOR</span><b class="h3">${esc(title)}</b><p class="p">${esc(text)}</p></div>`;
+const support = () => `<div class="stack">${waiting('Destek ol', 'Bağış ve destek seçenekleri hazırlanıyor.')}
+  <button class="chunky white" data-push="#/iletisim"><span class="face">${icon('IconPhone')}Bize ulaş</span></button></div>`;
+const partners = () => `<div class="stack">${note('Dore Mimi projelerine destek veren kurumlar.')}${pills(PARTNERS)}</div>`;
+const events = () => `<div class="stack">${note('Konserler, bilmece videoları ve eğitici materyaller.')}
+  ${waiting('Konser takvimi', 'Konser takvimi hazırlanıyor.')}
+  ${menu([menuRow('IconPlay', '', 'Bilmece videoları', 'Dore soruyor: bu hangi çalgı?', 'data-go="#/ogren/bilmeceler"'),
+    menuRow('IconBook', '', 'Eğitici materyaller', 'Kitaplar, metodlar ve notalar', 'data-go="#/ogren/notalar"')])}</div>`;
+const legalList = () => `<div class="stack">${menu([['IconLock', 'gizlilik'], ['IconBook', 'kosullar'], ['IconInfo', 'kvkk']].map(([ic, k]) => menuRow(ic, '', LEGAL[k].title, 'Taslak', `data-push="#/metin/${k}"`)))}</div>`;
 function legalPage(key) {
   const t = LEGAL[key];
   if (!t) return missing('metin/' + key);
@@ -708,7 +740,10 @@ function profilePage() {
 const SETTINGS = [['motion', 'Azaltılmış hareket', 'Kartlar ve arka plan sabit durur'], ['buttons', 'Buton sesleri', 'Her dokunuşta bir piyano notası çalar'], ['music', 'Müzik', 'Açılışta Doremimi teması bir kez çalar'], ['notify', 'Bildirimler', 'Yakında: günlük oyun hatırlatması']];
 function settingsPage() {
   const s = profile.settings;
-  return `<div class="stack">${ribbon('Oyun', ' small')}
+  // Zorluk (dossier ch. 14 §4): the level the first game asked, changeable here. It sets the ceiling of what is dealt.
+  const zorluk = `<div class="card zorluk"><span class="mt"><b>Zorluk</b><small>Oyunda hangi seviyeden sorular gelsin?</small></span>
+    <div class="ztrack" role="radiogroup" aria-label="Zorluk">${DIFFICULTIES.map(d => `<button class="zopt${profile.difficulty === d.key ? ' on' : ''}" role="radio" aria-checked="${profile.difficulty === d.key}" data-zorluk="${d.key}">${d.name}</button>`).join('')}</div></div>`;
+  return `<div class="stack">${ribbon('Oyun', ' small')}${zorluk}
     ${SETTINGS.map(([k, t, x]) => `<button class="tile" data-set="${k}"><div class="card toggle"><span class="mt"><b>${t}</b><small>${x}</small></span><span class="sw${s[k] ? ' on' : ''}"><i></i></span></div></button>`).join('')}
     ${ribbon('Metinler', ' small')}<div class="card menu plain">${[['Gizlilik politikası', '#/metin/gizlilik'], ['Kullanım koşulları', '#/metin/kosullar'], ['KVKK aydınlatma metni', '#/metin/kvkk'], ['Yardım ve SSS', '#/yardim'], ['Hakkında', '#/hakkinda']].map(([t, h]) => `<button class="mrow" data-push="${h}"><span class="mt"><b>${t}</b></span></button>`).join('')}</div></div>`;
 }
@@ -742,6 +777,11 @@ const PAGES = {
   yardim: { title: 'Yardım ve SSS', html: () => legalPage('yardim') },
   metin: { title: k => LEGAL[k]?.title ?? '', html: legalPage },
   hakkinda: { title: 'Uygulama bilgisi', html: about },
+  etkinlikler: { title: 'Etkinlikler ve materyaller', html: events },
+  bulten: { title: 'Bültene abone ol', html: newsletter },
+  destek: { title: 'Destek ol', html: support },
+  destekciler: { title: 'Destekçiler', html: partners },
+  yasal: { title: 'Yasal metinler', html: legalList },
   tasarim: { title: 'Tasarım sistemi', html: design },
   profil: { title: 'Profilim', html: profilePage },
   ayarlar: { title: 'Ayarlar', html: settingsPage },
@@ -764,8 +804,12 @@ function afterRender() {
       toast(`+${LEARNING.xp.seenInstrument} XP`, `${DIRECTORY.find(d => slug(d.name) === route.arg).name} keşfedildi`);
     }
   }
+  // Öğren's tab row scrolls; the current tab is brought into view, or Notalar opened from a link would be off screen.
+  const row = $('.otabs'), on = row?.querySelector('.on');
+  if (on) { row.scrollLeft = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2; row.classList.toggle('end', row.scrollLeft + row.clientWidth >= row.scrollWidth - 2); }
   updatePill();
 }
+document.addEventListener('scroll', e => { const r = e.target; if (r.classList?.contains('otabs')) r.classList.toggle('end', r.scrollLeft + r.clientWidth >= r.scrollWidth - 2); }, true);
 
 // ───────────────────────── overlays: Ebeveyn kilidi (A-30), Kim oynuyor? (A-31), the video player
 const overlayHost = document.createElement('div');
@@ -807,6 +851,24 @@ function renderGate() {
     <div class="pad">${keys.map(k => `<button class="chunky ${k === 'x' ? 'orange' : k === 'ok' ? 'green' : 'white'}" data-pin="${k}"${locked ? ' disabled' : ''}><span class="face">${k === 'x' ? icon('IconErase') : k === 'ok' ? icon('IconCheck') : k}</span></button>`).join('')}</div>
     <button class="chunky indigo" data-do="gate-close"><span class="face">Vazgeç</span></button></div></div>`;
 }
+/*
+ * The Hazırlan sheet (dossier ch. 14 §5): every Öğren way into the game shows it first, in the category's colour, with
+ * the true number of cards the round will deal. The owner: "this category has this many cards, let's prepare for it".
+ * A sign category has one card today, and the sheet says so rather than padding the round with other signs.
+ */
+function prepHtml(concept) {
+  const info = CONCEPTS[concept];
+  const t = accentSet(info.color);
+  const n = prepCount(deck, concept);
+  const art = info.family ? `<img src="../assets/cards/portrait-${FAMILIES[info.family].art}.png" alt="">` : `<span class="music">${esc(info.symbol)}</span>`;
+  return `<div class="overlay scrim prep-ov"><div class="prep" style="--kf:${t.face};--kl:${t.label};--ke:${t.edge}" role="dialog" aria-label="${esc(info.name)}">
+    <button class="chunky white close x" data-do="prep-close" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
+    <div class="prep-face"><span class="part">${art}</span><b class="pname">${esc(info.name)}</b><span class="pcount" data-count="${n}">Bu kategoride ${n} kart var</span></div>
+    <p class="p c">Kartları çevir, oku, öğren.</p>
+    <button class="chunky primary large" data-do="prep-start" style="${toneVars(t)}"><span class="face">${icon('IconPlay')}Başla</span></button></div></div>`;
+}
+const openPrep = concept => openOverlay('prep', concept);
+
 function openOverlay(kind, data) { overlay.kind = kind; overlay.data = data; renderOverlay(); }
 function closeOverlay() { overlay.kind = null; renderOverlay(); }
 function renderOverlay() {
@@ -817,6 +879,8 @@ function renderOverlay() {
     overlayHost.innerHTML = `<div class="overlay who-ov"><button class="chunky white close x" data-do="ov-close" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
       <b class="ttl">Kim oynuyor?</b><div class="card list kids2">${CHILDREN.map(c => `<button class="lrow kid${profile.child === c.id ? ' on' : ''}" data-child="${c.id}"><span class="avatar"><img src="../assets/site/characters/${c.image}" alt=""></span><span class="mt"><b>${c.name}</b><small>${c.age}</small></span>${profile.child === c.id ? icon('IconCheck', 'chev') : icon('IconChevronRight', 'chev')}</button>`).join('')}</div>
       <button class="chunky white" data-do="soon"><span class="face">Profil ekle</span></button></div>`;
+  } else if (overlay.kind === 'prep') {
+    overlayHost.innerHTML = prepHtml(overlay.data);
   } else if (overlay.kind === 'player') {
     const v = VIDEOS.find(x => x.id === overlay.data);
     overlayHost.innerHTML = `<div class="overlay scrim player-ov"><div class="player"><div class="frame"><img src="../assets/site/${esc(v.thumb)}" alt=""><button class="big-play" data-do="vplay" aria-label="Oynat">${icon('IconPlay')}</button></div>
@@ -863,26 +927,32 @@ document.addEventListener('pointerdown', e => {
 }, true);
 
 // ───────────────────────── the game (MusicCardGameViewModel.cs)
-const G = { round: null, q: null, stage: null, answer: '', feedback: '', bad: false, outcome: null, outcomeSeq: 0, line: null, lineSeq: 0, moved: false,
+const G = { round: null, q: null, stage: null, answer: '', feedback: '', bad: false, outcome: null, outcomeSeq: 0, origin: null, roundId: 0,
   revealTab: 1, wrongPick: null, results: null, intro: null, levelUp: null, cardSeq: 0, renderedSeq: -1, roundBadges: [], masteryBefore: {}, concept: null, fx: null };
 let gameBg = null;
 
-function openGame({ concept = null, level = null, intro } = {}) {
+/*
+ * A round. `origin` is the way in (lib/modes.js RoundOrigin) and decides the level and whether it may move; the
+ * default is Keşfet's, the one way in that is not a page of its own. `level` is the old `?seviye=` and the deck's
+ * game.start, mapped to the origin that starts at that level, so old links still land.
+ */
+function openGame({ concept = null, origin = null, level = null, intro } = {}) {
   closeOverlaysOfShell();
-  const sunumDeck = concept === 'sunum';
   G.concept = concept;
-  G.random = SUNUM ? seeded(11) : fromClock();
-  // `tekrar` is Tekrar zamanı: the cards met before that are due again (NR-80), at most a round's worth.
-  const cards = sunumDeck ? SUNUM_DECK.map(id => deck.find(id)) : concept === 'tekrar' ? dueCards().slice(0, LEARNING.cardsPerRound)
-    : dealFor(concept === 'karisik' ? null : concept, LEARNING.cardsPerRound);
-  const startLevel = level ? Level[{ yaz: 'Yaz', sec: 'Sec', cevir: 'Cevir' }[level]] : Level[profile.ladder] ?? Level.Yaz;
-  G.round = new LearningRound(cards, deck, new LevelLadder(LEARNING.ladder, startLevel), LEARNING, G.random);
-  G.masteryBefore = Object.fromEntries(deck.concepts.map(c => [c, mastery.conceptMastery(c, deck)]));
-  G.results = null; G.levelUp = null; G.roundBadges = []; G.line = null;
-  G.intro = (intro === true || (intro !== false && !profile.seenIntro)) ? { step: 0 } : null;
+  G.origin = origin ?? ORIGIN_OF_LEVEL[level] ?? RoundOrigin.Kesfet;
+  rulesOf(G.origin);
+  G.roundId = (G.roundId ?? 0) + 1;
+  G.results = null; G.levelUp = null; G.roundBadges = []; G.outcome = null;
+  // The first game asks the child's level before anything else (ch. 14 §4), whatever the way in.
+  const pages = [...(profile.difficulty ? [] : ['level']), ...INTRO_STEPS.map(x => x.key)];
+  // `only`: a child who has seen the intro before but has no level yet (a profile from before ch. 14) is asked the
+  // level and goes straight to the round.
+  G.intro = (intro === true || (intro !== false && !profile.seenIntro) || !profile.difficulty)
+    ? { step: 0, pages, only: intro !== true && profile.seenIntro } : null;
+  deal();
   gameEl.hidden = false;
   gameEl.innerHTML = `<canvas class="backdrop" id="gbg" aria-hidden="true"></canvas><div class="g-head" id="ghead"></div><div class="g-body" id="gbody"></div><div id="gover"></div>`;
-  gameBg = new Backdrop($('#gbg'), { seed: 3, mood: moodOf(startLevel), clearTop: safeTop(), reduced: REDUCED });
+  gameBg = new Backdrop($('#gbg'), { seed: 3, mood: moodOf(G.round.ladder.level), clearTop: safeTop(), reduced: REDUCED });
   gameBg.start();
   shellBg.stop();
   stopCarousel();
@@ -890,14 +960,13 @@ function openGame({ concept = null, level = null, intro } = {}) {
   showCard();
 }
 
-/** MusicCardGameViewModel.Deal (:201-216): a short concept is topped up from the whole deck, same kinds only. */
-function dealFor(conceptId, count) {
-  const cards = deck.deal(conceptId, count, mastery, G.random);
-  if (cards.length < count && conceptId != null) {
-    const kinds = new Set(cards.map(c => c.kind));
-    cards.push(...deck.deal(null, deck.all.length, mastery, G.random).filter(c => kinds.has(c.kind) && !cards.includes(c)).slice(0, count - cards.length));
-  }
-  return cards;
+/** Deals the round for G's origin and concept under the child's level; again when the first game's level is chosen. */
+function deal() {
+  G.random = SUNUM ? seeded(11) : fromClock();
+  const cards = G.concept === 'sunum' ? SUNUM_DECK.map(id => deck.find(id))
+    : dealRound({ deck, origin: G.origin, concept: G.concept === 'karisik' ? null : G.concept, level: profile.difficulty, mastery, random: G.random, count: LEARNING.cardsPerRound });
+  G.round = new LearningRound(cards, deck, ladderFor(G.origin, LEARNING.ladder), LEARNING, G.random);
+  G.masteryBefore = Object.fromEntries(deck.concepts.map(c => [c, mastery.conceptMastery(c, deck)]));
 }
 
 function exitGame() {
@@ -1008,19 +1077,13 @@ function endCard() {
   const lv = addXp(LEARNING, profile.level, profile.xp, o.xp);
   profile.level = lv.level; profile.xp = lv.xp;
   mastery.record(o.questionId, o.evidence);
-  profile.ladder = levelName(o.levelAfter);
+  profile.ladder = levelName(o.levelAfter);   // saved for the app's snapshot shape; no round starts from it (ch. 14 §3)
   const day = today(DAY_SHIFT);
   if (!profile.days.includes(day)) profile.days.push(day);
   profile.answered = (profile.answered ?? 0) + 1;   // Profilim › İstatistikler › Cevaplanan soru
   G.stage = ended;
-  if (o.move !== Move.None) {
-    const l = o.levelAfter;
-    // LadderViewModel.Show (:686-695): a line only when the game moved the child.
-    G.line = o.move === Move.Up ? (l === Level.Yaz ? 'Harika! Yazma seviyesine çıktın' : 'Süper! Seçme seviyesine çıktın')
-      : (l === Level.Sec ? 'Biraz seçerek ilerleyelim' : 'Şimdi kartları çevirip birlikte okuyalım');
-    G.lineSeq++; G.moved = true;
-    gameBg?.setMood(moodOf(l), { celebrate: true, up: o.move === Move.Up });
-  }
+  // A move is silent in words (ch. 14 §2): the toast that named the new level went; the backdrop's mood still changes.
+  if (o.move !== Move.None) gameBg?.setMood(moodOf(o.levelAfter), { celebrate: true, up: o.move === Move.Up });
   const earned = newlyEarned(BADGES, { mastery, deck, round: G.round.outcomes, days: profile.days }, profile.badges);
   profile.badges.push(...earned.map(b => b.id));
   G.roundBadges.push(...earned);
@@ -1036,14 +1099,24 @@ function finish() {
     .filter(id => CONCEPTS[id])
     .map(id => ({ id, info: CONCEPTS[id], before: G.masteryBefore[id] ?? 0, after: mastery.conceptMastery(id, deck) }));
   G.results = { stars: starsOf(r.outcomes, LEARNING.roundStars), right: r.outcomes.filter(o => isRight(o.resolution)).length, count: r.outcomes.length,
-    xp: r.xpEarned, level: r.ladder.level, facts, badges: G.roundBadges.slice() };
+    xp: r.xpEarned, facts, badges: G.roundBadges.slice() };
   // Profilim's counts: rounds played, the best round (cards known) and the stars (ch. 03 §16.2-16.4).
   profile.rounds = (profile.rounds ?? 0) + 1; profile.best = Math.max(profile.best ?? 0, G.results.right); profile.stars = (profile.stars ?? 0) + G.results.stars;
   save();
   renderGame();
 }
 
-function closeIntro() { profile.seenIntro = true; save(); G.intro = null; renderGame(); }
+function closeIntro() { if (!profile.difficulty) return; profile.seenIntro = true; save(); G.intro = null; renderGame(); }
+/** The first game's level page: the answer is saved and, nothing played yet, the round is dealt again under it. */
+function chooseLevel(key) {
+  if (!G.intro || !DIFFICULTIES.some(d => d.key === key)) return;
+  profile.difficulty = key; save();
+  if (G.round && !G.round.outcomes.length) { deal(); showCard(); }
+  G.intro.pages = G.intro.pages.filter(p => p !== 'level');
+  G.intro.step = 0;
+  if (G.intro.only) return closeIntro();
+  renderGame();
+}
 
 function typing(on) {
   if (typing.last === on) return;
@@ -1068,7 +1141,7 @@ function renderGame() {
   const body = $('#gbody');
   body.style.visibility = playing ? '' : 'hidden';
   if (playing) {
-    body.innerHTML = `${ladderHtml()}<div class="card-area" id="carea">${cardAreaHtml()}</div><div class="answer-area" id="aarea">${answerHtml()}</div>`;
+    body.innerHTML = `<div class="card-area" id="carea">${cardAreaHtml()}</div><div class="answer-area" id="aarea">${answerHtml()}</div>`;
     if (G.renderedSeq !== G.cardSeq) G.renderedSeq = G.cardSeq;
     afterCardRender();
   }
@@ -1076,17 +1149,10 @@ function renderGame() {
   gameEl.style.setProperty('--below', `${head.offsetTop + head.offsetHeight + 10}px`);
   $('#gover').innerHTML = (G.results ? resultsHtml() : '') + (G.levelUp && !G.results ? levelUpHtml() : '') + (G.intro ? introHtml() : '');
   typing(playing && !G.intro && isTypingStage());
-  G.fx = null; G.moved = false;
+  G.fx = null;
 }
 
-function ladderHtml() {
-  const l = G.round.ladder;
-  const step = (cls, lvl, ic, label) => `<span class="step ${cls}${l.level === lvl ? ' lit' : ''}">${icon(ic)}${label}</span>`;
-  const dots = Array.from({ length: l.rightNeeded }, (_, i) => `<i class="${i < l.rightInARow ? 'on' : ''}"></i>`).join('');
-  return `<div class="ladder${G.moved ? ' moved' : ''}"><div class="in">
-    ${step('cevir', Level.Cevir, 'IconReplay', 'Çevir')}${step('sec', Level.Sec, 'IconCards', 'Seç')}${step('yaz', Level.Yaz, 'IconPencil', 'Yaz')}
-    ${dots ? `<span class="ldots">${dots}</span>` : '<span></span>'}</div></div>`;
-}
+// No ladder strip (ch. 14 §2): its three segments named the levels.
 
 const accentVars = q => `--accent:${q.accent};--accent-deep:${readable(q.accent)};--accent-read:${readable(q.accent)};--edge:${edge(q.accent)}`;
 
@@ -1101,11 +1167,10 @@ function chipOf(q) {
 function cardAreaHtml() {
   const q = G.q;
   const back = G.stage === Stage.Revealed || G.stage === Stage.Flipped;
-  // The chip and the ladder's line play once: a later redraw (a tab on the information card) must not replay them.
+  // The chip plays once: a later redraw (a tab on the information card) must not replay it.
   const chip = G.outcome && G.shownOutcome !== G.outcomeSeq ? `<div class="xp-chip" data-seq="${G.outcomeSeq}"><span class="toastb">${esc(G.outcome.headline)}</span><small>${esc(G.outcome.detail)}</small></div>` : '';
-  const line = G.line && G.shownLine !== G.lineSeq ? `<div class="ladder-line" data-seq="${G.lineSeq}">${esc(G.line)}</div>` : '';
-  G.shownOutcome = G.outcomeSeq; G.shownLine = G.lineSeq;
-  if (back) return `<div class="back-scroll"><div class="back" style="${accentVars(q)}">${revealHtml(q)}</div></div>${chip}${line}`;
+  G.shownOutcome = G.outcomeSeq;
+  if (back) return `<div class="back-scroll"><div class="back" style="${accentVars(q)}">${revealHtml(q)}</div></div>${chip}`;
   const deal = G.renderedSeq !== G.cardSeq ? ' deal' : '';
   const solved = G.stage === Stage.Solved;
   return `<div class="qcard${deal}" style="${accentVars(q)}"><div class="face-card">
@@ -1113,7 +1178,7 @@ function cardAreaHtml() {
       <div class="symbol">${q.symbol ? esc(q.symbol) : `<span class="note-box">${icon('IconNote')}</span>`}</div>
       <div class="prompt">${esc(q.prompt)}</div>
       ${solved ? `<div class="solved"><b>${esc(q.answer)}</b><small>${esc(G.feedback)}</small></div>` : ''}
-    </div></div>${chip}${line}`;
+    </div></div>${chip}`;
 }
 
 /** RevealCardView.axaml: the answer said kindly, then Tanım / Çocuk anlatımı for a sign, the facts for a question. */
@@ -1278,9 +1343,8 @@ function afterCardRender() {
 function resultsHtml() {
   const R = G.results;
   const title = R.stars === 3 ? 'Efsane kulak!' : R.stars === 2 ? 'Harika!' : 'İyi başlangıç!';   // :906
-  const info = { 2: `${R.count} kartın ${R.right} tanesini bildin. Yaz seviyesindesin: bir sonraki turda da cevabı sen yazacaksın.`,
-    1: `${R.count} kartın ${R.right} tanesini bildin. Seç seviyesindesin: üst üste doğru seçimlerle Yaz'a çıkarsın.`,
-    0: `${R.count} kartın ${R.right} tanesini bildin. Kartları okuyarak öğreniyorsun: “Bildim” dedikçe yukarı çıkarsın.` }[R.level];   // :918-920
+  // A neutral line (ch. 14 §2): the three it replaces named the level the child had reached.
+  const info = `${R.count} kartın ${R.right} tanesini bildin.`;
   const star = (i, mid) => `<span class="star${mid ? ' mid' : ''}"><svg viewBox="0 0 24 24"><path class="sock" d="${STAR}"/>${i < R.stars ? `<path class="gold" d="${STAR}"/>` : ''}</svg></span>`;
   const art = info => info.symbol ? `<span class="music">${esc(info.symbol)}</span>` : info.family ? `<img src="../assets/cards/portrait-${FAMILIES[info.family].art}.png" alt="">` : icon('IconNote');
   const facts = R.facts.map(f => {
@@ -1297,7 +1361,7 @@ function resultsHtml() {
       <div class="stars">${star(0)}${star(1, true)}${star(2)}</div>
       <div class="r-title">${title}</div>
       <p class="p r-info">${esc(info)}</p>
-      <div class="stats3"><div class="rrow"><small>XP</small><b>+${R.xp}</b></div><div class="rrow"><small>Bilinen</small><b>${R.right}/${R.count}</b></div><div class="rrow"><small>Seviye</small><b>${levelLabel(R.level)}</b></div></div>
+      <div class="stats3"><div class="rrow"><small>XP</small><b>+${R.xp}</b></div><div class="rrow"><small>Doğru</small><b>${R.right}/${R.count}</b></div><div class="rrow"><small>Yıldız</small><b>${R.stars}/3</b></div></div>
       ${facts ? `<h3 class="group-title r-group">Müzik bilgin</h3>${facts}` : ''}
       ${badges ? `<h3 class="group-title r-group" id="new-badges">Yeni rozet</h3>${badges}` : ''}
       <div class="r-btns"><button class="chunky white" data-g="exit"><span class="face">Çık</span></button>
@@ -1323,20 +1387,30 @@ function levelUpHtml() {
     <button class="chunky white close x" data-g="lvl-close" title="Kapat" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button></div></div>`;
 }
 
+/*
+ * "Nasıl oynanır?" (ch. 14 §4): the child's level first when it is not known yet, then three pages that never name a
+ * level. The pictures show the game's moves without words. Until the level is chosen there is no ✕: the round is
+ * dealt under it.
+ */
 function introHtml() {
-  const i = G.intro.step, s = INTRO_STEPS[i];
-  const pic = i === 0 ? '<div class="tiles5"><span>B</span><span class="free">E</span><span>M</span><span class="free">O</span><span></span></div>'
-    : i === 1 ? '<div class="four"><span>Diyez</span><span>Bemol</span><span>Natürel</span><span>Porte</span></div>'
-      : `<div class="flip"><span>?</span>${icon('IconReplay')}<span class="m">♭</span></div>`;
-  return `<div class="overlay intro"><div class="pop-wrap"><div class="pop-card"><div class="pop-face">
-    <h2 class="r-head">Nasıl oynanır?</h2>
+  const { step, pages } = G.intro, key = pages[step], last = step === pages.length - 1;
+  const dots = `<div class="stepdots">${pages.map((_, k) => `<span class="dot${k === step ? ' on' : ''}"></span>`).join('')}</div>`;
+  const shell = inner => `<div class="overlay intro"><div class="pop-wrap"><div class="pop-card"><div class="pop-face">${inner}</div></div>
+    ${profile.difficulty ? `<button class="chunky white close x" data-g="intro-close" title="Kapat" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>` : ''}</div></div>`;
+  if (key === 'level') {
+    return shell(`<h2 class="r-head">${esc(LEVEL_QUESTION)}</h2>
+      <div class="levels">${DIFFICULTIES.map((d, k) => `<button class="chunky white large lvl" data-level="${d.key}"><span class="face"><span class="lstars">${'★'.repeat(k + 1)}</span><span class="ltxt"><b>${d.name}</b><small>${esc(d.line)}</small></span></span></button>`).join('')}</div>
+      ${dots}`);
+  }
+  const s = INTRO_STEPS.find(x => x.key === key);
+  const pic = key === 'see' ? '<div class="see"><span class="m">♭</span></div>'
+    : key === 'find' ? '<div class="tiles5"><span>B</span><span class="free">E</span><span>M</span><span class="free">O</span><span></span></div>'
+      : '<div class="stars3"><span>★</span><span class="mid">★</span><span>★</span></div>';
+  return shell(`<h2 class="r-head">Nasıl oynanır?</h2>
     <div class="pic" style="--accent:${s.accent}">${pic}</div>
-    <div class="eyebrow">${esc(s.eyebrow)}</div><div class="tt">${esc(s.title)}</div><p class="p">${esc(s.text)}</p>
-    <div class="stepdots">${[0, 1, 2].map(k => `<span class="dot${k === i ? ' on' : ''}"></span>`).join('')}</div>
-    <div class="btns"><button class="chunky white" data-g="intro-prev"${i === 0 ? ' disabled' : ''}><span class="face">Geri</span></button>
-      <button class="chunky primary" data-g="intro-next"><span class="face">${i === 2 ? 'Hadi oynayalım!' : 'Sonraki'}</span></button></div>
-  </div></div>
-  <button class="chunky white close x" data-g="intro-close" title="Kapat" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button></div></div>`;
+    <div class="tt">${esc(s.title)}</div><p class="p">${esc(s.text)}</p>${dots}
+    <div class="btns"><button class="chunky white" data-g="intro-prev"${step === 0 ? ' disabled' : ''}><span class="face">Geri</span></button>
+      <button class="chunky primary" data-g="intro-next"><span class="face">${last ? 'Hadi oynayalım!' : 'Sonraki'}</span></button></div>`);
 }
 
 function closeOverlaysOfShell() { toastHost.innerHTML = ''; }
@@ -1355,14 +1429,17 @@ document.addEventListener('click', e => {
   if (t.dataset.go) { if (t.dataset.go === location.hash) return render(); inApp = true; location.hash = t.dataset.go; return; }
   if (t.dataset.w) { piano.sel = +t.dataset.w; piano.idleSince = performance.now(); const el = $('[data-piano]'); if (el) el.innerHTML = pianoInner(); return; }
   if (t.dataset.today) return tapToday();
-  if (t.dataset.banner) { const go = BANNER_GO[+t.dataset.banner]; return go === 'game' ? openGame() : go === '#/izle' ? (location.hash = go) : push(go); }
+  if (t.dataset.banner) { const go = BANNER_GO[+t.dataset.banner]; return go === 'game' ? openGame({ origin: RoundOrigin.Kesfet }) : go === '#/izle' ? (location.hash = go) : push(go); }
   if (t.dataset.flip) { flipped.has(t.dataset.flip) ? flipped.delete(t.dataset.flip) : flipped.add(t.dataset.flip); t.outerHTML = signTile(SIGN_CATEGORIES.find(c => c.key === t.dataset.flip)); return; }
   if (t.dataset.iflip) { instrumentFlips.has(t.dataset.iflip) ? instrumentFlips.delete(t.dataset.iflip) : instrumentFlips.add(t.dataset.iflip); return render(); }
   if (t.dataset.aile !== undefined) { location.hash = '#/ogren/calgilar' + (t.dataset.aile ? `?aile=${t.dataset.aile}` : ''); return; }
   if (t.dataset.calf !== undefined) { calFilter = t.dataset.calf; const y = page.scrollTop; render(); page.scrollTop = y; return; }
   if (t.dataset.sekme) { signTab = +t.dataset.sekme; const y = page.scrollTop; render(); page.scrollTop = y; return; }
   if (t.dataset.gtab) { G.revealTab = +t.dataset.gtab; return renderGame(); }
-  if (t.dataset.play) return openGame({ concept: t.dataset.play });
+  if (t.dataset.play) return openGame({ concept: t.dataset.play, origin: t.dataset.origin });
+  if (t.dataset.prep) return openPrep(t.dataset.prep);
+  if (t.dataset.level) return chooseLevel(t.dataset.level);
+  if (t.dataset.zorluk) { profile.difficulty = t.dataset.zorluk; save(); const y = page.scrollTop; render(); page.scrollTop = y; return; }
   if (t.dataset.video) return openVideo(t.dataset.video);
   if (t.dataset.ext) return leaveApp(t.dataset.ext);
   if (t.dataset.songInCal) return openIn('cal', `#/sarki/${t.dataset.songInCal}`);
@@ -1378,9 +1455,10 @@ document.addEventListener('click', e => {
   const shell = t.dataset.do, g = t.dataset.g;
   switch (shell) {
     case 'back': return back();
-    case 'play': return openGame();
-    case 'review': return openGame({ concept: 'tekrar' });
-    case 'howto': return openGame({ intro: true });
+    case 'play': return openGame({ origin: t.dataset.origin });
+    case 'howto': return openGame({ origin: RoundOrigin.Kesfet, intro: true });
+    case 'prep-close': return closeOverlay();
+    case 'prep-start': { const c = overlay.data; closeOverlay(); return openGame({ concept: c, origin: RoundOrigin.Ogren }); }
     case 'switcher': return openOverlay('switcher');
     case 'ov-close': return closeOverlay();
     case 'vplay': return toast('Video bu demoda açılmaz', 'İnternetsiz sunum');
@@ -1402,10 +1480,11 @@ document.addEventListener('click', e => {
     case 'video': return G.links?.video ? openVideo(G.links.video) : null;
     // Çalgı sayfası closes the game, switches to Öğren and pushes the instrument (ch. 01 B-08).
     case 'instrument': { const k = G.links?.instrument; if (!k) return; exitGame(); return openIn('ogren', `#/calgi/${k}`); }
-    case 'replay': { const c = G.concept === 'sunum' ? null : G.concept; return openGame({ concept: c, intro: false }); }
+    // Tekrar oyna: the same way in and the same category (ch. 14 §3).
+    case 'replay': { const c = G.concept === 'sunum' ? null : G.concept; return openGame({ concept: c, origin: G.origin, intro: false }); }
     case 'lvl-close': G.levelUp = null; return renderGame();
     case 'intro-prev': G.intro.step = Math.max(0, G.intro.step - 1); return renderGame();
-    case 'intro-next': if (G.intro.step < 2) { G.intro.step++; return renderGame(); } return closeIntro();
+    case 'intro-next': if (G.intro.step < G.intro.pages.length - 1) { G.intro.step++; return renderGame(); } return closeIntro();
     case 'intro-close': return closeIntro();
   }
 });
@@ -1516,6 +1595,8 @@ async function run(m) {
 
 /** The deck's go: everything that sits over the page closes first (W-02). The page under it is a deep link. */
 function go(hash) { stack = []; if (location.hash === hash) navigate(); else location.hash = hash; }
+/** go, drawn before it returns: a scripted step presses on the new page at once, even with FAST's zero waits. */
+function goNow(hash) { closeLayers(); stack = []; history.replaceState(null, '', hash); navigate(); }
 function closeLayers() { gate.open = false; overlay.kind = null; renderOverlay(); if (!gameEl.hidden) exitGame(); }
 
 const pressG = async name => { const el = document.querySelector(`[data-g="${name}"]`); await flashButton(el); };
@@ -1537,9 +1618,16 @@ const ACTS = {
   // A smooth scroll is not a Web Animation, so done() cannot see it: the step waits out its own ~0.6 s here, or the
   // deck would unlock while the page is still sliding to the section being shown.
   'scroll': async m => { const el = m.to ? document.querySelector(m.to) : null; if (el) el.scrollIntoView({ behavior: REDUCED || FAST ? 'auto' : 'smooth', block: 'start' }); else page.scrollTo({ top: m.y ?? 0, behavior: REDUCED ? 'auto' : 'smooth' }); await sleep(REDUCED ? 0 : 700); },
-  'game.start': m => openGame({ concept: m.deck ?? null, level: m.level ?? null, intro: m.intro }),
-  'intro.finish': async () => {
-    while (G.intro) { await sleep(800); await pressG('intro-next'); if (G.intro && G.intro.step < 2) { G.intro.step++; renderGame(); } else if (G.intro) closeIntro(); }
+  'game.start': m => openGame({ concept: m.deck ?? null, origin: m.origin ?? null, level: m.level ?? null, intro: m.intro }),
+  /** Pages through the intro; on the level page it taps `m.level` (default Başlangıç), as a child would. */
+  'intro.finish': async m => {
+    while (G.intro) {
+      await sleep(800);
+      const page = G.intro.pages[G.intro.step];
+      if (page === 'level') { const k = m?.level ?? 'baslangic'; await flashButton(document.querySelector(`[data-level="${k}"]`)); chooseLevel(k); continue; }
+      await pressG('intro-next');
+      if (G.intro.step < G.intro.pages.length - 1) { G.intro.step++; renderGame(); } else closeIntro();
+    }
   },
   'game.type': async m => {
     for (const c of m.text) { flashKey(c); pressKey(c); await sleep(150); }
@@ -1562,46 +1650,68 @@ const ACTS = {
   'game.flip': async () => { await pressG('flip'); flip(); },
   'game.grade': async m => { await pressG(m.knew ? 'knew' : 'didnot'); grade(!!m.knew); },
   'game.next': async () => { await pressG('next'); next(); },
+  /** Plays the round to its end with right answers: a pick at the choices, Bildim on a turned card, typed at Yaz. */
+  'game.finish': async m => {
+    for (let guard = 0; G.round && !G.round.isOver && guard < 40; guard++) {
+      if (G.stage === Stage.Choices) await ACTS['game.choose']({ right: true });
+      else if (G.stage === Stage.Question) { await ACTS['game.flip'](); await sleep(m.gap ?? 600); await ACTS['game.grade']({ knew: true }); continue; }
+      else if (G.stage === Stage.Typing) await ACTS['game.type']({ text: normalise(G.q.answer), send: true });
+      if ([Stage.Solved, Stage.Revealed].includes(G.stage)) { await sleep(m.gap ?? 600); await ACTS['game.next'](); }
+      await sleep(m.gap ?? 600);
+    }
+  },
+  /** Öğren: a category's Hazırlan sheet, opened from its page or its family card as a child would. */
+  'prep.open': async m => { goNow(m.hash); await sleep(300); await pressDo(`[data-prep="${m.concept}"]`); },
+  'prep.start': async () => { await pressDo('[data-do="prep-start"]'); },
+  /** Çal: a song's "Bu çalgıyla oyna", which opens its round at the choices. */
+  'song.game': async m => { goNow(m.hash); await sleep(300); await pressDo('[data-play][data-origin="cal"]'); },
   'results.scroll': async () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); await sleep(REDUCED ? 0 : 700); },
   /** A sequence with a visible pause between presses (0.8–1.2 s, W-03), for slides that play several steps at once. */
   'seq': async m => { for (const step of m.steps) { await run({ type: 'act', ...step }); await sleep(m.gap ?? 900); } },
 };
 
 /*
- * The deck's game slides as one script (dossier ch. 10 part 5): a slide or a button asks for a step, and the phone
- * plays the steps between where it is and there. Going back, jumping to a slide, or a round the presenter touched by
- * hand restarts the round and replays it fast to the step before, then plays the asked step. The rules are the real
- * ones and the deck is fixed and seeded (G-05), so a replay lands on the same cards, choices and ladder every time;
- * this is also the answer to O-12 (← in the game slides) without snapshots.
+ * The deck's game slides as one script (dossier ch. 10 part 5, re-told by ch. 14 §9): a slide or a button asks for a
+ * step, and the phone plays the steps between where it is and there. Going back, jumping to a slide, or a phone the
+ * presenter touched by hand starts over from a fresh child and replays fast to the step before, then plays the asked
+ * step. The rules are the real ones and every round is seeded (G-05), so a replay lands on the same cards every time.
+ *
+ * The story: Keşfet's round at the top, where the child writes (steps 0-8); then Öğren, the Hazırlan sheet of a
+ * family and its cards turned over (9-10); then Çal, a song's round at the choices, to its results (11-13). Each way
+ * in plays the way it plays in the app; nothing here picks a level. Steps 0-7 kept their numbers from before ch. 14.
  */
 const SCRIPT = [
-  [{ name: 'game.start', deck: 'sunum', level: 'yaz', intro: true }],                                  // 0  S06 opens: the intro
-  [{ name: 'intro.finish' }],                                                                           // 1  S06 · Hadi oynayalım!
-  [{ name: 'game.type', text: 'sol', send: true }],                                                     // 2  S06 · Yanlış yaz: "sol"
-  [{ name: 'game.fill', send: true }],                                                                  // 3  S06 · Kutuları doldur
-  [{ name: 'game.next' }],                                                                              // 4  S07 opens: Diyez at Yaz
-  [{ name: 'game.type', text: 'bemol', send: true }, { name: 'game.type', text: 'solm', send: true }],  // 5  S07 · İki deneme de yanlış
-  [{ name: 'game.choose', right: false }],                                                              // 6  S07 · Yanlış seç
-  [{ name: 'game.next' }],                                                                              // 7  S07 · Sıradaki kart (Bemol)
-  [{ name: 'game.dontknow' }],                                                                          // 8  S08 · Bilmiyorum: Seç'e iner
-  [{ name: 'game.next' }, { name: 'game.choose', right: false }, { name: 'game.next' }, { name: 'game.dontknow' }],  // 9  S08 · Çevir'e in
-  [{ name: 'game.next' }, { name: 'game.flip' }, { name: 'game.grade', knew: true }, { name: 'game.flip' }, { name: 'game.grade', knew: true }],  // 10 S08 · Çevir, Bildim
-  [{ name: 'game.choose', right: true }, { name: 'game.next' }, { name: 'game.choose', right: true }, { name: 'game.next' }],  // 11 S09 · Turu bitir
-  [{ name: 'results.scroll', to: 'badges' }],                                                           // 12 S09 · Rozetler
+  [{ name: 'game.start', deck: 'sunum', origin: 'kesfet', intro: true }],                             // 0  Keşfet · OYNA: the level question
+  [{ name: 'intro.finish' }],                                                                           // 1  Başlangıç, Hadi oynayalım!
+  [{ name: 'game.type', text: 'sol', send: true }],                                                     // 2  Yanlış yaz: "sol", harf kutuları
+  [{ name: 'game.fill', send: true }],                                                                  // 3  Kutuları doldur
+  [{ name: 'game.next' }],                                                                              // 4  Diyez
+  [{ name: 'game.type', text: 'bemol', send: true }, { name: 'game.type', text: 'solm', send: true }],  // 5  İki deneme de yanlış: dört seçenek
+  [{ name: 'game.choose', right: false }],                                                              // 6  Yanlış seç: kart anlatır
+  [{ name: 'game.next' }],                                                                              // 7  Bemol, yine yazarak
+  [{ name: 'game.type', text: 'bemol', send: true }],                                                   // 8  Doğru yaz: tek zorlanma oyunu indirmez
+  [{ name: 'prep.open', hash: '#/ogren/aileler', concept: 'family:YayliCalgilar' }],                    // 9  Öğren › Aileler: Hazırlan, "7 kart"
+  [{ name: 'prep.start' }, { name: 'game.flip' }, { name: 'game.grade', knew: true }],                  // 10 Başla: kartı çevir, Bildim
+  [{ name: 'song.game', hash: '#/sarki/keman' }, { name: 'game.choose', right: true }],                 // 11 Çal › Keman: Bu çalgıyla oyna, seç
+  [{ name: 'game.next' }, { name: 'game.finish' }],                                                     // 12 Turu bitir: sonuçlar
+  [{ name: 'results.scroll', to: 'badges' }],                                                           // 13 Rozetler
 ];
-const script = { pos: -1, dirty: false };
+const script = { pos: -1, dirty: false, at: null };
+/** Where the phone is, as the script left it: the round on screen (if any), the page, the sheet. */
+const scriptPlace = () => [gameEl.hidden ? '' : G.roundId, location.hash, overlay.kind === 'prep' ? overlay.data : ''].join('|');
 
 async function playStep(k) {
   for (const a of SCRIPT[k]) { await ACTS[a.name](a); await sleep(900); }
-  script.pos = k;
+  script.pos = k; script.at = scriptPlace();
 }
 
 ACTS.goto = async m => {
   const want = m.step;
-  const onScript = !gameEl.hidden && G.concept === 'sunum' && !script.dirty && script.pos >= 0 && script.pos <= want;
+  const onScript = !script.dirty && script.pos >= 0 && script.pos <= want && script.at === scriptPlace();
   if (!onScript) {
-    // Start over: a fresh child, as on the cover slide, so the badges of part 5 are new again.
+    // Start over: a fresh child, as on the cover slide, so the level question and the badges are new again.
     store.wipe(); profile = freshProfile(); mastery = new Mastery(LEARNING, profile.mastery, DAY_SHIFT);
+    closeLayers();
     script.pos = -1; script.dirty = false;
   }
   const playLast = m.play && want > script.pos;
@@ -1612,7 +1722,7 @@ ACTS.goto = async m => {
 };
 
 // A tap or a key from a person, not the script, makes the round unknown to the script.
-for (const type of ['click', 'keydown']) document.addEventListener(type, e => { if (e.isTrusted && !gameEl.hidden && G.concept === 'sunum' && e.target.closest?.('#game, body')) script.dirty = true; }, true);
+for (const type of ['click', 'keydown']) document.addEventListener(type, e => { if (e.isTrusted && script.pos >= 0) script.dirty = true; }, true);
 
 // ───────────────────────── start
 navigate();

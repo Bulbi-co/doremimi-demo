@@ -110,10 +110,12 @@ const PHONE = [
   ['phone-33-game-solved', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 3 })], 5000],
   ['phone-34-game-choices', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 5 })], 7000],
   ['phone-35-game-reveal', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 6 })], 7000],
-  ['phone-36-game-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 8 })], 8000],
-  ['phone-37-game-cevir', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 9 }), msg({ type: 'act', name: 'game.next' }), msg({ type: 'act', name: 'game.flip' })], 9000],
-  ['phone-38-game-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 10000],
-  ['phone-39-game-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 12 })], 11000],
+  // Since ch. 14 the script's later steps are other ways in: Öğren's sheet and turned cards, then Çal's choices.
+  ['phone-36-game-typed-right', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 8 })], 8000],
+  ['phone-37-ogren-cevir', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 10 })], 10000],
+  ['phone-38-cal-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 11000],
+  ['phone-39-game-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 12 })], 14000],
+  ['phone-39b-game-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 13 })], 15000],
 ].map(([name, url, steps = [], wait = 1200]) => ({ name, url, steps, wait, w: 430, h: 932 }));
 // The Platformlar slide's frames (index.html #frames) are copied from these into assets/screens/, so they show the
 // demo's own navigation: the app's c33d9ff captures still had the old four-tab dock.
@@ -138,8 +140,61 @@ const V3 = [
   ['v3/18-game-solved', ...sunum(3, [], 5000)],
   ['v3/14-game-choices', ...sunum(5, [], 7000)],
   ['v3/19-game-reveal', ...sunum(6, [], 7000)],
-  ['v3/20-game-results', ...sunum(11, [], 10000)],
+  ['v3/20-game-results', ...sunum(12, [], 14000)],
 ].map(([name, url, steps = [], wait = 1200, h = 932]) => ({ name, url, steps, wait, w: 430, h }));
+// Dossier ch. 14: every screen the revision changed. `node … tools/shoot.mjs <base> <dir> '^ch14-'`. The two OYNA shots
+// run without ?still, at two points of the card's 4.5 s loop, to show it moving; the rest are still.
+const live = (hash, extra = '') => `${base}/app/?reset${extra}${hash}`;
+// Holds OYNA's card loop at `ms` into its 4.5 s (each letter's own delay included), so a shot shows one known phase.
+const oynaAt = ms => `document.querySelectorAll('.oyna *').forEach(el => el.getAnimations().forEach(a => { a.pause(); a.currentTime = ${ms}; }))`;
+const CH14 = [
+  ['ch14-01-kesfet', app('#/')],
+  ['ch14-02-kesfet-kategoriler', app('#/'), [`document.querySelector('.kats-sec').scrollIntoView()`]],
+  ['ch14-03-kesfet-played', app('#/'), [msg({ type: 'act', name: 'goto', step: 8 }), `new Promise(r => setTimeout(r, 7000))`, tap('[data-g="exit"]'), `document.querySelector('.kats-sec').scrollIntoView()`]],
+  ['ch14-04-oyna-flip', live('#/'), [oynaAt(450)], 600],
+  ['ch14-05-oyna-bars', live('#/'), [oynaAt(2300)], 600],
+  ['ch14-06-oyna-letters', live('#/'), [oynaAt(4000)], 600],
+  ['ch14-10-ogren-isaretler', app('#/ogren/isaretler')],
+  ['ch14-11-ogren-calgilar', app('#/ogren/calgilar')],
+  ['ch14-12-ogren-calgilar-yayli', app('#/ogren/calgilar?aile=yayli')],
+  ['ch14-13-ogren-aileler', app('#/ogren/aileler')],
+  ['ch14-14-ogren-bilmeceler', app('#/ogren/bilmeceler')],
+  ['ch14-15-ogren-degerler', app('#/ogren/degerler')],
+  ['ch14-16-ogren-notalar', app('#/ogren/notalar')],
+  ['ch14-17-ogren-tabs-scrolled', app('#/ogren/notalar'), [`document.querySelector('.otab.on').scrollIntoView({ inline: 'center' })`]],
+  ['ch14-18-isaret-kategori-bemol', app('#/isaret-kategori/bemol')],
+  ['ch14-19-hazirlan-bemol', app('#/isaret-kategori/bemol'), [tap('[data-prep]')]],
+  ['ch14-20-hazirlan-yayli', app('#/ogren/aileler'), [tap('[data-prep="family:YayliCalgilar"]')]],
+  ['ch14-21-ogren-round-cevir', app('#/ogren/aileler'), [tap('[data-prep="family:YayliCalgilar"]'), tap('[data-do="prep-start"]')]],
+  ['ch14-22-first-game-level', app('#/'), [tap('[data-do="play"]')]],
+  ['ch14-23-intro-see', app('#/'), [tap('[data-do="play"]'), tap('[data-level="orta"]')]],
+  ['ch14-24-intro-find', app('#/'), [tap('[data-do="play"]'), tap('[data-level="orta"]'), tap('[data-g="intro-next"]')]],
+  ['ch14-25-intro-stars', app('#/'), [tap('[data-do="play"]'), tap('[data-level="orta"]'), tap('[data-g="intro-next"]'), tap('[data-g="intro-next"]')]],
+  ['ch14-26-kesfet-round-yaz', app('#/'), [tap('[data-do="play"]'), tap('[data-level="orta"]'), tap('[data-g="intro-close"]')]],
+  ['ch14-27-category-round', app('#/'), [tap('[data-do="play"]'), tap('[data-level="baslangic"]'), tap('[data-g="intro-close"]'), tap('[data-g="exit"]'), tap('[data-play="family:TelliCalgilar"]')]],
+  ['ch14-30-script-tiles', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 2 })], 5000],
+  ['ch14-31-script-choices', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 5 })], 7000],
+  ['ch14-32-script-reveal', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 6 })], 7000],
+  ['ch14-33-script-typed-right', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 8 })], 8000],
+  ['ch14-34-script-hazirlan', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 9 })], 9000],
+  ['ch14-35-script-cevir', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 10 })], 10000],
+  ['ch14-36-script-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 11000],
+  ['ch14-37-script-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 12 })], 14000],
+  ['ch14-38-script-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 13 })], 15000],
+  ['ch14-40-cal-song-sec', app('#/sarki/keman'), [`new Promise(r => setTimeout(r, 600))`, tap('[data-play][data-origin="cal"]')]],
+  ['ch14-41-calgi-keman', app('#/calgi/keman'), [`document.querySelector('[data-play]').scrollIntoView()`]],
+  ['ch14-50-hub', app('#/doremimi')],
+  ['ch14-51-hub-scrolled', app('#/doremimi'), [`document.querySelector('#page').scrollTop = 700`]],
+  ['ch14-52-hub-bottom', app('#/doremimi'), [`document.querySelector('#page').scrollTop = 4000`]],
+  ['ch14-53-etkinlikler', app('#/etkinlikler')],
+  ['ch14-54-destek', app('#/destek')],
+  ['ch14-55-yasal', app('#/yasal')],
+  ['ch14-56-bulten', app('#/bulten')],
+  ['ch14-57-destekciler', app('#/destekciler')],
+  ['ch14-58-iletisim', app('#/iletisim')],
+  ['ch14-59-vakif', app('#/vakif')],
+  ['ch14-60-ayarlar-zorluk', app('#/ayarlar'), [tap('[data-zorluk="orta"]')]],
+].map(([name, url, steps = [], wait = 1200]) => ({ name, url, steps, wait, w: 430, h: 932 }));
 const TABLET = [
   // &embed: the standalone page narrows to a 440 px phone column on a wide screen (style.css .app:not(.embed)), and a
   // tablet runs the app full width with the content column centred, as dossier screen 20-tablet-home.png shows.
@@ -147,7 +202,7 @@ const TABLET = [
 ];
 
 mkdirSync(join(out, 'v3'), { recursive: true });
-for (const s of [...DECK, ...PHONE, ...TABLET, ...V3]) {
+for (const s of [...DECK, ...PHONE, ...TABLET, ...V3, ...CH14]) {
   if (only && !only.test(s.name)) continue;
   if (!s.cont) await load(s.url, s.w, s.h);
   for (const st of s.steps ?? []) { await evaluate(st); await sleep(250); }

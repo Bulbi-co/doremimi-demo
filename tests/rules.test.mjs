@@ -9,10 +9,9 @@ import assert from 'node:assert/strict';
 import { normalise, find, Match, acceptedFor } from '../app/lib/answers.js';
 import { LetterTiles } from '../app/lib/tiles.js';
 import { LevelLadder, Level, Move } from '../app/lib/ladder.js';
-import { LearningRound, QuestionDeck, Stage, Resolution, isRight } from '../app/lib/round.js';
-import { Mastery, stars, newlyEarned } from '../app/lib/progress.js';
+import { LearningRound, QuestionDeck } from '../app/lib/round.js';
 import { seeded } from '../app/lib/rng.js';
-import { QUESTIONS, LEARNING, SUNUM_DECK, BADGES } from '../app/data/content.js';
+import { QUESTIONS, LEARNING } from '../app/data/content.js';
 
 test('normalise folds Turkish letters, case, accents and punctuation (AnswerMatcher.cs:69-107)', () => {
   assert.equal(normalise('  FA ANAHTARI! '), 'fa anahtari');
@@ -46,9 +45,9 @@ test('letter tiles of Fa anahtarı match the app: 2 + 8 letters, the A of FA and
   assert.equal(LetterTiles.for('Altı tel', 'q:guitar-strings', LEARNING.tilePrefillFraction).tiles.filter(t => t.prefilled).length, 2);
 });
 
-test('the ladder moves down after two struggles and up after the run (LevelLadder.cs)', () => {
+test('the ladder moves down after four struggles and up after the run (LevelLadder.cs; learning.json since ch. 14)', () => {
   const ladder = new LevelLadder(LEARNING.ladder);
-  assert.equal(ladder.record('Struggle'), Move.None);
+  for (let i = 0; i < 3; i++) assert.equal(ladder.record('Struggle'), Move.None);
   assert.equal(ladder.record('Struggle'), Move.Down);
   assert.equal(ladder.level, Level.Sec);
   assert.equal(ladder.record('Right'), Move.None);
@@ -58,81 +57,8 @@ test('the ladder moves down after two struggles and up after the run (LevelLadde
   assert.equal(ladder.rightNeeded, 0);
 });
 
-/** Plays the deck's scripted round (dossier ch. 10 part 5) through the real rules. */
-function playSunumRound() {
-  const deck = new QuestionDeck(QUESTIONS);
-  const random = seeded(11);
-  const mastery = new Mastery(LEARNING);
-  const round = new LearningRound(SUNUM_DECK.map(id => deck.find(id)), deck, new LevelLadder(LEARNING.ladder), LEARNING, random);
-  const earned = [];
-  const end = () => {
-    const o = round.next();
-    mastery.record(o.questionId, o.evidence);
-    earned.push(...newlyEarned(BADGES, { mastery, deck, round: round.outcomes, days: [] }, earned).map(b => b.id));
-    return o;
-  };
-  const wrongChoice = () => round.choices.find(c => c !== round.current.answer);
-
-  // S06: c1 Fa anahtarı at Yaz, "sol", then the tiles filled right.
-  assert.equal(round.stage, Stage.Typing);
-  assert.equal(round.submit('sol').verdict, 'Wrong');
-  const missing = round.tiles.tiles.filter(t => t.kind === 'Letter' && !t.prefilled).map(t => t.letter.toLocaleLowerCase('tr')).join('');
-  round.tiles.type(missing);
-  assert.equal(round.submitTiles().verdict, 'Right');
-  assert.equal(end().resolution, Resolution.TypedWithTiles);
-
-  // S07: c2 Diyez: "bemol", then "solm" in the tiles (must be judged wrong), then a wrong pick.
-  round.submit('bemol');
-  round.tiles.type('solm');
-  assert.equal(round.submitTiles().verdict, 'Wrong', 'solm must not pass as a typo of diyez');
-  assert.equal(round.stage, Stage.Choices);
-  assert.equal(round.choices.length, 4);
-  assert.equal(round.choose(wrongChoice()), false);
-  assert.equal(end().resolution, Resolution.PickedWrong);
-
-  // c3 Bemol: Bilmiyorum: the second struggle moves the ladder down to Seç.
-  round.dontKnow();
-  assert.equal(end().move, Move.Down);
-  assert.equal(round.ladder.level, Level.Sec);
-
-  // S08: c4 at Seç, a wrong pick; c2′ comes back, Bilmiyorum: down to Çevir.
-  assert.equal(round.current.id, 'q:guitar-family');
-  assert.equal(round.stage, Stage.Choices);
-  round.choose(wrongChoice()); end();
-  assert.equal(round.current.id, 'sign:diyez');
-  round.dontKnow();
-  assert.equal(end().move, Move.Down);
-  assert.equal(round.ladder.level, Level.Cevir);
-
-  // c3′ and c4′ at Çevir: flip, Bildim, twice: up to Seç.
-  for (const id of ['sign:bemol', 'q:guitar-family']) {
-    assert.equal(round.current.id, id);
-    assert.equal(round.stage, Stage.Question);
-    round.flip(); round.grade(true);
-    var last = end();
-  }
-  assert.equal(last.move, Move.Up);
-  assert.equal(round.ladder.level, Level.Sec);
-
-  // S09: c5 and c6 at Seç, right picks.
-  for (const id of ['q:violin-family', 'q:guitar-strings']) {
-    assert.equal(round.current.id, id);
-    assert.equal(round.choose(round.current.answer), true);
-    end();
-  }
-  return { round, earned };
-}
-
-test('the deck round plays the path of dossier ch. 10 part 5: 9 cards, 5 right, +16 XP, 2 stars, ends at Seç', () => {
-  const { round, earned } = playSunumRound();
-  assert.equal(round.isOver, true);
-  assert.equal(round.count, 9);
-  assert.equal(round.outcomes.filter(o => isRight(o.resolution)).length, 5);
-  assert.equal(round.xpEarned, 16);
-  assert.equal(stars(round.outcomes, LEARNING.roundStars), 2);
-  assert.equal(round.ladder.level, Level.Sec);
-  assert.deepEqual(earned, ['ilk-nota', 'baba-sesler']);
-});
+// The deck's scripted rounds, which this file played through the old one-round path (Yaz → Seç → Çevir), are played
+// through ch. 14's story in tests/ch14.test.mjs: no round moves the child down after one or two struggles any more.
 
 test('a move from the wrong stage throws, as the C# does', () => {
   const deck = new QuestionDeck(QUESTIONS);

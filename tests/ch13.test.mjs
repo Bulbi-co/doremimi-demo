@@ -92,7 +92,8 @@ test('two registers: Inter for the app, Baloo 2 and Nunito back inside the game,
   const game = css.match(/\.game \{[^}]*\}/)[0];
   assert.match(game, /--font-display: var\(--font-play\); --font-body: var\(--font-play-body\);/);
   assert.match(css, /\.hero \.txt b \{ font: 800 22px\/26px var\(--font-play\); \}/);
-  assert.match(css, /\.oyna \.words b \{ font: 800 30px\/32px var\(--font-play\); \}/);
+  // OYNA is a circle since ch. 14 §1; its word stays in the playful register
+  assert.match(css, /\.oyna \.word \{ font: 800 34px\/34px var\(--font-play\);/);
   assert.match(readFileSync(new URL('../assets/fonts/fonts.css', import.meta.url), 'utf8'), /font-family: 'Inter'; src: url\('Inter-SemiBold\.ttf'\)/);
 });
 
@@ -104,12 +105,13 @@ test('buttons lose the lip off the game only; OYNA and the game keep theirs', ()
   assert.match(html, /<main class="page" id="page"[^>]*><\/main>\s*<nav class="dock"[^>]*><\/nav>\s*<section class="game"/, 'the game is a sibling of .page, not inside it');
 });
 
-test('Keşfet: topics grouped İŞARETLER then ÇALGILAR; a row shows progress only once played; Bugünün kartı is plain', () => {
-  const rows = app.slice(app.indexOf('function topicRow('), app.indexOf('const DAILY_POOLS'));
-  assert.doesNotMatch(rows, /henüz oynamadın/);
-  assert.match(rows, /\$\{cards\} kart\$\{played \? ` · %\$\{Math\.round\(m \* 100\)\}` : ''\}/);
-  assert.match(rows, /\$\{played \? `<span class="track">/);
-  assert.match(rows, /part\('İŞARETLER', signs\) \+ part\('ÇALGILAR', families\)/);
+test('Keşfet: a category card shows progress only once played; Bugünün kartı is plain', () => {
+  // ch. 14 §1 replaced the İŞARETLER / ÇALGILAR list with one grid of cards (tests/ch14.test.mjs); the rule that a card
+  // says only "N kart" until it has been played carries over.
+  const card = app.slice(app.indexOf('function categoryCard('), app.indexOf('function home('));
+  assert.doesNotMatch(card, /henüz oynamadın/);
+  assert.match(card, /\$\{cards\} kart\$\{played \? ` · %\$\{Math\.round\(m \* 100\)\}` : ''\}/);
+  assert.match(card, /\$\{played \? `<span class="ktrack">/);
   const today = css.match(/\.today \{[^}]*\}/)[0];
   assert.doesNotMatch(today, /0 8px 0 0/, 'no coloured edge under it');
   assert.match(css, /\.today \.tface::before \{[^}]*width: 3px; background: var\(--acc\);/);

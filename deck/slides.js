@@ -59,7 +59,7 @@ export const SLIDES = [
     id: 'kapak', label: 'Kapak', theme: 'dark', phone: { type: 'reset', hash: '#/' },
     html: `
       <h1 class="title">Müziği oynayarak<br><em>öğren.</em></h1>
-      <p class="lead">Dore Mimi Yetenek ve Eğitim Vakfı için hazırlanan uygulama: müzik kart oyunu, çalgılar, şarkılar ve videolar tek yerde.</p>`,
+      <p class="lead">Dore Mimi Yetenek ve Eğitim Vakfı için: müzik kart oyunu, çalgılar, şarkılar ve videolar tek uygulamada.</p>`,
     notes: `<p><b>“Önce vakfın bugüne kadar yaptıklarına, sonra uygulamaya bakacağız.”</b> Sağdaki telefon uygulama gibi çalışır; dokunulabilir.</p><p>Başlamadan sağ üstteki <b>Sesi aç</b>'a bir kez tıklayın. <b>→</b> slayttaki düğmeleri sırayla oynatır, bitince sonraki slayta geçer; <b>←</b> geri alır; <b>R</b> telefonu slaytın başına döndürür. Bu slayta dönünce telefon sıfırlanır.</p><p><b>A</b> ya da alttaki <b>Otomatik</b> sunumu kendi kendine yürütür; →, ← ya da telefona dokunmak durdurur.</p>`,
   },
   // What the foundation has done, before the app is shown (owner, 2026-11-16; dossier ch. 14 §13; deck/foundation.js).
@@ -84,7 +84,7 @@ export const SLIDES = [
     id: 'kesfet', label: 'Oyna', theme: 'light', phone: go('#/'),
     html: step('Oyna: oyunun kendisi',
       'Uygulama oyunla açılır: ortada Şimdi Oyna, altında 12 kategori. Çocuk kartı görür, cevabı kendisi yazar.',
-      ['Bilemezse harf kutuları, sonra dört seçenek gelir', 'Yanlış seçimde kart dönüp anlatır; yanlış cevap hiçbir şey kaybettirmez']),
+      ['Bilemezse harf kutuları, sonra dört seçenek gelir', 'Yanlış seçimde kart dönüp anlatır; hiçbir şey kaybedilmez']),
     acts: [
       ['Kategoriler', batch(go('#/'), act('scroll', { to: '.kats-sec' }))],
       ['Şimdi Oyna', batch(go('#/'), act('oyna.press'))],
@@ -102,7 +102,7 @@ export const SLIDES = [
   {
     id: 'cal', label: 'Çal', theme: 'light', phone: go('#/cal'),
     html: step('Çal: piyano ve şarkılar',
-      'Üstte çocuğun serbestçe çaldığı piyano, altında çalgıların şarkıları.',
+      'Üstte serbest çalınan piyano, altında 41 şarkı.',
       []),
     acts: [['Serbest çal', batch(go('#/cal'), act('keys.play', { keys: [60, 62, 64, 65, 67, 67, 69, 67] }))]],
     notes: `<p>Nota çalan her şey bu sekmede.</p><ol><li><b>Serbest çal</b>: telefon piyanoda kısa bir ezgi çalar; çalınanlar Melodim'e eklenir.</li></ol><p>Altta Şarkılar: 41 çalgının her birinin şarkısı var. Birini sıradaki slaytta dinleyeceğiz.</p>`,
@@ -115,7 +115,7 @@ export const SLIDES = [
      * Keman has no lyric sheet (ten instruments do), only the words on its karaoke line.
      */
     id: 'sarki', label: 'Şarkı', theme: 'light', phone: go('#/sarki/keman'),
-    html: step("Keman'ın şarkısı, uygulamanın piyanosunda",
+    html: step('Şarkı: Keman, piyanoda',
       'Şarkı çalarken çalan tuş yanar; karaoke satırında önce nota adları, sonra sözler ilerler.',
       ['41 şarkının hepsi aynı piyanoda, nota nota çalar', 'Şarkı sözleri ayrı bir sayfada da okunur']),
     acts: [['Keman şarkısını çal', batch(go('#/sarki/keman'), act('song.play')), { hold: SONG_HOLD }], ['Gitar: şarkı sözleri', go('#/sozler/gitar')]],

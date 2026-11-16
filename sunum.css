@@ -139,10 +139,12 @@ h1.title.tour { font-size: 60px; margin: 40px 0 18px; }
 /* closing (S14) */
 .stage .closing { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 70px; pointer-events: none; font: 800 66px/1.05 var(--display); color: #fff; }
 .closing .cl-l { width: 440px; text-align: right; }
-.closing .cl-r { width: 440px; }
+.closing .cl-r { width: 440px; position: relative; }
 .closing em { font-style: normal; color: var(--yellow); }
-/* The platforms, one line under the closing words (they were a slide until the deck was cut to nine). */
-.closing .cl-plat { display: block; margin-top: 22px; font: 700 19px/1.4 var(--body); letter-spacing: .01em; color: rgba(255, 255, 255, .72); }
+/* The platforms, one line under the closing words (they were a slide until the deck was cut to nine). Hung below
+   the words, out of the flow: counted in the block's height it pushed "artık cebinizde." up, and "Dore ve Mimi" on
+   the other side of the phone then stood level with its second line and no longer between the two. */
+.closing .cl-plat { position: absolute; left: 0; top: 100%; margin-top: 22px; white-space: nowrap; font: 700 19px/1.4 var(--body); letter-spacing: .01em; color: rgba(255, 255, 255, .72); }
 .slide:has(.closing) { padding: 0; }
 .slide:has(.closing) .col { width: auto; }
 

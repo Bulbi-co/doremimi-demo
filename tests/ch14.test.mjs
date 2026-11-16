@@ -326,7 +326,7 @@ test('the deck’s script plays as ch. 14 tells it: Oyna writes, Öğren is read
   const mastery = new Mastery(LEARNING);
   const earned = [];
   const run = round => () => { const o = round.next(); mastery.record(o.questionId, o.evidence); earned.push(...newlyEarned(BADGES, { mastery, deck, round: round.outcomes, days: [] }, earned).map(b => b.id)); return o; };
-  // Keşfet's round over the fixed deck (steps 0-8)
+  // Oyna's round over the fixed deck (steps 1-10)
   let random = seeded(11);
   const k = new LearningRound(SUNUM_DECK.map(id => deck.find(id)), deck, ladderFor(RoundOrigin.Kesfet, LEARNING.ladder), LEARNING, random);
   const endK = run(k);
@@ -339,12 +339,30 @@ test('the deck’s script plays as ch. 14 tells it: Oyna writes, Öğren is read
   k.choose(k.choices.find(c => c !== k.current.answer)); assert.equal(endK().move, Move.None);
   assert.equal(k.current.id, 'sign:bemol');
   assert.equal(k.stage, Stage.Typing, 'one struggle does not take the child off Yaz');
-  assert.equal(k.submit('bemol').verdict, 'Right'); endK();
-  assert.equal(k.ladder.level, Level.Yaz);
-  // Diyez, picked wrong, comes back two cards later; Fa anahtarı, found with the tiles, counts as learned (Baba Sesler)
-  assert.deepEqual(k.queue.map(x => x.question.id), ['sign:fa-anahtari', 'sign:diyez', 'sign:bemol', 'q:guitar-family', 'sign:diyez', 'q:violin-family', 'q:guitar-strings']);
-  assert.deepEqual(earned, ['ilk-nota', 'baba-sesler', 'bemol-avcisi']);
-  // Çal › Keman: Bu çalgıyla oyna, every card at the choices, all right (steps 13-14)
+  // Step 7: three "Bilmiyorum"; the fourth struggle in a row takes the round down, so the next card opens at the choices
+  const moves = [];
+  for (let i = 0; i < 3; i++) { assert.equal(k.stage, Stage.Typing); k.dontKnow(); moves.push(endK().move); }
+  assert.deepEqual(moves, [Move.None, Move.None, Move.Down]);
+  assert.equal(k.stage, Stage.Choices, 'step 7 ends on a card that opens at the four choices');
+  // Step 8: a wrong pick and three more; the eighth struggle turns the next card over
+  k.choose(k.choices.find(c => c !== k.current.answer)); moves.push(endK().move);
+  for (let i = 0; i < 3; i++) { k.dontKnow(); moves.push(endK().move); }
+  assert.deepEqual(moves.slice(3), [Move.None, Move.None, Move.None, Move.Down]);
+  assert.equal(k.ladder.level, Level.Cevir);
+  assert.equal(k.stage, Stage.Question, 'step 8 ends on a card turned over to read: the ladder’s help, in view');
+  // Step 9: Kartı çevir, Bildim; step 10 finishes the round
+  k.flip(); k.grade(true); endK();
+  while (!k.isOver) { if (k.stage === Stage.Question) { k.flip(); k.grade(true); } else if (k.stage === Stage.Choices) k.choose(k.current.answer); else k.submit(k.current.answer); endK(); }
+  // what the running phone showed for this round (demo-deck/slide-07-step1.png): 11 cards, 3 right, +8 XP, 1 star
+  assert.deepEqual([k.count, k.outcomes.filter(o => o.xp > 0).length, k.xpEarned, stars(k.outcomes, LEARNING.roundStars)], [11, 3, 8, 1]);
+  assert.deepEqual(earned, ['ilk-nota', 'baba-sesler']);
+  // The cards turned over appear only where the round has come down to them: the script flips in no other step.
+  const flips = SCRIPT.flatMap((acts, i) => acts.some(a => /^game\.(flip|grade)$/.test(a.name)) ? [i] : []);
+  assert.deepEqual(flips, [SCRIPT.findIndex(acts => acts.some(a => a.name === 'game.flip'))]);
+  assert.equal(flips.length, 1);
+  assert.ok(SCRIPT[flips[0] - 1].filter(a => a.name === 'game.dontknow').length === 3 && SCRIPT[flips[0] - 2].filter(a => a.name === 'game.dontknow').length === 3,
+    'the flip follows the two steps of struggles the model above plays');
+  // Çal › Keman: Bu çalgıyla oyna, every card at the choices, all right (steps 30-31)
   random = seeded(11);
   const cCards = dealRound({ deck, origin: RoundOrigin.Cal, concept: 'instrument:violin', level: 'baslangic', mastery, random, count: LEARNING.cardsPerRound });
   const c = new LearningRound(cCards, deck, ladderFor(RoundOrigin.Cal, LEARNING.ladder), LEARNING, random);
@@ -358,10 +376,10 @@ test('the deck’s script plays as ch. 14 tells it: Oyna writes, Öğren is read
   // and the script the phone plays (app/data/script.js) is that story
   const script = JSON.stringify(SCRIPT);
   assert.match(script, /"name":"game\.start","deck":"sunum","origin":"kesfet","intro":true/);
-  // Öğren is information (§10): a family's instruments, then one instrument's page, with no round in between
-  assert.match(script, /"name":"open","hash":"#\/ogren\/aileler","tap":"\[data-fam=\\"YayliCalgilar\\"\]"/);
-  assert.match(script, /"name":"open","hash":"#\/ogren\/calgilar\?aile=yayli","tap":"\[data-push=\\"#\/calgi\/keman\\"\]"/);
-  assert.doesNotMatch(script, /prep\.|game\.flip|game\.grade/, 'no step turns a card over outside a round that needs it');
+  // Öğren is information (§10): Aileler, a family's instruments, then one instrument's page, with no round in between
+  const ogren = SCRIPT.findIndex(acts => acts.some(a => a.name === 'page' && a.hash === '#/ogren/aileler'));
+  assert.deepEqual(SCRIPT.slice(ogren + 1, ogren + 3).map(acts => acts.map(a => a.sel)), [['[data-fam="YayliCalgilar"]'], ['[data-push="#/calgi/keman"]']]);
+  assert.doesNotMatch(script, /prep\./);
   assert.match(script, /"name":"song\.game","hash":"#\/sarki\/keman"/);
   assert.doesNotMatch(script, /"level":/, 'the script never picks a level');
 });

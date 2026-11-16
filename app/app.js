@@ -1619,6 +1619,9 @@ async function run(m) {
     freshChild();
     closeLayers(); stopTheme(); theme.played = false;
     stack = []; banner = 0; flipped.clear(); calFilter = ''; signTab = 1;
+    // The child is new, so the script is at its start: otherwise the next at(k) could find the old place still
+    // matching and carry on from a round this reset has thrown away.
+    script.pos = -1; script.dirty = false; script.at = null;
     applySettings();
     go(m.hash ?? '#/');
     return;
@@ -1704,6 +1707,8 @@ const ACTS = {
   'page': async m => { goNow(m.hash); await sleep(300); },
   /** A page, then a tap on it as a child would (Öğren's family card, an instrument in the grid). */
   'open': async m => { goNow(m.hash); await sleep(300); if (m.tap) await pressDo(m.tap); },
+  /** A tap on the page as it is, for a step that goes deeper from where the last one left the phone. */
+  'tap': async m => { if (!document.querySelector(m.sel)) throw new Error(`tap: no ${m.sel}`); await pressDo(m.sel); await sleep(300); },
   /** Çal: a song's "Bu çalgıyla oyna", which opens its round at the choices. */
   'song.game': async m => { goNow(m.hash); await sleep(300); await pressDo('[data-play][data-origin="cal"]'); },
   'results.scroll': async () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); await sleep(REDUCED ? 0 : 700); },

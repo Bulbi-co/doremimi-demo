@@ -165,3 +165,17 @@ h1.title.tour { font-size: 60px; margin: 40px 0 18px; }
 .act.playing .a-go::after { content: ''; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: act-spin .8s linear infinite; }
 @keyframes act-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .act.playing .a-go::after { animation: none; border-right-color: currentColor; opacity: .6; } }
+
+/* ---------- the walk's sections (ch. 14 §11): which part of the app a slide is in, over its title */
+.slide .eyebrow { display: inline-block; margin-top: 40px; font: 800 15px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--magenta); }
+.dark .slide .eyebrow { color: var(--yellow); }
+.slide .eyebrow + h1.title { margin-top: 14px; }
+
+/* ---------- auto-play (deck/flow.js): a control the presenter can always reach, lit while it runs */
+.auto-btn { display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 16px 0 14px; margin-left: 10px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px var(--line), 0 4px 0 0 #C9CFE6; }
+.auto-btn b { font: 800 15px/1 var(--display); }
+.auto-i { width: 0; height: 0; border-left: 11px solid currentColor; border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
+.stage.auto .auto-btn { background: var(--magenta); color: #fff; box-shadow: 0 4px 0 0 #8A0A61; }
+.stage.auto .auto-i { width: 11px; height: 13px; border: 0; border-left: 4px solid currentColor; border-right: 4px solid currentColor; }
+.dark .auto-btn { background: rgba(255, 255, 255, .08); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
+.dark.stage.auto .auto-btn { background: var(--yellow); color: var(--ink); box-shadow: 0 4px 0 0 #9C7C00; }

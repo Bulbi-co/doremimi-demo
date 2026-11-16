@@ -3,7 +3,7 @@
  * R-02 to R-12). The slides are data in deck/slides.js; each may send the phone a message when it opens, and its
  * "canlı göster" buttons play in order on →. This file draws them and drives them through deck/flow.js.
  */
-import { SLIDES, icon } from './deck/slides.js';
+import { SLIDES, icon, readMs } from './deck/slides.js';
 import { initial, step as flowStep } from './deck/flow.js';
 
 const $ = s => document.querySelector(s);
@@ -30,7 +30,10 @@ addEventListener('resize', fit); addEventListener('orientationchange', () => set
  * move now. While the phone is playing a step (until its dm-done) or a slide is still coming in, input is ignored and
  * the controls show they are waiting; nothing queues up to fire later (owner, 2026-11-15).
  */
-let flow = initial(SLIDES.map(s => ({ phone: s.phone ?? null, acts: (s.acts ?? []).map(a => a[1]) })));
+const query = new URLSearchParams(location.search);
+// ?bekle=<ms>: one pause for all of auto-play, for tools/auto-e2e.mjs; the lock itself is not shortened.
+const pause = Number.parseInt(query.get('bekle') ?? '', 10);
+let flow = initial(SLIDES.map(s => ({ phone: s.phone ?? null, acts: (s.acts ?? []).map(a => a[1]), read: readMs(s) })), { pause: Number.isFinite(pause) ? pause : null });
 function dispatch(e) {
   const r = flowStep(flow, e);
   flow = r.state;
@@ -42,6 +45,7 @@ function perform(fx) {
   else if (fx.type === 'mark') mark();
   else if (fx.type === 'timer') setTimeout(() => dispatch({ type: 'dwell', token: fx.token }), fx.ms);
   else if (fx.type === 'watchdog') setTimeout(() => dispatch({ type: 'watchdog', token: fx.token }), fx.ms);
+  else if (fx.type === 'autotimer') setTimeout(() => dispatch({ type: 'autotick', token: fx.token }), fx.ms);
   else if (fx.type === 'warn') console.warn('[sunum]', fx.text);
 }
 
@@ -91,6 +95,10 @@ function mark() {
   stage.classList.toggle('busy', busy);
   stage.setAttribute('aria-busy', String(busy));
   [$('#prev'), $('#next'), ...document.querySelectorAll('[data-dot], .act')].forEach(b => { b.disabled = busy; });
+  // The auto-play control is never disabled: it is how the presenter stops it, busy or not.
+  stage.classList.toggle('auto', flow.auto);
+  $('#auto').setAttribute('aria-pressed', String(flow.auto));
+  $('#auto-t').textContent = flow.auto ? 'Durdur' : 'Otomatik';
   [...document.querySelectorAll('.slide.on .act')].forEach((a, k) => {
     a.classList.toggle('done', k < flow.sub && !(busy && k === flow.playing));
     a.classList.toggle('upnext', !busy && k === flow.sub);
@@ -104,10 +112,11 @@ function key(k) {
   if (['ArrowLeft', 'PageUp'].includes(k)) dispatch({ type: 'prev' });
   if (k === 'Home') dispatch({ type: 'goto', slide: 0 });
   if (k === 'End') dispatch({ type: 'goto', slide: SLIDES.length - 1 });
-  if (phoneTyping) return;   // while the game takes letters, N, F and R are letters, not shortcuts
+  if (phoneTyping) return;   // while the game takes letters, N, F, R and A are letters, not shortcuts
   if (k === 'n' || k === 'N') $('#notes').hidden = !$('#notes').hidden;
   if (k === 'f' || k === 'F') { if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); else document.documentElement.requestFullscreen?.().catch(() => {}); }   // refused (no gesture, headless): stay windowed, no uncaught rejection
   if (k === 'r' || k === 'R') dispatch({ type: 'reset' });
+  if (k === 'a' || k === 'A') dispatch({ type: 'auto' });
 }
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -119,10 +128,13 @@ document.addEventListener('keydown', e => {
 });
 $('#next').onclick = () => dispatch({ type: 'next' });
 $('#prev').onclick = () => dispatch({ type: 'prev' });
+$('#auto').onclick = () => dispatch({ type: 'auto' });
 $('#sound').onclick = () => { unlockAudio(); phone.contentWindow.postMessage({ type: 'sound' }, '*'); $('#sound').classList.add('on'); $('#sound-t').textContent = 'Ses açık'; };
 $('#notes-close').onclick = () => { $('#notes').hidden = true; };
 
 addEventListener('hashchange', () => { const n = parseInt(location.hash.slice(1), 10); if (Number.isFinite(n) && n - 1 !== flow.cur) dispatch({ type: 'goto', slide: n - 1 }); });
 const start = parseInt(location.hash.slice(1), 10);
 dispatch({ type: 'goto', slide: Number.isFinite(start) ? start - 1 : 0 });
-if (new URLSearchParams(location.search).has('notlar')) $('#notes').hidden = false;
+if (query.has('notlar')) $('#notes').hidden = false;
+// ?oynat: open already playing, for a kiosk screen or a recording.
+if (query.has('oynat')) dispatch({ type: 'auto', on: true });

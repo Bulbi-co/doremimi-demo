@@ -147,12 +147,18 @@ Chrome. It starts its own headless Chrome with a throwaway profile and stops it 
 
 ## Deploy
 
-**GitHub Pages** is where the demo is published: <https://bulbi-co.github.io/doremimi-demo/>. Every push to `main`
-runs `.github/workflows/pages.yml`: the guards (`node --test tests/*.test.mjs`), then the site alone (`index.html`, `sunum.*`,
-`robots.txt`, `app/`, `assets/`, `deck/`) goes up; `tests/`, `tools/` and `docs/` do not. It needs one repository
-setting, once: Settings → Pages → Build and deployment → Source: GitHub Actions. Every path is relative, so the
-project page's `/doremimi-demo/` prefix needs nothing, and `app/index.html` adds the missing trailing slash itself
-when a host serves `/app` without it.
+**GitHub Pages** is where the demo is published: <https://bulbi-co.github.io/doremimi-demo/>. Pages serves the
+`gh-pages` branch, which holds the site alone (`index.html`, `sunum.*`, `robots.txt`, `app/`, `assets/`, `deck/`);
+`tests/`, `tools/` and `docs/` stay on `main`. To publish what is committed:
+
+```sh
+bash tools/publish-pages.sh    # HEAD's site becomes one commit on gh-pages; live in about a minute
+```
+
+`.github/workflows/pages.yml` runs the guards and then the same script on every push to `main`. Every path is
+relative, so the project page's `/doremimi-demo/` prefix needs nothing, and `app/index.html` adds the missing
+trailing slash itself when a host serves `/app` without it. GitHub sends `cache-control: max-age=600`: a visitor who
+had the page open may see the old files for up to ten minutes after a publish.
 
 It moved from Vercel on 2026-11-16: people opening the link in Turkey got "site not found" until they retried.
 `vercel.json` and `.vercelignore` are still here, and <https://doremimi-demo.vercel.app/> still answers for whoever

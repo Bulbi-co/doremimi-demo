@@ -5,12 +5,10 @@
 # could not open reliably (owner, 2026-11-16: "site bulunamadı", then it opened on a retry). The owner asked for
 # GitHub Actions and GitHub's own domain for this repo, and only this repo.
 #
-# The steps are GitHub's own static starter (actions/starter-workflows pages/static.yml, read 2026-11-16) with two
-# changes: the guards run first, so a deck that fails them is not published, and only the site is uploaded (what
-# .vercelignore kept out stays out: tests/, tools/, docs/, the README).
-#
-# It needs one setting, once, by someone with access to the repository's settings:
-# Settings → Pages → Build and deployment → Source: GitHub Actions.
+# How it publishes: Pages serves the `gh-pages` branch. GitHub switched Pages on by itself when that branch was first
+# pushed (2026-11-16); the "GitHub Actions" source this file was first written for needs a repository setting nobody
+# could reach that night, and its two runs failed at "Setup Pages". So the job runs the guards and then
+# tools/publish-pages.sh, the same script a person runs by hand: the site's files alone, committed to gh-pages.
 name: Deploy the demo to GitHub Pages
 
 on:
@@ -18,21 +16,17 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# contents: write, and nothing else: the job's one side effect is a commit on gh-pages.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# One deployment at a time; a run in progress is allowed to finish, as in the starter.
+# One publish at a time; a run in progress is allowed to finish.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -46,16 +40,8 @@ jobs:
       # '…/tests'") where Node 20 walked the folder. The first run of this workflow failed on exactly that.
       - name: Guards
         run: node --test tests/*.test.mjs
-      - name: The site only
+      - name: Publish to gh-pages
         run: |
-          mkdir _site
-          cp -R index.html sunum.js sunum.css robots.txt app assets deck _site/
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash tools/publish-pages.sh

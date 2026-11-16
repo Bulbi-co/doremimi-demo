@@ -80,7 +80,11 @@ h1.title em { font-style: normal; color: var(--magenta); }
 .dark .nav .count { color: rgba(255, 255, 255, .55); }
 .madeby { font-size: 13px; font-weight: 700; color: var(--muted); }
 .dark .madeby { color: rgba(255, 255, 255, .4); }
-.stage:has(.device.center) .madeby { display: none; }
+/* The centred phone (the closing slide) stands on the footer's row from x = 614 (573 + the 9% its .82 scale takes off
+   each side). The line beside the dots always ran under it; with 16 dots and the auto-play control the dots do too
+   (they end at x = 727, measured 2026-11-16), and the active one showed through the phone's chin. The arrows, the
+   counter and the bar across the top still say where the deck is. */
+.stage:has(.device.center) :is(.madeby, .dots) { display: none; }
 .progress { position: absolute; left: 0; right: 0; top: 0; height: 4px; z-index: 7; }
 .progress b { display: block; height: 100%; background: var(--yellow); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
 
@@ -165,3 +169,12 @@ h1.title.tour { font-size: 60px; margin: 40px 0 18px; }
 .act.playing .a-go::after { content: ''; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: act-spin .8s linear infinite; }
 @keyframes act-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .act.playing .a-go::after { animation: none; border-right-color: currentColor; opacity: .6; } }
+
+/* ---------- auto-play (deck/flow.js): a control the presenter can always reach, lit while it runs. `.nav .auto-btn`
+   and not `.auto-btn`: it sits in .nav, whose square 46 px (54 px on touch) button rule would clip the label. */
+.nav .auto-btn { display: inline-flex; align-items: center; gap: 9px; width: auto; padding: 0 16px 0 14px; margin-left: 10px; font-size: 15px; }
+.nav .auto-btn b { font: 800 15px/1 var(--display); }
+.auto-i { width: 0; height: 0; border-left: 11px solid currentColor; border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
+.stage.auto .nav .auto-btn { background: var(--magenta); color: #fff; box-shadow: 0 4px 0 0 #8A0A61; }
+.stage.auto .auto-i { width: 11px; height: 13px; border: 0; border-left: 4px solid currentColor; border-right: 4px solid currentColor; }
+.stage.dark.auto .nav .auto-btn { background: var(--yellow); color: var(--ink); box-shadow: 0 4px 0 0 #9C7C00; }

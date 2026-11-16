@@ -6,6 +6,8 @@
     "test": "node --test tests/",
     "mutants": "bash tools/mutants.sh",
     "shots": "node --experimental-websocket tools/shoot.mjs http://127.0.0.1:4175 docs/screens",
-    "e2e": "node --experimental-websocket tools/flow-e2e.mjs http://127.0.0.1:4175"
+    "e2e": "node --experimental-websocket tools/flow-e2e.mjs http://127.0.0.1:4175",
+    "e2e:auto": "node --experimental-websocket tools/auto-e2e.mjs http://127.0.0.1:4175",
+    "walk": "node --experimental-websocket tools/deck-walk.mjs http://127.0.0.1:4175 docs/screens/deck"
   }
 }

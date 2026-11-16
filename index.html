@@ -7,9 +7,9 @@
   <title>Doremimi — Sunum</title>
   <meta name="description" content="Bulbi'nin Dore Mimi Yetenek ve Eğitim Vakfı için hazırladığı Doremimi uygulamasının tanıtım sunumu.">
   <link rel="icon" type="image/png" href="assets/brand/logo.png">
-  <link rel="stylesheet" href="assets/fonts/fonts.css?v=5">
-  <link rel="stylesheet" href="sunum.css?v=5">
-  <link rel="stylesheet" href="deck/foundation.css?v=1">
+  <link rel="stylesheet" href="assets/fonts/fonts.css?v=6">
+  <link rel="stylesheet" href="sunum.css?v=7">
+  <link rel="stylesheet" href="deck/foundation.css?v=2">
 </head>
 <body>
   <div class="viewport" id="viewport">
@@ -23,23 +23,24 @@
       <div class="device" id="device" aria-label="Canlı uygulama">
         <span class="btn-l1"></span><span class="btn-l2"></span><span class="btn-r"></span>
         <div class="screen">
-          <iframe id="phone" title="Doremimi uygulaması" src="app/?v=9&embed=1&reset=1#/"></iframe>
+          <iframe id="phone" title="Doremimi uygulaması" src="app/?v=11&embed=1&reset=1#/"></iframe>
           <div class="island"></div>
           <div class="home-ind"></div>
         </div>
       </div>
 
       <div class="frames" id="frames" aria-hidden="true">
-        <figure class="fr phone"><img src="assets/screens/phone-kesfet-new-nav.png?v=3" alt=""></figure>
-        <figure class="fr tab-p"><img src="assets/screens/tablet-kesfet-new-nav.png?v=4" alt=""></figure>
-        <figure class="fr tab-l"><img src="assets/screens/12g-game-yaz-tablet-1366x1024.png?v=3" alt=""></figure>
+        <figure class="fr phone"><img src="assets/screens/phone-kesfet-new-nav.png?v=4" alt=""></figure>
+        <figure class="fr tab-p"><img src="assets/screens/tablet-kesfet-new-nav.png?v=5" alt=""></figure>
+        <figure class="fr tab-l"><img src="assets/screens/12g-game-yaz-tablet-1366x1024.png?v=4" alt=""></figure>
       </div>
 
       <footer class="foot">
         <div class="nav">
           <button id="prev" aria-label="Önceki slayt">←</button>
           <button id="next" aria-label="Sonraki slayt">→</button>
-          <span class="count" id="count">01 / 10</span>
+          <span class="count" id="count">01 / 16</span>
+          <button class="auto-btn" id="auto" type="button" aria-pressed="false" title="Otomatik oynat (A)"><span class="auto-i" aria-hidden="true"></span><b id="auto-t">Otomatik</b></button>
         </div>
         <div class="dots" id="dots"></div>
         <span class="madeby">Bulbi · Doremimi tanıtım sunumu</span>
@@ -51,9 +52,9 @@
   <aside class="notes" id="notes" hidden>
     <div class="notes-head"><strong>Konuşmacı notu</strong><span id="notes-step"></span><button id="notes-close" aria-label="Kapat">×</button></div>
     <div id="notes-body"></div>
-    <small>N: notları aç/kapat · F: tam ekran · →/boşluk: sıradaki gösterim · ←: geri · R: telefonu bu slayta sıfırla</small>
+    <small>N: notları aç/kapat · F: tam ekran · →/boşluk: sıradaki gösterim · ←: geri · R: telefonu bu slayta sıfırla · A: otomatik oynat/durdur</small>
   </aside>
 
-  <script type="module" src="sunum.js?v=8"></script>
+  <script type="module" src="sunum.js?v=9"></script>
 </body>
 </html>

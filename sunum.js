@@ -3,7 +3,7 @@
  * R-02 to R-12). The slides are data in deck/slides.js; each may send the phone a message when it opens, and its
  * "canlı göster" buttons play in order on →. This file draws them and drives them through deck/flow.js.
  */
-import { SLIDES, icon } from './deck/slides.js';
+import { SLIDES, icon, asFlow } from './deck/slides.js';
 import { initial, step as flowStep } from './deck/flow.js';
 
 const $ = s => document.querySelector(s);
@@ -30,7 +30,10 @@ addEventListener('resize', fit); addEventListener('orientationchange', () => set
  * move now. While the phone is playing a step (until its dm-done) or a slide is still coming in, input is ignored and
  * the controls show they are waiting; nothing queues up to fire later (owner, 2026-11-15).
  */
-let flow = initial(SLIDES.map(s => ({ phone: s.phone ?? null, acts: (s.acts ?? []).map(a => a[1]) })));
+const query = new URLSearchParams(location.search);
+// ?bekle=<ms>: one pause for all of auto-play, for tools/auto-e2e.mjs; the lock itself is not shortened.
+const pause = Number.parseInt(query.get('bekle') ?? '', 10);
+let flow = initial(SLIDES.map(asFlow), { pause: Number.isFinite(pause) ? pause : null });
 function dispatch(e) {
   const r = flowStep(flow, e);
   flow = r.state;
@@ -42,6 +45,7 @@ function perform(fx) {
   else if (fx.type === 'mark') mark();
   else if (fx.type === 'timer') setTimeout(() => dispatch({ type: 'dwell', token: fx.token }), fx.ms);
   else if (fx.type === 'watchdog') setTimeout(() => dispatch({ type: 'watchdog', token: fx.token }), fx.ms);
+  else if (fx.type === 'autotimer') setTimeout(() => dispatch({ type: 'autotick', token: fx.token }), fx.ms);
   else if (fx.type === 'warn') console.warn('[sunum]', fx.text);
 }
 
@@ -54,6 +58,11 @@ slidesEl.addEventListener('touchend', e => {
 
 /* ---------- telefonla konuşma (R-07, W-02, W-04) */
 phone.addEventListener('load', () => setTimeout(() => dispatch({ type: 'ready' }), 1500));   // dm-ready normally comes first; this is the fallback
+// A hand on the phone is the presenter taking over, so auto-play stops. Trusted events only: the phone's own scripted
+// presses are element.click() calls, which are not.
+phone.addEventListener('load', () => {
+  try { for (const t of ['pointerdown', 'keydown']) phone.contentDocument.addEventListener(t, e => { if (e.isTrusted) dispatch({ type: 'auto', on: false }); }, true); } catch { /* a phone on another origin: the deck's own inputs still stop it */ }
+});
 let phoneTyping = false;
 addEventListener('message', e => {
   if (e.source !== phone.contentWindow) return;
@@ -96,6 +105,10 @@ function mark() {
     a.classList.toggle('upnext', !busy && k === flow.sub);
     a.classList.toggle('playing', busy && k === flow.playing);
   });
+  // The auto-play control is never disabled: it is how the presenter stops it, busy or not.
+  stage.classList.toggle('auto', flow.auto);
+  $('#auto').setAttribute('aria-pressed', String(flow.auto));
+  $('#auto-t').textContent = flow.auto ? 'Durdur' : 'Otomatik';
 }
 
 /* ---------- tuşlar (R-09, K-01, K-02) */
@@ -104,25 +117,38 @@ function key(k) {
   if (['ArrowLeft', 'PageUp'].includes(k)) dispatch({ type: 'prev' });
   if (k === 'Home') dispatch({ type: 'goto', slide: 0 });
   if (k === 'End') dispatch({ type: 'goto', slide: SLIDES.length - 1 });
-  if (phoneTyping) return;   // while the game takes letters, N, F and R are letters, not shortcuts
+  if (phoneTyping) return;   // while the game takes letters, N, F, R and A are letters, not shortcuts
   if (k === 'n' || k === 'N') $('#notes').hidden = !$('#notes').hidden;
   if (k === 'f' || k === 'F') { if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); else document.documentElement.requestFullscreen?.().catch(() => {}); }   // refused (no gesture, headless): stay windowed, no uncaught rejection
   if (k === 'r' || k === 'R') dispatch({ type: 'reset' });
+  if (k === 'a' || k === 'A') dispatch({ type: 'auto' });
 }
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   // K-02: while the phone's game is at a typing stage, letters, digits, Space, Backspace and Enter go to the phone
   // even when the deck has the focus, so the presenter can type on the laptop without clicking into the phone.
-  if (phoneTyping && (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter')) { e.preventDefault(); phone.contentWindow.postMessage({ type: 'key', key: e.key }, '*'); return; }
+  if (phoneTyping && (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter')) {
+    e.preventDefault();
+    // During auto-play the round on the phone is being typed by the script, so a letter from the laptop (A, to stop
+    // it, above all) stops auto-play and is not typed into the answer.
+    if (flow.auto) dispatch({ type: 'auto', on: false }); else phone.contentWindow.postMessage({ type: 'key', key: e.key }, '*');
+    return;
+  }
   if (e.key === ' ') e.preventDefault();
   key(e.key);
 });
 $('#next').onclick = () => dispatch({ type: 'next' });
 $('#prev').onclick = () => dispatch({ type: 'prev' });
+$('#auto').onclick = () => dispatch({ type: 'auto' });
 $('#sound').onclick = () => { unlockAudio(); phone.contentWindow.postMessage({ type: 'sound' }, '*'); $('#sound').classList.add('on'); $('#sound-t').textContent = 'Ses açık'; };
 $('#notes-close').onclick = () => { $('#notes').hidden = true; };
 
 addEventListener('hashchange', () => { const n = parseInt(location.hash.slice(1), 10); if (Number.isFinite(n) && n - 1 !== flow.cur) dispatch({ type: 'goto', slide: n - 1 }); });
 const start = parseInt(location.hash.slice(1), 10);
 dispatch({ type: 'goto', slide: Number.isFinite(start) ? start - 1 : 0 });
-if (new URLSearchParams(location.search).has('notlar')) $('#notes').hidden = false;
+if (query.has('notlar')) $('#notes').hidden = false;
+// ?oynat: open already playing, for a screen left running or a recording. Browsers keep audio locked until a click or
+// a key, and the phone's songs run on the audio clock: with no gesture at all the Şarkı slide stays silent and its
+// karaoke line does not move (measured in Chrome with its autoplay policy on, 2026-11-16). One click anywhere, or
+// starting with A or the control, which are gestures, is enough.
+if (query.has('oynat')) dispatch({ type: 'auto', on: true });

@@ -1693,6 +1693,23 @@ const ACTS = {
   'page': async m => { goNow(m.hash); await sleep(300); },
   /** A page, then a tap on it as a child would (Öğren's family card, an instrument in the grid). */
   'open': async m => { goNow(m.hash); await sleep(300); if (m.tap) await pressDo(m.tap); },
+  /** A tap on the page as it is, after the steps before it in a batch (the foundation's banner on the logo's tab). */
+  'tap': async m => { if (!document.querySelector(m.sel)) throw new Error(`tap: no ${m.sel}`); await pressDo(m.sel); await sleep(300); },
+  /*
+   * Ayarlar as a whole state (the deck's Ayarlar slide): the page, then Zorluk and Dil pressed until they read as
+   * asked, so ← and R land on the same screen whatever was tapped in between. `quiet`, or the flow machine's
+   * play: false on an undo, sets them with no press shown: the audience should not watch a tap nobody asked for.
+   */
+  'settings': async m => {
+    const quiet = m.quiet || m.play === false;
+    goNow('#/ayarlar'); await sleep(300);
+    for (const [attr, want] of [['zorluk', m.zorluk], ['dil', m.dil]]) {
+      if (!want || want === (attr === 'dil' ? lang : profile.difficulty)) continue;
+      const sel = `[data-${attr}="${want}"]`;
+      if (!document.querySelector(sel)) throw new Error(`settings: no ${sel}`);
+      if (quiet) document.querySelector(sel).click(); else { await pressDo(sel); await sleep(500); }
+    }
+  },
   'results.scroll': async () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); await sleep(REDUCED ? 0 : 700); },
   /** A sequence with a visible pause between presses (0.8–1.2 s, W-03), for slides that play several steps at once. */
   'seq': async m => { for (const step of m.steps) { await run({ type: 'act', ...step }); await sleep(m.gap ?? 900); } },

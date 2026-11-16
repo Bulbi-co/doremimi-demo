@@ -21,7 +21,7 @@
   --lip-mint: #279C62; --lip-magenta: #960B6B; --lip-indigo: #0E0B55; --lip-steel: #144D77; --lip-navy: #07072A; --lip-white: #C7C6DF;
   /* Palette.axaml role tokens (HC-02). The old text roles (xp, success, gold, wrong) are inks now: right and wrong are
      said in copy and icons, never by a hue (HC-05). */
-  --ink: #16182C; --text-body: #34384C; --text-muted: #555A6E; --text-xp: #16182C; --text-success: #16182C;
+  --ink: #16182C; --text-body: #34384C; --text-muted: #555A6E; --text-success: #16182C;
   --text-gold: #555A6E; --text-wrong: #34384C; --ribbon-magenta: #B00C7C;
   --ink-soft: #555A6E; --ink-faint: #8D92A3; --ink-disabled: #8A8FA0;
   --surface: #FFFFFF; --sunken: #EDEFF3; --hairline: #DFE2E8; --modifier: #DADEE5;
@@ -91,10 +91,6 @@ img { display: block; }
 .topbar .title { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
 .topbar .title img { width: 46px; height: 45px; }
 .topbar h1 { margin: 0; font: 700 28px/34px var(--font-display); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* The level chip and the avatar chip: white, RadiusM, the card shadow (AppStyles.axaml level-chip, avatar-chip). */
-.tile.levelbtn { display: flex; align-items: center; min-height: 40px; padding: 6px 10px 7px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--drop-card); }
-.levelbtn .lv { min-width: 52px; display: flex; flex-direction: column; gap: 4px; align-items: center; }
-.levelbtn .lv b { font: 600 12px/15px var(--font-display); }
 .slim { width: 100%; height: 4px; border-radius: 2px; background: var(--sunken); overflow: hidden; }
 .slim i { display: block; height: 100%; background: var(--ink); border-radius: 3px; }
 .avatar { width: 40px; height: 40px; border-radius: var(--r-m); display: grid; place-items: center; box-shadow: inset 0 -4px 0 0 rgba(0,0,0,.20); color: #fff; font: 800 20px var(--font-display); overflow: hidden; flex: none; }
@@ -346,11 +342,11 @@ img { display: block; }
 :is(.topbar, .page, .overlay-host) .p.strong { font-weight: 500; }
 :is(.topbar, .page, .overlay-host) .today .ttxt .p { font: var(--t-meta); letter-spacing: var(--ls-meta); }
 :is(.topbar, .page, .overlay-host) :is(.mt small, .caption, .imeta small, .ttxt small, .video .meta small, .prow em, .card.lyric small, .pmeta small) { font: var(--t-meta); letter-spacing: var(--ls-meta); }
-:is(.topbar, .page, .overlay-host) :is(.prow, .prof-level .three) { font: var(--t-meta); letter-spacing: var(--ls-meta); }
+:is(.topbar, .page, .overlay-host) :is(.prow, .prof-counts) { font: var(--t-meta); letter-spacing: var(--ls-meta); }
 :is(.topbar, .page, .overlay-host) .prow > span:first-child { font: var(--t-row); letter-spacing: var(--ls-row); }
 :is(.topbar, .page, .overlay-host) :is(.kface small, .hero .txt small, .sign-hero small, .inst-hero .mt small, .ftxt small, .ftxt em) { font: 600 13px/18px var(--font-body); letter-spacing: var(--ls-meta); }
 :is(.topbar, .page, .overlay-host) .kface small { font-size: 12px; line-height: 16px; }
-:is(.topbar, .page, .overlay-host) :is(.eyebrow, .ribbon.small h2, .lvbox small, .badge) { font: var(--t-eyebrow); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; font-feature-settings: "case"; color: var(--ink-soft); }
+:is(.topbar, .page, .overlay-host) :is(.eyebrow, .ribbon.small h2, .badge) { font: var(--t-eyebrow); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; font-feature-settings: "case"; color: var(--ink-soft); }
 /* An eyebrow is its own line: inline, the Vakıf page's "DUYURU" ran straight into the title it labels. */
 :is(.topbar, .page, .overlay-host) .eyebrow { display: block; }
 :is(.topbar, .page, .overlay-host) .card > .eyebrow { margin-bottom: 4px; }
@@ -367,8 +363,7 @@ img { display: block; }
 :is(.topbar, .page, .overlay-host) .otab { font: var(--t-label); line-height: 40px; letter-spacing: var(--ls-label); }
 :is(.topbar, .page, .overlay-host) .quiet.link { font: var(--t-meta); text-decoration: underline; text-underline-offset: 3px; }
 :is(.topbar, .page, .overlay-host) .oyna-cap { font: var(--t-row); letter-spacing: var(--ls-row); }
-:is(.topbar, .page, .overlay-host) .levelbtn .lv b { font: 600 12px/15px var(--font-display); }
-:is(.topbar, .page, .overlay-host) :is(.lvbox b, .prof-level .three b) { letter-spacing: -0.017em; }
+:is(.topbar, .page, .overlay-host) .prof-counts b { letter-spacing: -0.017em; }
 .dock .tab span { font: var(--t-dock); letter-spacing: var(--ls-dock); }
 /* A long page title steps down rather than being cut (app.js fitTitle): the hero size, then two lines of 18. */
 .topbar .title h1.fit1 { font: var(--t-hero); letter-spacing: var(--ls-hero); }
@@ -430,7 +425,6 @@ img { display: block; }
 .card.list { padding: 4px 0; overflow: hidden; }
 .lrow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px 8px 16px; width: 100%; text-align: left; }
 .lrow .mt small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.badge.xpb { background: var(--sunken); color: var(--ink-soft); box-shadow: none; font-size: 10px; padding: 2px 7px; }
 .badge.soonb { background: #FFF4D6; color: var(--text-gold); align-self: flex-start; }
 .pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .pills span { padding: 5px 10px; border-radius: var(--r-m); background: var(--sunken); font: 700 13px/18px var(--font-body); }
@@ -567,15 +561,13 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 /* Profilim in white cards (ch. 13): the slate panels put white bar labels on grey at about 1.4:1. */
 .card.child-head { flex-direction: column; align-items: stretch; gap: 12px; }
 .who-line { display: flex; align-items: center; gap: 14px; }
-.card.prof-level { display: flex; flex-direction: column; gap: 14px; }
-.prof-level .top { display: flex; gap: 14px; align-items: center; }
-.lvbox { width: 56px; height: 56px; border-radius: var(--r-m); background: var(--sunken); color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
-.lvbox small { font: 600 10px/12px var(--font-display); letter-spacing: .06em; color: var(--ink-soft); }
-.lvbox b { font: 700 24px/26px var(--font-display); }
-.prof-level .mt { gap: 6px; }
-.prof-level .mt small { font: 500 12px/16px var(--font-body); color: var(--ink-soft); }
-.prof-level .three { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font: 400 12px/16px var(--font-body); color: var(--ink-soft); padding-top: 12px; border-top: 1px solid var(--hairline); }
-.prof-level .three b { display: block; font: 700 20px/26px var(--font-display); color: var(--ink); }
+/* Three lines beside the avatar (the parent panel): the avatar stays at the first, as the app's does (VerticalAlignment Top). */
+.who-line.top { align-items: flex-start; }
+/* Profilim's three counts (rozet, oynanan tur, yıldız) are a card of their own since ch. 14 §14 took the level and its
+   bar from above them. No font here: the labels take the type system's meta role (the rule that names .prof-counts
+   above). A font set on .card.prof-counts ties with that rule and, coming later, won: the labels were Regular 12. */
+.card.prof-counts { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; color: var(--ink-soft); }
+.prof-counts b { display: block; font: 700 20px/26px var(--font-display); color: var(--ink); }
 .card.plist { padding: 2px 16px; display: flex; flex-direction: column; }
 .prow { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 6px 8px; align-items: center; padding: 12px 0; font: 600 15px/20px var(--font-body); }
 .prow em { font: 500 12px/16px var(--font-body); font-style: normal; color: var(--ink-soft); }
@@ -644,13 +636,12 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
      again, card, keyboard, popups and all. Its buttons keep their lips: the flat rule above is scoped off the game. */
   --font-display: var(--font-play); --font-body: var(--font-play-body); }
 .game[hidden] { display: none; }
-.g-head { position: relative; z-index: 5; display: grid; grid-template-columns: auto 1fr auto; align-items: center; margin: calc(6px + var(--safe-top)) 12px 6px; }
-/* ch. 13: the ✕ is 44 (popup ✕s stay 48), the Sv chip 32 tall; the title stays 20. */
+.g-head { position: relative; z-index: 5; display: grid; grid-template-columns: auto 1fr; align-items: center; margin: calc(6px + var(--safe-top)) 12px 6px; }
+/* ch. 13: the ✕ is 44 (popup ✕s stay 48); the title stays 20. */
 .g-head .chunky.close > .face { width: 44px; height: 44px; }
 .g-head .t { margin: 0 0 2px 12px; display: flex; flex-direction: column; min-width: 0; }
 .g-head .t b { font: 800 20px/24px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .g-head .t small { font: 700 13px/15px var(--font-body); color: var(--text-body); }
-.g-head .sv { height: 32px; min-width: 54px; width: auto; padding: 0 10px; background: var(--sunken); color: var(--ink); font-size: 14px; box-shadow: none; }
 /* The bottom margin keeps the safe-area inset on purpose. The dossier's game shots were taken on desktop with no inset, so
    their keyboard and choices end ~25 px lower; on an iPhone the app pads the same way (ShellView TopLevel.AutoSafeAreaPadding). */
 .g-body { position: relative; z-index: 2; flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 12px calc(10px + var(--safe-bottom)); }
@@ -680,11 +671,18 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 /* ToyCard.FlashTint: coral #FF7A6B at 35 %, linear to nothing in 320 ms (motion.json wrong.tintOpacity / durationMs). */
 .wrong-tint { position: absolute; inset: 0; border-radius: var(--r-card); background: #FF7A6B; opacity: .35; pointer-events: none; animation: tint 320ms linear both; }
 @keyframes tint { from { opacity: .35; } to { opacity: 0; } }
-/* The outcome: a white toast with the headline, the detail on a sunken pill (MusicCardGameView.axaml:92-96). */
-.xp-chip { position: absolute; left: 50%; top: -50px; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; animation: xpChip 1.6s var(--ease-cubic-out) both; }
-.xp-chip .toastb { padding: 8px 22px 10px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--drop-toast); font: 800 32px/36px var(--font-display); }
-.xp-chip small { padding: 3px 12px 5px; border-radius: var(--r-m); background: var(--sunken); color: var(--ink-soft); font: 800 13px/16px var(--font-display); }
-@keyframes xpChip { 0% { opacity: 0; transform: translate(-50%, 0) scale(.9); } 19% { opacity: 1; transform: translate(-50%, 0) scale(1); } 76% { opacity: 1; transform: translate(-50%, -50px); } 100% { opacity: 0; transform: translate(-50%, -56px); } }
+/* The outcome: a white toast with the praise line alone (ch. 14 §14 took the "+N XP" headline, so the praise is the
+   headline now). 22 px in 20 px of padding, as the app has it: the longest line in the three languages ("TROUVÉ AVEC
+   LES LETTRES !") measures 278 px, 318 with the padding, inside the app's 320 px box and a 360 px phone.
+   The box is the app's too (MusicCardGameView.axaml: Margin 0,-50, Height 170, content at the bottom): the chip lands
+   120 px under the card area's top and rises 56 from there. Placed by its own top at -50 it sat on the game's title
+   and flew off the top of the screen (measured: y 18 to -11 under a header that ends at 54), which the level strip had
+   hidden until ch. 14 §2 took the strip away.
+   The transform is also set outside the keyframes: with animations off (reduced motion, ?still) the chip started at
+   the middle and ran off the right edge. */
+.praise-chip { position: absolute; left: 50%; top: -50px; height: 170px; transform: translate(-50%, 0); z-index: 10; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; pointer-events: none; animation: praiseChip 1.6s var(--ease-cubic-out) both; }
+.praise-chip .toastb { padding: 8px 20px 10px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--drop-toast); font: 800 22px/28px var(--font-display); white-space: nowrap; }
+@keyframes praiseChip { 0% { opacity: 0; transform: translate(-50%, 0) scale(.9); } 19% { opacity: 1; transform: translate(-50%, 0) scale(1); } 76% { opacity: 1; transform: translate(-50%, -50px); } 100% { opacity: 0; transform: translate(-50%, -56px); } }
 
 /* the back: the information card (RevealCardView.axaml), white in a 4 px frame of the card's colour */
 .back-scroll { overflow-y: auto; height: 100%; margin: 0 -4px; padding: 2px 4px 6px; scrollbar-width: none; }
@@ -792,9 +790,9 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .grade .two { align-self: stretch; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .grade .two .face { padding: 16px 8px; }
 
-/* popups: results, intro, level up (MusicCardGameView.axaml:338-450; Controls.axaml result-face): a white face with
+/* popups: results, intro (MusicCardGameView.axaml:338-450; Controls.axaml result-face): a white face with
    one soft shadow, the title inside it, the ✕ in its corner. No ribbon, no rays, no coloured stars: ink on grey. */
-/* The results and the level-up sit under the game's header (MusicCardGameView.axaml:345, Grid.Row 1); the intro covers all. */
+/* The results sit under the game's header (MusicCardGameView.axaml:345, Grid.Row 1); the intro covers all. */
 .overlay.below { top: var(--below, 0px); }
 .overlay { position: absolute; inset: 0; z-index: 40; background: var(--scrim); overflow-y: auto; display: flex; justify-content: center; align-items: center; padding: calc(24px + var(--safe-top)) 16px calc(24px + var(--safe-bottom)); scrollbar-width: none; --pface: var(--ink); --plabel: #fff; }
 .overlay::-webkit-scrollbar { display: none; }
@@ -814,11 +812,11 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .star:nth-child(2) .gold { animation-delay: 150ms; } .star:nth-child(3) .gold { animation-delay: 300ms; }
 .r-title { text-align: center; font: 800 22px/26px var(--font-display); }
 .r-info { text-align: center; font-size: 14px; }
-.stats3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.stats2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .rrow { background: var(--sunken); border-radius: var(--r-m); padding: 8px; font: 800 15px/18px var(--font-display); }
-.stats3 .rrow { text-align: center; display: flex; flex-direction: column; }
-.stats3 .rrow small { font: 800 12px/14px var(--font-display); }
-.stats3 .rrow b { font: 800 20px/24px var(--font-display); }
+.stats2 .rrow { text-align: center; display: flex; flex-direction: column; }
+.stats2 .rrow small { font: 800 12px/14px var(--font-display); }
+.stats2 .rrow b { font: 800 20px/24px var(--font-display); }
 .r-group { margin: 6px 2px 0; }
 .fact-row { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 10px; }
 .fact-row .art { width: 44px; height: 44px; border-radius: var(--r-m); background: var(--accent-deep); display: grid; place-items: center; color: #fff; font: 400 26px/1 var(--font-music); overflow: hidden; }
@@ -854,7 +852,6 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .intro .tt { text-align: center; font: 800 24px/28px var(--font-display); }
 .intro .p { text-align: center; }
 .stepdots { display: flex; gap: 6px; justify-content: center; }
-.lvl-num { width: 88px; height: 88px; margin: 0 auto; border-radius: var(--r-l); background: var(--sunken); display: grid; place-items: center; font: 800 44px/1 var(--font-display); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

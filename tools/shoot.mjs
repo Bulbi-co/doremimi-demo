@@ -273,6 +273,8 @@ const LANG_PLAN = [
   ['75-oyun-harfler', '#/', [...playing, act('game.type', { text: 'abc', send: true })], 2500],
   ['76-oyun-secenekler', '#/', [...playing, act('game.type', { text: 'abc', send: true }), wait(1200), act('game.type', { text: 'zzzzzzzzzzzz', send: true })], 3500],
   ['77-oyun-bilgi', '#/', [...playing, act('game.dontknow')], 2000],
+  // The praise chip over a card answered right (ch. 14 §14: the praise alone). The long gap holds the round on that card.
+  ['78-oyun-dogru', '#/', [...playing, act('game.finish', { gap: 9000 })], 4500],
   ['79-oyun-cevir', '#/', [...playing, ...struggle(8)], 2500],
   ['80-oyun-sonuc', '#/', [...playing, act('game.finish', { gap: 50 })], 22000],
   ['81-cal-turu', '#/sarki/keman', [wait(500), tap('[data-play][data-origin="cal"]'), tap('[data-level="orta"]'), tap('[data-g="intro-close"]')], 1500],

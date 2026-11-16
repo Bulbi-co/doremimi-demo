@@ -161,3 +161,37 @@ mutatef "text on colour at Medium"               app/style.css      's/(\.ftxt s
 mutatef "a weight Inter does not ship"           app/style.css      's/--t-card: 600 17px/--t-card: 650 17px/'
 mutatef "the section as big as the title"        app/style.css      's/--t-section: 700 20px\/26px/--t-section: 700 28px\/34px/'
 mutatef "a count loses its figures"              app/app.js         's/<small class="num">\$\{esc\(t\(.game\.card./<small>\${esc(t(\x27game.card\x27/'
+# dossier ch. 14 §14, no XP, no gold and no XP level on the phone (tests/xp.test.mjs)
+mutatef "CONTROL: a comment that names XP"       app/app.js         's/is kept for the backend and never drawn \(ch\. 14 §14\)/is kept for the backend (it was the XP) and never drawn (ch. 14 §14)/'
+mutatef "CONTROL: a comment in the stylesheet"   app/style.css      's/took the "\+N XP" headline, so the praise/took the "+N XP" headline and the XP pill, so the praise/'
+mutatef "+N XP back on the outcome chip"         app/app.js         "s/G\.outcome = \{ praise: t\(\{ TypedFirstTry/G.outcome = { praise: '+' + o.xp + ' ' + t({ TypedFirstTry/"
+mutatef "the chip gets a second line"            app/app.js         's/<span class="toastb">\$\{esc\(G\.outcome\.praise\)\}<\/span><\/div>/<span class="toastb">\${esc(G.outcome.praise)}<\/span><small>\${esc(G.round.count)}<\/small><\/div>/'
+mutatef "the level chip back in the top bar"     app/app.js         's/(    <button class="tile" data-go="#\/profil" data-do="avatar")/    <button class="tile" data-go="#\/profil"><b class="num">\${profile.level}<\/b><\/button>\n$1/'
+mutatef "a chip in the game header"              app/app.js         's/(n: r\.count \}\)\)\}<\/small>` : .{2}\}<\/div>)`;/$1\n    <span class="avatar num">\${profile.level}<\/span>`;/'
+mutatef "results get their XP tile back"         app/app.js         's/<div class="stats2 num"><div class="rrow">/<div class="stats2 num"><div class="rrow"><small>\${esc(t("results.stars"))}<\/small><b>+\${G.round.xpEarned}<\/b><\/div><div class="rrow">/'
+mutatef "the level-up popup returns"             app/app.js         's/(  G\.roundBadges\.push\(\.\.\.earned\);\n)/$1  if (lv.levelsGained > 0) G.levelUp = { level: profile.level };\n/'
+mutatef "Profilim shows the level"               app/app.js         's/<div class="card prof-counts"><span>/<div class="card prof-counts"><span><b class="num">\${profile.level}<\/b><\/span><span>/'
+mutatef "Profilim gets the note card back"       app/app.js         's/(    \$\{group\(t\(.profile\.family.\), \[)/    <div class="card note"><p class="p strong c">\${esc(t("profile.stats"))}<\/p><\/div>\n$1/'
+mutatef "the parent panel shows the number"      app/app.js         's/(<b class="h3">\$\{esc\(kidName\(kid\)\)\}<\/b>)<span class="p num">/$1<small class="num">\${profile.xp}<\/small><span class="p num">/'
+mutatef "a first instrument pays on screen"      app/app.js         "s/toast\(t\('instrument\.discovered', \{ name: d\.label \}\)\);/toast('+' + LEARNING.xp.seenInstrument, t('instrument.discovered', { name: d.label }));/"
+mutatef "a card no longer records progress"      app/app.js         's/  profile\.level = lv\.level; profile\.xp = lv\.xp;\n  mastery\.record/  mastery.record/'
+mutatef "a first instrument records nothing"     app/app.js         's/      const lv = addXp\(LEARNING, profile\.level, profile\.xp, LEARNING\.xp\.seenInstrument\);\n      profile\.level = lv\.level; profile\.xp = lv\.xp; save\(\);/      save();/'
+mutatef "XP in a Turkish string"                 app/i18n/ui.js     "s/'results\.right': 'Doğru'/'results.right': 'Doğru XP'/"
+mutatef "Seviye N in an English string"          app/i18n/ui.js     "s/'game\.card': 'Card \{i\} of \{n\}'/'game.card': 'Level {n} · card {i}'/"
+mutatef "gold in a French string"                app/i18n/ui.js     "s/'results\.stars': 'Étoiles'/'results.stars': 'Pièces d’or'/"
+mutatef "a riddle's row pays XP again"            app/data/site/videos.json 's/"title": "Arp · Bilmece"/"title": "Arp · Bilmece · +3 XP"/'
+mutatef "the parent row names the level again"   app/i18n/ui.js     "s/'profile\.panel\.line': 'Çocukların pratiği ve rozetleri'/'profile.panel.line': 'Çocukların seviyesi ve pratiği'/"
+mutatef "the parent row in other words"          app/i18n/ui.js     "s/'profile\.panel\.line': 'Çocukların pratiği ve rozetleri'/'profile.panel.line': 'Çocukların ilerlemesi ve pratiği'/"
+mutatef "En iyi tur back in İstatistikler"       app/app.js         "s/(\['stats\.rounds', profile\.rounds \?\? 0\], )/\$1\['stats.rounds', profile.best ?? 0\], /"
+mutatef "the best round is no longer saved"      app/app.js         's/ profile\.best = Math\.max\(profile\.best \?\? 0, G\.results\.right\);//'
+mutatef "the best-round key is back in English"  app/i18n/ui.js     "s/( 'stats\.answered': 'Questions answered',)/ 'stats.best': 'Best round',\$1/"
+mutatef "the XP key is back in French"           app/i18n/ui.js     "s/(  'results\.info': 'Tu as trouvé)/  'results.xp': 'Points',\n\$1/"
+mutatef "the intro promises XP in French"        app/i18n/content-fr.js "s/Les bonnes réponses rapportent des étoiles\./Les bonnes réponses rapportent des XP et des étoiles./"
+mutatef "the intro promises points in Turkish"   app/data/content.js "s/Doğru cevaplar yıldız getirir\./Doğru cevaplar puan ve yıldız getirir./"
+mutatef "the level chip's style is back"         app/style.css      's/(\.praise-chip \{ position)/.levelbtn .lv { min-width: 52px; }\n$1/'
+# the outcome chip's box and rise are the app's (tests/app-parity.test.mjs reads MusicCardGameView.axaml and Controls.axaml)
+mutatef "CONTROL: the chip a pixel wider"        app/style.css      's/(\.praise-chip \.toastb \{ padding: 8px) 20px/$1 21px/'
+mutatef "the chip placed by its own top again"   app/style.css      's/(\.praise-chip \{ position: absolute; left: 50%; top: -50px;) height: 170px;/$1/'
+mutatef "the chip's box starts at the card"      app/style.css      's/(\.praise-chip \{ position: absolute; left: 50%; top:) -50px;/$1 0px;/'
+mutatef "the chip at the top of its box"         app/style.css      's/(\.praise-chip \{[^}]*)justify-content: flex-end;/$1justify-content: flex-start;/'
+mutatef "the chip rises 80"                      app/style.css      's/76% \{ opacity: 1; transform: translate\(-50%, -50px\); \}/76% { opacity: 1; transform: translate(-50%, -80px); }/'

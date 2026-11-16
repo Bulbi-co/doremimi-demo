@@ -237,7 +237,7 @@ export const LEVEL_QUESTION = 'Hangi seviyeden başlayalım?';
 export const INTRO_STEPS = [
   { key: 'see', title: 'Kartı gör', text: 'Kartta bir müzik işareti ya da bir çalgı sorusu var.', accent: '#2B9BFF' },
   { key: 'find', title: 'Cevabı bul', text: 'Cevabı yazarsın, seçersin ya da kartı çevirip okursun: kart sana nasıl yapacağını gösterir.', accent: '#E0109E' },
-  { key: 'stars', title: 'Yıldız topla', text: 'Doğru cevaplar XP ve yıldız getirir. Yanlış cevap hiçbir şey kaybettirmez.', accent: '#FFCC00' },
+  { key: 'stars', title: 'Yıldız topla', text: 'Doğru cevaplar yıldız getirir. Yanlış cevap hiçbir şey kaybettirmez.', accent: '#FFCC00' },
 ];
 
 /**

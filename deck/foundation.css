@@ -11,14 +11,20 @@
    line it does not spend is one the strip needs; the gaps below were set by looking at it at 1600 × 900. */
 .lead.fnd-wide { max-width: 1360px; }
 
-/* ---------- the timeline: one column a year, the year's entries under it */
-.fnd-line { list-style: none; margin: 38px 0 0; padding: 0; position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: 22px; width: 1360px; }
+/* ---------- the timeline: five columns, the orchestra's one wider, today's last and lit */
+.fnd-line { list-style: none; margin: 38px 0 0; padding: 0; position: relative; display: grid; grid-template-columns: 1fr 1.9fr 1fr 1.25fr 1.35fr; column-gap: 28px; width: 1360px; }
 .fnd-line::before { content: ''; position: absolute; left: 0; right: 0; top: 7px; height: 2px; background: rgba(255, 255, 255, .2); }
 .fnd-line > li { position: relative; padding-top: 34px; }
 .fnd-line > li::before { content: ''; position: absolute; left: 0; top: 0; width: 16px; height: 16px; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 0 6px var(--navy); }
 .fnd-y { display: block; font: 800 40px/1 var(--display); color: var(--yellow); font-variant-numeric: tabular-nums; }
-.fnd-ev { display: block; margin-top: 14px; font: 700 19px/1.32 var(--body); color: #fff; }
-.fnd-ev i { display: block; margin-bottom: 3px; font: 800 14px/1.2 var(--display); letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .6); }
+.fnd-ev { display: block; margin-top: 14px; font: 700 20px/1.32 var(--body); color: #fff; }
+.fnd-ev i { display: block; margin-bottom: 4px; font: 800 14px/1.25 var(--display); letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .6); }
+.fnd-ev small { display: block; margin-top: 8px; font: 600 18px/1.35 var(--body); color: rgba(255, 255, 255, .7); }
+/* Today: the one column that is not a date. Its dot is ringed and its words are the slide's largest after the title,
+   because it is where the presenter stops ("bugün buradayız") before turning to the phone. */
+.fnd-line > li.fnd-now::before { background: var(--navy); box-shadow: 0 0 0 4px var(--yellow), 0 0 0 10px var(--navy); }
+.fnd-now .fnd-ev { font: 800 30px/1.1 var(--display); color: #fff; }
+.fnd-now .fnd-ev small { margin-top: 10px; font: 700 20px/1.32 var(--body); color: var(--yellow); }
 
 /* ---------- the strip under the timeline: the books, the concerts, the site, a card each (they were slides) */
 .fnd-strip { list-style: none; margin: 26px 0 0; padding: 0; display: grid; grid-template-columns: 1.25fr 1fr 1fr; column-gap: 22px; width: 1360px; }

@@ -373,7 +373,7 @@ const carouselHtml = () => `<div class="carousel">
     <div class="dots">${L.BANNERS.map((b, i) => `<span class="dot${i === banner ? ' on' : ''}"></span>`).join('')}</div>
   </div>`;
 
-// ───────────────────────── Öğren (dossier ch. 14 §10): information only, four tabs, İşaretler · Çalgılar · Aileler ·
+// ───────────────────────── Öğren (dossier ch. 14 §10, §17): information only, three tabs, İşaretler · Çalgılar · Aileler ·
 // Değerler. No page reached from here starts a round: the cards turned over to read now come only as the help inside
 // an Oyna round (the ladder), and the riddles live in İzle, the scores in Çal.
 const flipped = new Set();
@@ -396,7 +396,6 @@ const LEARN_TABS = {
   },
   aileler: () => `${note(t('ogren.aileler.note'))}
     <div class="fams">${Object.keys(L.FAMILIES).map(k => familyCard(k)).join('')}</div>`,
-  degerler: () => valuesTab(),
 };
 
 /*
@@ -413,12 +412,13 @@ function familyCard(key) {
 }
 
 /*
- * Değerler (ch. 14 §5): the foundation's Dore Mimi Müzikle Değerler Eğitimi. What it is comes from the site's own
- * vision text (Turkish in every language, as the foundation's site texts are); the parts the app already has open
- * them, and the part it does not have yet says so ("Hazırlanıyor"), rather than a page that pretends. The games part
- * goes to the Oyna tab: Öğren has no play button (ch. 14 §10).
+ * Müzikle Değerler Eğitimi, a page of the Doremimi tab (ch. 14 §17; it was Öğren's fourth tab, "Değerler", until the
+ * owner moved it: it is the foundation's programme, so it belongs with the foundation's pages, not with what the
+ * child learns). What it is comes from the site's own vision text (Turkish in every language, as the foundation's
+ * site texts are); the parts the app already has open them, and the part it does not have yet says so
+ * ("Hazırlanıyor"), rather than a page that pretends. The games part goes to the Oyna tab, a link, not a round.
  */
-function valuesTab() {
+function valuesPage() {
   const part = (ic, title, line, attrs) => `<button class="vpart${attrs ? '' : ' wait'}" ${attrs ?? 'disabled'}><span class="sq">${icon(ic)}</span>
     <span class="mt"><b>${esc(title)}</b><small>${esc(line)}</small></span>${attrs ? icon('IconChevronRight', 'chev') : `<span class="badge soonb">${esc(t('preparing'))}</span>`}</button>`;
   return `<div class="card values"><span class="eyebrow">${esc(t('values.eyebrow'))}</span><p class="p ink"${TRL()}>${esc(VISION)}</p></div>
@@ -820,6 +820,7 @@ const PAGES = {
   kitaplar: { title: 'page.kitaplar', html: booksPage },
   'dore-ve-mimi': { title: 'hub.dore-ve-mimi', html: characters },
   vakif: { title: 'page.vakif', html: foundation },
+  degerler: { title: 'hub.degerler', html: valuesPage },
   ekip: { title: 'hub.ekip', html: teamPage },
   burslar: { title: 'hub.burslar', html: scholarships },
   gonullu: { title: 'hub.gonullu', html: volunteer },

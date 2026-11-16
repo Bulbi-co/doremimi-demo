@@ -16,15 +16,17 @@ export const TABS = [
 ];
 export const TAB_OF = { '': 'kesfet', ogren: 'ogren', doremimi: 'doremimi', izle: 'izle', cal: 'cal' };
 /**
- * Öğren's tabs (dossier ch. 14 §10), each a root at #/ogren/<key>, labelled ogren.<key>. Four since revision 2:
- * Bilmeceler left for İzle, which already listed every riddle, and Notalar for Çal, which already held the scores.
+ * Öğren's tabs (dossier ch. 14 §10, §17), each a root at #/ogren/<key>, labelled ogren.<key>. Three: Bilmeceler left
+ * for İzle, which already listed every riddle, Notalar for Çal, which already held the scores, and Değerler for the
+ * Doremimi tab (owner, 2026-11-16: it is the foundation's programme, information about the foundation, not something
+ * the child learns in the app; having it here was "a huge blunder").
  */
-export const OGREN_TABS = [{ key: 'isaretler' }, { key: 'calgilar' }, { key: 'aileler' }, { key: 'degerler' }];
+export const OGREN_TABS = [{ key: 'isaretler' }, { key: 'calgilar' }, { key: 'aileler' }];
 // Old routes stay as redirects so a stale deep link (a bookmark, an old slide) still lands (NR-91). The game's own
 // page went in the clean-up (superapp f8c3a52): its topics are Keşfet's Konu seç now, so both of its links land there.
 // Öğren's Bilmeceler and Notalar (ch. 14 §5) went in revision 2: their links land where the same things live now.
 export const REDIRECTS = { oyunlar: '#/', 'oyun-merkezi': '#/', daha: '#/doremimi', 'ogren/videolar': '#/izle', 'ogren/kitaplik': '#/cal', 'kim-oynuyor': '#/profil',
-  'ogren/bilmeceler': '#/izle', 'ogren/notalar': '#/cal' };
+  'ogren/bilmeceler': '#/izle', 'ogren/notalar': '#/cal', 'ogren/degerler': '#/degerler' };
 /*
  * Where a page lives when it is opened with nothing under it (a deep link, or the deck's `go`): the song page in
  * Çal, the instrument in Öğren, the foundation's pages in the hub. Opened by a tap, a page stays on the tab it was
@@ -35,7 +37,9 @@ export const PAGE_HOME = { calgi: 'ogren', isaret: 'ogren', 'isaret-kategori': '
   'doremimi-nedir': 'doremimi', kitaplar: 'doremimi', 'dore-ve-mimi': 'doremimi', vakif: 'doremimi', ekip: 'doremimi',
   burslar: 'doremimi', gonullu: 'doremimi', iletisim: 'doremimi', yardim: 'doremimi', metin: 'doremimi', hakkinda: 'doremimi', tasarim: 'doremimi',
   // the hub's own pages since dossier ch. 14 §6
-  etkinlikler: 'doremimi', bulten: 'doremimi', destek: 'doremimi', destekciler: 'doremimi', yasal: 'doremimi' };
+  etkinlikler: 'doremimi', bulten: 'doremimi', destek: 'doremimi', destekciler: 'doremimi', yasal: 'doremimi',
+  // Müzikle Değerler Eğitimi, a tab of Öğren until ch. 14 §17
+  degerler: 'doremimi' };
 
 export function parse(hash) {
   const [path, query] = (hash.replace(/^#\/?/, '') || '').split('?');

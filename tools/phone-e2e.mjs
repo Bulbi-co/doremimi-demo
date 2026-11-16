@@ -58,7 +58,7 @@ const CHECK = `(() => {
     if (!el.closest('.game') && parseFloat(st.fontSize) <= 13.5 && +st.fontWeight < 500 && /\\p{L}/u.test(text)) out.small.push(st.fontWeight + ' ' + st.fontSize + ' ' + text.slice(0, 40));
     if (lang !== 'tr' && /[ğĞıİşŞ]/.test(text.replace(NAMES, '')) && !el.closest('[lang="tr"]')) out.turkish.push(text.slice(0, 60));
   }
-  for (const el of document.querySelectorAll('.tab span, .otab, .chip-btn, .zopt, .chunky > .face, .levelbtn .lv b, .topbar h1, .kface b, .imeta b, .song-tile b, .sign-tile b')) {
+  for (const el of document.querySelectorAll('.tab span, .otab, .chip-btn, .zopt, .chunky > .face, .topbar h1, .kface b, .imeta b, .song-tile b, .sign-tile b')) {
     if (!el.getClientRects().length || !el.textContent.trim()) continue;   // an icon-only face is not a label
     if (el.scrollHeight > el.clientHeight + 1 && el.matches('.topbar h1')) out.overflow.push('title, two lines not enough: ' + el.textContent.trim());
     if (el.scrollWidth > el.clientWidth + 1) out.overflow.push(el.className + ': ' + el.textContent.trim().slice(0, 40) + ' (' + el.scrollWidth + ' > ' + el.clientWidth + ')');

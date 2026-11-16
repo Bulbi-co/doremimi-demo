@@ -94,7 +94,7 @@ try {
     check(!hit, `script step ${step}: no level name on screen${hit ? ` ("${hit[0]}")` : ''}`);
     if (await ev(`!document.querySelector('#game').hidden`)) check(!(await ev(`!!document.querySelector('#game .ladder, #game .ladder-line')`)), `script step ${step}: no ladder strip`);
   }
-  check(/Doğru/.test(await text('#gover')) && !/Seviye/.test(await text('#results .stats3')), 'the results count right answers, not a level');
+  check(/Doğru/.test(await text('#gover')) && !/Seviye/.test(await text('#results .stats2')), 'the results count right answers, not a level');
 
   // The hub: every destination once.
   await open('#/doremimi');

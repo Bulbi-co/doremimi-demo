@@ -115,7 +115,7 @@ export default {
   intro: {
     see: { title: 'Regarde la carte', text: 'La carte montre un signe musical ou une question sur un instrument.' },
     find: { title: 'Trouve la réponse', text: 'Tu écris la réponse, tu la choisis ou tu retournes la carte pour la lire : la carte te montre comment.' },
-    stars: { title: 'Gagne des étoiles', text: 'Les bonnes réponses rapportent des XP et des étoiles. Une mauvaise réponse ne te fait rien perdre.' },
+    stars: { title: 'Gagne des étoiles', text: 'Les bonnes réponses rapportent des étoiles. Une mauvaise réponse ne te fait rien perdre.' },
   },
   levelQuestion: 'Par quel niveau commençons-nous ?',
   difficulties: {

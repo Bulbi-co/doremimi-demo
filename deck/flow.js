@@ -18,7 +18,8 @@
  *
  * Effects
  *   { type: 'show', slide }            render slide `slide` (classes, counter, notes)
- *   { type: 'send', msg }              post msg to the phone (msg.id is set when a dm-done is awaited)
+ *   { type: 'send', msg }              post msg to the phone (msg.id is set when a dm-done is awaited; a slide's
+ *                                      `leave` message has none)
  *   { type: 'mark' }                   repaint the step buttons from state.sub
  *   { type: 'timer', ms, token }       call back with { type: 'dwell', token } after ms
  *   { type: 'watchdog', ms, token }    call back with { type: 'watchdog', token } after ms
@@ -44,7 +45,8 @@ export const STEP_DWELL = 350;
  */
 export const WATCHDOG = 20000;
 /**
- * Auto-play's pauses. After a step: long enough to see what the phone did. On a new slide: the slide's own reading
+ * Auto-play's pauses. After a step: long enough to see what the phone did, or the step's own `hold` where the slide
+ * gives one (the song on the Şarkı slide has to be heard, not just started). On a new slide: the slide's own reading
  * time (`read`, from deck/slides.js readMs), never less than AUTO_SLIDE. Just switched on: a short beat, because the
  * presenter has already been looking at this slide.
  */
@@ -87,7 +89,8 @@ function arm({ state, effects }, ms) {
   if (state.armed) return { state, effects };
   if (atEnd(state)) return { state: { ...state, auto: false }, effects: [...effects, { type: 'mark' }] };
   const token = state.autoToken + 1;
-  const rest = state.sub === 0 ? Math.max(AUTO_SLIDE, state.slides[state.cur]?.read ?? 0) : AUTO_STEP;
+  const slide = state.slides[state.cur];
+  const rest = state.sub === 0 ? Math.max(AUTO_SLIDE, slide?.read ?? 0) : slide?.holds?.[state.sub - 1] ?? AUTO_STEP;
   return { state: { ...state, armed: true, autoToken: token }, effects: [...effects, { type: 'autotimer', ms: state.pause ?? ms ?? rest, token }] };
 }
 
@@ -183,9 +186,14 @@ function play(s, k) {
 function enter(s, i, { initial: first = false } = {}) {
   const st = { ...s, cur: i, sub: 0, held: null };
   const show = first ? [] : [{ type: 'show', slide: i }];
+  // A slide that changes something lasting on the phone (Ayarlar: the language) names a `leave` message that puts it
+  // back, sent whichever way the deck leaves the slide: a dot or End pressed while the phone was in French left every
+  // slide after it in French. It carries no id: the phone runs its messages in the order they arrive, so the slide
+  // being entered still plays after it, and that one is the answer the lock waits for.
+  const leave = !first && s.cur !== i ? s.slides[s.cur]?.leave ?? null : null;
   const msg = s.slides[i].phone;
   const r = lock(st, msg ?? null, SLIDE_DWELL);
-  return { state: r.state, effects: [...show, ...r.effects] };
+  return { state: r.state, effects: [...(leave ? [{ type: 'send', msg: leave }] : []), ...show, ...r.effects] };
 }
 
 /** Enter busy: send msg (if any) with a fresh id, start the dwell timer and the watchdog. */

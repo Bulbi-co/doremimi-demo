@@ -115,12 +115,11 @@ const PHONE = [
   ['phone-34-game-choices', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 5 })], 7000],
   ['phone-35-game-reveal', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 6 })], 7000],
   // Since ch. 14 the script's later steps leave the round: Öğren's family and an instrument (information only since
-  // revision 2), then Çal's choices (app/data/script.js; the numbers are its steps).
+  // revision 2). The script ends on Çal's page (step 12): the song's round and its results left it with 5d0bf0a, and
+  // the three shots that asked for steps 13 to 15 went with them (app/data/script.js; the numbers are its steps).
   ['phone-36-game-typed-right', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 8 })], 8000],
   ['phone-37-ogren-calgi', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 10000],
-  ['phone-38-cal-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 13 })], 11000],
-  ['phone-39-game-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 14 })], 14000],
-  ['phone-39b-game-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 15 })], 15000],
+  ['phone-38-cal', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 12 })], 11000],
 ].map(([name, url, steps = [], wait = 1200]) => ({ name, url, steps, wait, w: 430, h: 932 }));
 // The Platformlar slide's frames (index.html #frames) are copied from these into assets/screens/, so they show the
 // demo's own navigation: the app's c33d9ff captures still had the old four-tab dock.
@@ -195,7 +194,9 @@ const CH14 = [
 // still showed the OYNA bar, Konu seç and the game's Çevir · Seç · Yaz strip. Copy them into assets/screens/ by hand
 // after looking at them: `node … tools/shoot.mjs <base> <dir> '^frames/'`.
 const FRAMES = [
-  { name: 'frames/phone-kesfet-new-nav', url: app('#/'), steps: [], wait: 1500, w: 430, h: 932 },
+  // &dil=tr: on its own (no &embed, so no fake status bar) the phone opens in the browser's language, and headless
+  // Chrome's is English: the frame came out as "Play · Play now" beside two Turkish ones (2026-11-16).
+  { name: 'frames/phone-kesfet-new-nav', url: app('#/', '&dil=tr'), steps: [], wait: 1500, w: 430, h: 932 },
   { name: 'frames/tablet-kesfet-new-nav', url: app('#/', '&embed'), steps: [], wait: 1500, w: 1024, h: 1366 },
   { name: 'frames/12g-game-yaz-tablet-1366x1024', url: app('#/', '&embed'), steps: [msg({ type: 'act', name: 'goto', step: 1 })], wait: 5000, w: 1366, h: 1024 },
 ];
@@ -275,7 +276,6 @@ const LANG_PLAN = [
   ['77-oyun-bilgi', '#/', [...playing, act('game.dontknow')], 2000],
   ['79-oyun-cevir', '#/', [...playing, ...struggle(8)], 2500],
   ['80-oyun-sonuc', '#/', [...playing, act('game.finish', { gap: 50 })], 22000],
-  ['81-cal-turu', '#/sarki/keman', [wait(500), tap('[data-play][data-origin="cal"]'), tap('[data-level="orta"]'), tap('[data-g="intro-close"]')], 1500],
 ];
 const LANG_SHOTS = ['tr', 'en', 'fr'].flatMap(lang => LANG_PLAN.map(([name, hash, steps = [], waitMs = 1200]) =>
   ({ name: `${lang}/${name}`, url: app(hash, `&sunum&dil=${lang}`), steps, wait: waitMs, w: 430, h: 932 })));

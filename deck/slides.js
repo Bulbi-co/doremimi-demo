@@ -5,8 +5,9 @@
  * it: Oyna is the game (Keşfet until ch. 14 §10) and its whole round, one press per move → Öğren, read, not played →
  * Çal → family and the foundation. Owner, 2026-11-16: no slide about XP or results (progress is tracked, never shown as
  * XP), and no way into the game from a song or an instrument, so the "Tur sonu" slide and Çal's game step went.
- * Ch. 14 §11 asks for every tab and scenario, so after Çal the walk goes on: İzle and a riddle behind the parent PIN,
- * the logo's tab and the foundation's page, the family, then Ayarlar with Zorluk and the three languages.
+ * Ch. 14 §11 asks for every tab and scenario, so after Çal and its song the walk goes on: İzle and a riddle behind
+ * the parent PIN, the logo's tab and the foundation's page, the family, then Ayarlar with Zorluk and the three
+ * languages.
  *
  * Its own module, apart from sunum.js (which draws and drives it), so tests/deck.test.mjs can import the slides and
  * hold every scripted step they ask for to the phone's script (app/data/script.js).
@@ -33,20 +34,30 @@ export const play = step => ({ type: 'act', name: 'goto', step, play: true });
  * Ayarlar as a whole state too: the phone opens the page and presses Zorluk and Dil until they read as asked
  * (app/app.js ACTS.settings). `quiet` sets them without a press, for the slide's own entry, where a tap nobody asked
  * for would be shown; the flow machine's ← and R resend a step with play: false, which the phone treats the same way.
+ * A null Zorluk or Dil is left as it is.
  */
+/*
+ * How long auto-play lets Keman's song play before it moves on. The song opens with its tune alone, the karaoke line
+ * showing note names; the words start at 19.2 s and a line lasts 4.8 s (the phone's own sequencer, app/lib/music.js,
+ * on app/data/songs/keman.json). 24 s is the opening and the first sung line, whole. The song itself is 91 s, too
+ * long to sit through. tests/deck.test.mjs holds this number to the song's data.
+ */
+export const SONG_HOLD = 24000;
 export const settings = (zorluk, dil, quiet = false) => ({ type: 'act', name: 'settings', zorluk, dil, ...(quiet ? { quiet } : {}) });
 // The new dock as a small picture for the navigation slide (dossier ch. 11 NR-02).
 const dockPic = `<div class="dockpic">${[['IconCards', 'Oyna'], ['IconBook', 'Öğren'], null, ['IconEye', 'İzle'], ['IconNote', 'Çal']].map(t => t
   ? `<span class="dp">${icon(t[0])}<b>${t[1]}</b></span>` : '<span class="dp logo"><img src="assets/brand/logo.png" alt="Doremimi"></span>').join('')}</div>`;
 
 /*
- * The scripted slides (kesfet to sonuc) ask for steps in rising order, and the two 'page' steps of the script open
+ * The scripted slides (kesfet, ogren, cal) ask for steps in rising order, and the two 'page' steps of the script open
  * Öğren and Çal, so walking the deck with → plays the story once, front to back, and the phone never starts over.
  * The Çal slide's piano step is not a script step, but it stays on the page step 12 opened (#/cal).
  *
- * The slides after Çal (İzle, the logo's tab, the family, Ayarlar) are off the script on purpose: each of their steps
- * is a whole state (batch, settings), so nothing has to be replayed to reach it, and the script's own last steps (a
- * song's round and its results) are no longer shown at all.
+ * The slides after Çal (the song, İzle, the logo's tab, the family, Ayarlar) are off the script on purpose: each of
+ * their steps is a whole state (go, batch, settings), so nothing has to be replayed to reach it.
+ *
+ * A step is [label, message] or [label, message, { hold }]: `hold` is how long auto-play rests after that step when
+ * the usual pause (deck/flow.js AUTO_STEP) is not enough.
  */
 export const SLIDES = [
   {
@@ -54,7 +65,7 @@ export const SLIDES = [
     html: `
       <h1 class="title">Müziği oynayarak<br><em>öğren.</em></h1>
       <p class="lead">Dore Mimi Yetenek ve Eğitim Vakfı için: Dore ve Mimi'nin şarkıları, çalgıları ve videoları, tek bir müzik kart oyunuyla.</p>`,
-    notes: `<p><b>“Doremimi'yi baştan sona birlikte gezeceğiz.”</b> Sağdaki telefon gerçek gibi çalışır; → her slaytın canlı gösterimini sırayla oynatır.</p><p>Önce sağ üstteki <b>Sesi aç</b>'a bir kez tıklayın. Bu slayta dönünce telefon sıfırlanır.</p>`,
+    notes: `<p><b>“Doremimi'yi baştan sona birlikte gezeceğiz.”</b> Sağdaki telefon gerçek gibi çalışır; → her slaytın canlı gösterimini sırayla oynatır.</p><p>Önce sağ üstteki <b>Sesi aç</b>'a bir kez tıklayın. Bu slayta dönünce telefon sıfırlanır.</p><p><b>A</b> ya da alttaki <b>Otomatik</b> sunumu kendi kendine yürütür; →, ← ya da telefona dokunmak durdurur.</p>`,
   },
   // What the foundation has done, before the app is shown (owner, 2026-11-16; dossier ch. 14 §13; deck/foundation.js).
   ...FOUNDATION_SLIDES,
@@ -112,24 +123,25 @@ export const SLIDES = [
   {
     /*
      * A song of its own (owner, 2026-11-16): the deck said every instrument's song plays on the app's keyboard but
-     * never showed one. Keman's song plays here, its note names moving on the karaoke line and its notes lighting the keys;
-     * the second step opens a lyric sheet (Gitar's: Keman has no lyric sheet, its karaoke line carries note names).
+     * never showed one. Keman's song plays here, its notes lighting the keys; its karaoke line shows note names while the
+     * tune opens and the words once they start (19 s in). The second step opens a lyric sheet, and it is Gitar's:
+     * Keman has no lyric sheet (ten instruments do), only the words on its karaoke line.
      */
     id: 'sarki', label: 'Şarkı', theme: 'light', phone: go('#/sarki/keman'),
     html: step("Keman'ın şarkısı, uygulamanın klavyesinde",
-      'Her çalgının kendi şarkısı var: notalar klavyede sırayla yanar, nota adları karaoke satırında ilerler.',
+      'Her çalgının kendi şarkısı var: notalar klavyede sırayla yanar, karaoke satırında önce nota adları, sonra sözler ilerler.',
       ['41 şarkının hepsi aynı klavyede, nota nota çalar', 'Şarkı sözleri ayrı bir sayfada da okunur']),
-    acts: [['Keman şarkısını çal', batch(go('#/sarki/keman'), act('song.play'))], ['Gitar: şarkı sözleri', go('#/sozler/gitar')]],
-    notes: `<p>Vakfın verdiği notalar uygulamanın kendi klavyesinde çalar: ayrı bir ses dosyası yok, her nota tek tek çalınır.</p><ol><li><b>Keman şarkısını çal</b>: karaoke satırında çalınan notanın adı vurgulanır, klavyede o an çalan tuş yanar. Önce sağ üstten <b>Sesi aç</b>'a basılmış olmalı.</li><li><b>Şarkı sözleri</b>: on çalgının sözleri ayrı bir sayfada okunur; burada Gitar'ınki.</li></ol><p>Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı. Sonraki slayta geçince şarkı durur.</p>`,
+    acts: [['Keman şarkısını çal', batch(go('#/sarki/keman'), act('song.play')), { hold: SONG_HOLD }], ['Gitar: şarkı sözleri', go('#/sozler/gitar')]],
+    notes: `<p>Vakfın verdiği notalar uygulamanın kendi klavyesinde çalar: ayrı bir ses dosyası yok, her nota tek tek çalınır.</p><ol><li><b>Keman şarkısını çal</b>: klavyede o an çalan tuş yanar. Karaoke satırında önce nota adları, yaklaşık 20. saniyeden sonra şarkının sözleri ilerler. Önce sağ üstten <b>Sesi aç</b>'a basılmış olmalı.</li><li><b>Şarkı sözleri</b>: on çalgının sözleri ayrı bir sayfada okunur; burada Gitar'ınki.</li></ol><p>Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı. Sonraki adıma geçince şarkı durur; otomatik oynatma şarkıyı 24 saniye dinletir.</p>`,
   },
   {
     id: 'izle', label: 'İzle', theme: 'light', phone: go('#/izle'),
     html: step('İzle: videolar ve bilmeceler',
-      'Bilmece videoları en üstte, ardından klipler, söyleşiler, karaoke ve jenerikler; videolar YouTube’da olduğu için önce ebeveyn PIN’i istenir.',
+      'Bilmeceler dahil bütün videolar tek sekmede; videolar YouTube’da olduğu için oynatmadan önce ebeveyn PIN’i istenir.',
       []),
     // The first card on İzle is a riddle: the page lists the kinds in WATCH_KINDS' order, riddles first (app/app.js).
     acts: [['Bir bilmece', batch(go('#/izle'), act('video.open'))], ["PIN'i gir", batch(go('#/izle'), act('video.open'), act('gate.type'))]],
-    notes: `<p>Bütün videolar tek sekmede; Öğren'deki bilmeceler de buraya taşındı.</p><ol><li><b>Bir bilmece</b>: videoya dokununca ebeveyn kilidi açılır; çocuk tek başına YouTube'a çıkamaz.</li><li><b>PIN'i gir</b>: demo PIN'i <b>135790</b>. Oynatıcı açılır; demo çevrimdışı olduğu için video burada oynamaz, uygulamada YouTube'dan oynar.</li></ol>`,
+    notes: `<p>Sırayla: bilmece videoları, klipler, “Dore soruyor, müzisyen cevaplıyor”, karaoke ve jenerikler. Öğren'deki bilmeceler de buraya taşındı.</p><ol><li><b>Bir bilmece</b>: videoya dokununca ebeveyn kilidi açılır; çocuk tek başına YouTube'a çıkamaz.</li><li><b>PIN'i gir</b>: demo PIN'i <b>135790</b>. Oynatıcı açılır; demo çevrimdışı olduğu için video burada oynamaz, uygulamada YouTube'dan oynar.</li></ol>`,
   },
   {
     id: 'vakif', label: 'Vakıf', theme: 'light', phone: go('#/doremimi'),
@@ -152,11 +164,14 @@ export const SLIDES = [
   },
   {
     id: 'ayarlar', label: 'Ayarlar', theme: 'light', phone: settings('baslangic', 'tr', true),
+    // Whichever way the deck leaves this slide, the phone goes back to Turkish first (deck/flow.js enter): the slides
+    // around it are told in Turkish, and a dot pressed after "Français" used to show them in French.
+    leave: settings(null, 'tr', true),
     html: step('Ayarlar: zorluk ve dil',
       'İlk oyunda seçilen seviye burada değişir; dil Türkçe, English ya da Français olur ve uygulama anında o dile geçer.',
       ['Şarkı sözleri, video adları ve vakfın uzun metinleri Türkçe kalır', 'İngilizce ve Fransızca taslak: anadili olan biri okuyacak']),
     acts: [['Zorluk: Orta', settings('orta', 'tr')], ['English', settings('orta', 'en')], ['Français', settings('orta', 'fr')], ['Türkçe', settings('orta', 'tr')]],
-    notes: `<p>Ayarlar, Profilim'in altındaki Aile bölümünden açılır.</p><ol><li><b>Zorluk: Orta</b>: sorular seçilen seviyeye kadar gelir. Seviye ilk oyunda bir kez sorulur, sonra buradan değişir.</li><li><b>English</b>, <b>Français</b>: menüler, sorular, cevaplar, işaret ve aile adları o dile geçer; alt menü de.</li><li><b>Türkçe</b>: geri döner. Sunuma devam etmeden önce bu adımı oynatın.</li></ol><p>Uygulama, cihazın dili bu üçünden biriyse o dille açılır; değilse Türkçe. Çeviriler taslak ve tablolarında öyle işaretli.</p>`,
+    notes: `<p>Ayarlar, Profilim'in altındaki “Aile ve ayarlar” bölümünden açılır.</p><ol><li><b>Zorluk: Orta</b>: sorular seçilen seviyeye kadar gelir. Seviye ilk oyunda bir kez sorulur, sonra buradan değişir.</li><li><b>English</b>, <b>Français</b>: menüler, sorular, cevaplar, işaret ve aile adları o dile geçer; alt menü de.</li><li><b>Türkçe</b>: geri döner. Sunuma devam etmeden önce bu adımı oynatın.</li></ol><p>Uygulama, cihazın dili bu üçünden biriyse o dille açılır; değilse Türkçe. Çeviriler taslak ve tablolarında öyle işaretli.</p>`,
   },
   {
     id: 'platform', label: 'Platformlar', theme: 'dark', layout: 'full', cls: 'platforms',
@@ -177,6 +192,18 @@ export const SLIDES = [
     notes: `<p>Telefonda vakfın kendi sayfası açık: faaliyetleri (Müzikle Değerler Eğitimi, burslar, etkinlikler), gönüllülük ve iletişim. Sorularınız ve değiştirmek istedikleriniz bizim için yol haritası.</p>`,
   },
 ];
+
+/**
+ * A slide as the flow machine takes it (deck/flow.js): its phone message, its steps' messages, and auto-play's pauses.
+ * Here and not in sunum.js, so the guards hand the machine the very thing the deck does.
+ */
+export const asFlow = slide => ({
+  phone: slide.phone ?? null,
+  leave: slide.leave ?? null,
+  acts: (slide.acts ?? []).map(a => a[1]),
+  holds: (slide.acts ?? []).map(a => a[2]?.hold ?? null),
+  read: readMs(slide),
+});
 
 /** The longest auto-play leaves any slide before its first step, however much it says. */
 export const READ_MAX = 20000;

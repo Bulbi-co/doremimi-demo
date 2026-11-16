@@ -3,7 +3,7 @@
  * R-02 to R-12). The slides are data in deck/slides.js; each may send the phone a message when it opens, and its
  * "canlı göster" buttons play in order on →. This file draws them and drives them through deck/flow.js.
  */
-import { SLIDES, icon, readMs } from './deck/slides.js';
+import { SLIDES, icon, asFlow } from './deck/slides.js';
 import { initial, step as flowStep } from './deck/flow.js';
 
 const $ = s => document.querySelector(s);
@@ -33,7 +33,7 @@ addEventListener('resize', fit); addEventListener('orientationchange', () => set
 const query = new URLSearchParams(location.search);
 // ?bekle=<ms>: one pause for all of auto-play, for tools/auto-e2e.mjs; the lock itself is not shortened.
 const pause = Number.parseInt(query.get('bekle') ?? '', 10);
-let flow = initial(SLIDES.map(s => ({ phone: s.phone ?? null, acts: (s.acts ?? []).map(a => a[1]), read: readMs(s) })), { pause: Number.isFinite(pause) ? pause : null });
+let flow = initial(SLIDES.map(asFlow), { pause: Number.isFinite(pause) ? pause : null });
 function dispatch(e) {
   const r = flowStep(flow, e);
   flow = r.state;
@@ -147,5 +147,8 @@ addEventListener('hashchange', () => { const n = parseInt(location.hash.slice(1)
 const start = parseInt(location.hash.slice(1), 10);
 dispatch({ type: 'goto', slide: Number.isFinite(start) ? start - 1 : 0 });
 if (query.has('notlar')) $('#notes').hidden = false;
-// ?oynat: open already playing, for a screen left running or a recording.
+// ?oynat: open already playing, for a screen left running or a recording. Browsers keep audio locked until a click or
+// a key, and the phone's songs run on the audio clock: with no gesture at all the Şarkı slide stays silent and its
+// karaoke line does not move (measured in Chrome with its autoplay policy on, 2026-11-16). One click anywhere, or
+// starting with A or the control, which are gestures, is enough.
 if (query.has('oynat')) dispatch({ type: 'auto', on: true });

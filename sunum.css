@@ -80,7 +80,11 @@ h1.title em { font-style: normal; color: var(--magenta); }
 .dark .nav .count { color: rgba(255, 255, 255, .55); }
 .madeby { font-size: 13px; font-weight: 700; color: var(--muted); }
 .dark .madeby { color: rgba(255, 255, 255, .4); }
-.stage:has(.device.center) .madeby { display: none; }
+/* The centred phone (the closing slide) stands on the footer's row from x = 614 (573 + the 9% its .82 scale takes off
+   each side). The line beside the dots always ran under it; with 16 dots and the auto-play control the dots do too
+   (they end at x = 727, measured 2026-11-16), and the active one showed through the phone's chin. The arrows, the
+   counter and the bar across the top still say where the deck is. */
+.stage:has(.device.center) :is(.madeby, .dots) { display: none; }
 .progress { position: absolute; left: 0; right: 0; top: 0; height: 4px; z-index: 7; }
 .progress b { display: block; height: 100%; background: var(--yellow); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
 

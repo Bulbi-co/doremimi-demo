@@ -8,7 +8,7 @@ content:
 - `../../doremimi-superapp/docs/dossier/11-navigation-revision.md`: the owner's navigation revision of 2026-11-13,
   which this demo already uses. Where the two disagree about where something lives, chapter 11 wins.
 
-The dock is **Keşfet · Öğren · [Doremimi logo] · İzle · Çal**. The logo opens the foundation and app information hub.
+The dock is **Oyna · Öğren · [Doremimi logo] · İzle · Çal** (Oyna was Keşfet until dossier ch. 14 §10). The logo opens the foundation and app information hub.
 The profile is the avatar in the top-right corner. Everything that plays notes lives in Çal. The real app at
 `c33d9ff` still has the old four tabs: the screens inside the phone are 1:1 with the app, but where they live follows
 chapter 11.
@@ -51,22 +51,30 @@ the server.
   answers `dm-done` when it has finished). A phone that never answers frees the deck after 20 s.
 - **Auto-play** (`A`, or **Otomatik** beside the counter; `?oynat` on the URL starts it). It presses → for you: every
   step and every slide, each after a pause (3.5 s after a step; on a new slide the time it takes to read it, 5 to 20 s,
-  so the foundation's text slides stay longest). It is the same `next` through the same lock, so it waits for the
-  phone exactly as a presenter must. →, ←, a dot, a step button, R, swipe, a touch on the phone or A stops it, and it
-  stops by itself on the last slide. While the game on the phone takes letters, any letter stops it and is not typed.
+  so the foundation's text slides stay longest; Keman's song is left playing for 24 s, until its first sung line has
+  passed). It is the same `next` through the same lock, so it waits for the phone exactly as a presenter must. →, ←,
+  a dot, a step button, R, swipe, Home/End, a touch on the phone or A stops it, and it stops by itself on the last
+  slide. While the game on the phone takes letters, any letter stops it and is not typed. N, F and **Sesi aç** do not
+  stop it: they do not move the deck. The whole walk takes about six and a half minutes (380 s in headless Chrome, 2026-11-16).
 - **Slide 1 resets the phone.** Going back to it starts the demo over.
-- **Sound:** click **Sesi aç** (top right) once before you start. Browsers start audio only after a click.
+- **The phone speaks Turkish outside the Ayarlar slide.** That slide switches it to English and French; however the
+  deck leaves it (→, ←, a dot, End), the phone is put back in Turkish first (the slide's `leave` message).
+- **Sound:** click **Sesi aç** (top right) once before you start. Browsers start audio only after a click. This
+  matters for `?oynat` most: opened that way and never clicked, the deck walks, but the Şarkı slide is silent and its
+  karaoke line stands still, because the song runs on the audio clock. Starting with A or **Otomatik** is itself a
+  click, so the song then plays.
 - **Typing in the game:** while the game asks for a typed answer, the laptop keyboard types into it. During that time
   N, F, R and A are letters, not shortcuts.
 - **Demo PIN: `135790`.** The parent gate accepts only this demo PIN, never the app's own default (ch. 10 G-06). It
   is in the notes of the İzle and Aile ve içerik slides.
 - `?notlar` on the deck URL opens the notes. `#7` opens slide 7.
 
-The deck has 15 slides (dossier ch. 14 §9 to §14): Kapak; the four slides of "Dore Mimi, bugüne kadar", what the
+The deck has 16 slides (dossier ch. 14 §9 to §14): Kapak; the four slides of "Dore Mimi, bugüne kadar", what the
 foundation has done (`deck/foundation.js`, numbers from `deck/foundation-facts.js`); Gezinme (the dock; logo, Öğren);
 Oyna (the categories, Bugünün kartı, then the whole round, one press per move: the level question, a wrong typing, the
 letter tiles, the choices, the card that explains); Öğren (a family's instruments, one instrument's page; nothing to
-play); Çal (the piano); İzle (a riddle: the parent gate, then the player); Vakıf (the logo's tab: the banner, the
+play); Çal (the piano); Şarkı (Keman's song playing on the app's keyboard, then Gitar's lyric sheet); İzle (a riddle:
+the parent gate, then the player); Vakıf (the logo's tab: the banner, the
 foundation's page); Aile ve içerik (profiles, parent PIN); Ayarlar (Zorluk, then English, Français and back to Türkçe);
 Platformlar and Kapanış. No slide shows results or XP, and none opens the game from a song or an instrument. The slides
 are data in `deck/slides.js`. Up to Çal the phone's side is one seeded script, `app/data/script.js`, walked front to
@@ -115,6 +123,8 @@ npm test                 # node --test tests/: the game rules, the music, the na
                          # without the app checked out it is skipped, not passed
 npm run e2e              # with npm start running: mashes → in headless Chrome; the deck must wait for the phone
 npm run e2e:auto         # auto-play end to end: every slide and step, in order, to the last slide; about two minutes
+                         # add "sahne" (… tools/auto-e2e.mjs <url> sahne) to run it at the pace an audience sees,
+                         # about six and a half minutes, with every pause timed against the one the slides ask for
 npm run walk             # → through the whole deck, a PNG of every slide and step into docs/screens/deck/
 npm run mutants          # every mutant must be "caught" and every CONTROL "SURVIVED"
 node --experimental-websocket tools/phone-e2e.mjs http://127.0.0.1:4175   # the phone in tr, en, fr: type, stray Turkish, fit

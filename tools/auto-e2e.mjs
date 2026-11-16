@@ -6,20 +6,23 @@
 // every tab, the pages the slides promise, the parent gate, the player and the three languages.
 //
 //   npm start  (in another terminal)  then
-//   node --experimental-websocket tools/auto-e2e.mjs http://127.0.0.1:4175 [pause-ms] [shots-dir] [1600x900]
+//   node --experimental-websocket tools/auto-e2e.mjs http://127.0.0.1:4175 [pause-ms | sahne] [shots-dir] [1600x900]
 //
-// The pause between moves defaults to 300 ms (?bekle=), so the run takes about two minutes, not the six or seven the
-// reading pauses add up to on stage; the lock and every dm-done are waited for exactly as on stage. With a shots-dir
-// every rest is saved as a PNG (use a pause of 1500 or more, so a rest lasts long enough to be captured). Exit code
-// 0 = every check passed.
+// The pause between moves defaults to 300 ms (?bekle=), so the run takes about two minutes; the lock and every
+// dm-done are waited for exactly as on stage. `sahne` in its place runs the deck as an audience sees it, with its own
+// pauses (about six and a half minutes), and then each rest is also timed against the pause the slides ask for: a slide's
+// reading time, a step's 3.5 s, the song's hold. With a shots-dir every rest is saved as a PNG (use `sahne` or a pause
+// of 1500 or more, so a rest lasts long enough to be captured). Exit code 0 = every check passed.
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { SLIDES } from '../deck/slides.js';
+import { SLIDES, asFlow } from '../deck/slides.js';
+import { AUTO_STEP, AUTO_SLIDE, AUTO_START } from '../deck/flow.js';
 import { TABS } from '../app/lib/nav.js';
 import { launch, openDeck, sleep, DECK_STATE, restName } from './cdp.mjs';
 
 const base = (process.argv[2] ?? 'http://127.0.0.1:4175').replace(/\/$/, '');
-const pause = Number(process.argv[3] ?? 300);
+const stagePace = process.argv[3] === 'sahne';
+const pause = stagePace ? null : Number(process.argv[3] ?? 300);
 const shots = process.argv[4] ?? null;
 const [width, height] = (process.argv[5] ?? '1600x900').split('x').map(Number);
 if (shots) mkdirSync(shots, { recursive: true });
@@ -64,19 +67,27 @@ try {
   check(await c.ev(`document.querySelector('#phone').contentDocument.body.innerText`) !== before, 'with auto-play off the same key is a letter again (the check above can fail)');
 
   // 2. Left alone from the cover, it walks the whole deck.
-  await openDeck(c, `${base}/?bekle=${pause}#1`);
+  await openDeck(c, `${base}/${stagePace ? '' : `?bekle=${pause}`}#1`);
   c.errors.length = 0; c.warnings.length = 0;
   // Recorder in the page, sampled every 50 ms: each rest of the deck (slide, steps done), and what the phone showed.
-  await c.ev(`(() => { const seen = window.__seen = { rests: [], hashes: [], langs: [], gate: false, player: false, movedBusy: 0 }; let last = '';
+  // `lasted` is how long each rest was held before the deck moved again; `song` what the phone did while a song page
+  // was up (its equaliser on, a key lit, the karaoke line showing a syllable as the one being played).
+  await c.ev(`(() => { const seen = window.__seen = { rests: [], lasted: [], hashes: [], langs: [], gate: false, player: false, song: { on: false, lit: false, sung: false, onAfter: false, eqAtLyrics: null } }; let last = '', since = 0;
     setInterval(() => {
       const d = document.querySelector('#phone').contentDocument, w = document.querySelector('#phone').contentWindow;
       const h = w.location.hash; if (seen.hashes.at(-1) !== h) seen.hashes.push(h);
       const l = d.documentElement.lang; if (seen.langs.at(-1) !== l) seen.langs.push(l);
       if (d.querySelector('.gate')) seen.gate = true;
       if (d.querySelector('.player-ov')) seen.player = true;
-      if (document.querySelector('#stage').getAttribute('aria-busy') !== 'false') return;
+      if (d.querySelector('#eq.on')) seen.song.on = true;
+      if (d.querySelector('#song-keys .lit')) seen.song.lit = true;
+      if (d.querySelector('#karaoke .now .on')) seen.song.sung = true;
+      if (document.querySelector('#stage').getAttribute('aria-busy') !== 'false') { if (since) { seen.lasted.push(performance.now() - since); since = 0; } return; }
+      // Only at rest: for the few milliseconds between the phone's new hash and its hashchange, the old page is still
+      // drawn, and a sample taken there read as "playing on another page" (2026-11-16).
+      if (d.querySelector('#eq.on') && !h.startsWith('#/sarki/')) seen.song.onAfter = true;
       const r = document.querySelector('#count').textContent + '|' + document.querySelectorAll('.slide.on .act.done').length;
-      if (r !== last) { seen.rests.push(r); last = r; }
+      if (r !== last) { seen.rests.push(r); last = r; since = performance.now(); if (h.startsWith('#/sozler/')) seen.song.eqAtLyrics = d.querySelectorAll('#eq, #song-keys').length; }
     }, 50); })()`);
   const t0 = Date.now();
   await c.ev(`document.querySelector('#auto').click()`);
@@ -88,13 +99,17 @@ try {
       last = rest;
       const i = Number(s.count.slice(0, 2)) - 1;
       if (s.done === 0) console.log(`      ${s.count}  ${Math.round((Date.now() - t0) / 1000)} s`);
-      if (shots) { await sleep(Math.min(400, pause / 3)); await c.shot(join(shots, `${restName(SLIDES, i, s.done)}.png`)); saved++; }
+      // 400 ms: the dots and arrows fade back from their disabled look over 0.3 s (sunum.css), and a shot taken at once caught them dim.
+      if (shots) { await sleep(pause == null ? 400 : Math.min(400, pause / 3)); await c.shot(join(shots, `${restName(SLIDES, i, s.done)}.png`)); saved++; }
     }
     if (s.auto === 'false' && s.busy === 'false') break;
-    if (Date.now() - t0 > 20 * 60_000) { check(false, 'auto-play finished within 20 minutes'); break; }
+    if (Date.now() - t0 > 25 * 60_000) { check(false, 'auto-play finished within 25 minutes'); break; }
     await sleep(shots ? 40 : 150);
   }
   const secs = Math.round((Date.now() - t0) / 1000);
+  // The recorder samples every 50 ms: read at once, it had not yet seen the last rest one run in a few, and the walk
+  // read as one rest short (2026-11-16).
+  await sleep(250);
   const seen = await c.ev('window.__seen');
   const end = await state();
   check(end.count === count(N - 1) && end.busy === 'false' && end.auto === 'false', `it stopped by itself on the last slide (${end.count}, ${secs} s)`);
@@ -103,11 +118,21 @@ try {
   check(JSON.stringify(seen.rests) === JSON.stringify(want), `every slide and every step, in order, none skipped (${seen.rests.length}/${want.length} rests)${JSON.stringify(seen.rests) === JSON.stringify(want) ? '' : ': first difference at ' + want.find((w, i) => seen.rests[i] !== w)}`);
   if (shots) check(saved === want.length, `every rest was saved (${saved} PNGs in ${shots})`);
   const hashes = new Set(seen.hashes.map(h => h.split('?')[0]));
-  const promised = [...TABS.map(t => t.hash), '#/ogren/aileler', '#/ogren/calgilar', '#/calgi/keman', '#/vakif', '#/profil', '#/hesabim', '#/ayarlar'];
+  const promised = [...TABS.map(t => t.hash), '#/ogren/aileler', '#/ogren/calgilar', '#/calgi/keman', '#/sarki/keman', '#/sozler/gitar', '#/vakif', '#/profil', '#/hesabim', '#/ayarlar'];
   const missing = promised.filter(h => !hashes.has(h));
   check(missing.length === 0, `the phone showed every tab and the pages the slides promise${missing.length ? ' (missing ' + missing.join(' ') + ')' : ''}`);
   check(seen.gate && seen.player, 'the parent gate came up and the player opened behind it');
   check(JSON.stringify(seen.langs) === JSON.stringify(['tr', 'en', 'fr', 'tr']), `the phone switched Türkçe → English → Français → Türkçe (${seen.langs.join(' → ')})`);
+  // The karaoke line's first syllable comes 4.8 s into the song, so only a run at stage pace stays long enough to see it.
+  check(seen.song.on && seen.song.lit && (seen.song.sung || !stagePace), `Keman's song really played: the equaliser ran, a key lit${stagePace ? ', the karaoke line moved' : ''} (${JSON.stringify(seen.song)})`);
+  check(!seen.song.onAfter && seen.song.eqAtLyrics === 0, 'and at no rest after it was a song still drawn as playing: the lyric sheet has no song page under it');
+  // Each rest against the pause the deck is meant to keep: ?bekle's one number, or on stage the slide's reading
+  // time, a step's AUTO_STEP or its own hold (the song). The very first rest is the short beat after switching on.
+  const flow = SLIDES.map(asFlow);
+  const meant = SLIDES.flatMap((x, i) => Array.from({ length: flow[i].acts.length + 1 }, (_, k) => pause ?? (k === 0 ? (i === 0 ? AUTO_START : Math.max(AUTO_SLIDE, flow[i].read)) : flow[i].holds[k - 1] ?? AUTO_STEP))).slice(0, -1);
+  // 50 ms sampling at both ends and the timer's own lateness; a rest is never shorter than asked.
+  const off = meant.map((ms, i) => ({ rest: want[i], ms, got: Math.round(seen.lasted[i] ?? -1) })).filter(x => x.got < x.ms - 120 || x.got > x.ms + 600);
+  check(seen.lasted.length === meant.length && off.length === 0, `every rest lasted what the deck asks (${meant.length} rests, ${Math.round(meant.reduce((a, b) => a + b, 0) / 1000)} s of pauses)${off.length ? ': ' + off.slice(0, 6).map(x => `${x.rest} ${x.got} ms, not ${x.ms}`).join('; ') : ''}`);
   check(c.errors.length === 0, `no page errors${c.errors.length ? ': ' + c.errors.join(' | ') : ''}`);
   check(c.warnings.length === 0, `no failed phone step and no watchdog${c.warnings.length ? ': ' + c.warnings.join(' | ') : ''}`);
 } catch (err) { console.log(String(err?.stack ?? err)); ok = false; } finally { c.close(); }

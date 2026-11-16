@@ -8,11 +8,12 @@ import { join } from 'node:path';
 
 export const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-export async function launch({ width = 1600, height = 900 } = {}) {
+/** `gesture: false` leaves Chrome's autoplay policy on, as for a visitor who has not clicked yet: audio stays locked. */
+export async function launch({ width = 1600, height = 900, gesture = true } = {}) {
   const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
   const port = 9935 + Math.floor(Math.random() * 400);
   const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'dm-deck-'))}`, '--hide-scrollbars',
-    '--no-first-run', '--no-default-browser-check', '--autoplay-policy=no-user-gesture-required', 'about:blank'], { stdio: 'ignore' });
+    '--no-first-run', '--no-default-browser-check', ...(gesture ? ['--autoplay-policy=no-user-gesture-required'] : []), 'about:blank'], { stdio: 'ignore' });
   let ver = null;
   for (let i = 0; i < 150 && !ver; i++) { await sleep(200); try { ver = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); } catch { /* starting */ } }
   if (!ver) { chrome.kill(); throw new Error('headless Chrome did not start'); }

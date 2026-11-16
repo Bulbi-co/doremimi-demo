@@ -1721,7 +1721,6 @@ const ACTS = {
       if (quiet) document.querySelector(sel).click(); else { await pressDo(sel); await sleep(500); }
     }
   },
-  /** Çal: a song's "Bu çalgıyla oyna", which opens its round at the choices. */
   'results.scroll': async () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); await sleep(REDUCED ? 0 : 700); },
   /** A sequence with a visible pause between presses (0.8–1.2 s, W-03), for slides that play several steps at once. */
   'seq': async m => { for (const step of m.steps) { await run({ type: 'act', ...step }); await sleep(m.gap ?? 900); } },

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { initial, step, SLIDE_DWELL, STEP_DWELL, WATCHDOG, AUTO_STEP, AUTO_SLIDE, AUTO_START, MANUAL } from '../deck/flow.js';
-import { SLIDES as DECK, readMs, READ_MAX } from '../deck/slides.js';
+import { SLIDES as DECK, readMs, READ_MAX, asFlow as flowSlide, SONG_HOLD } from '../deck/slides.js';
 import { FOUNDATION_SLIDES } from '../deck/foundation.js';
 
 const SLIDES = [
@@ -142,10 +142,47 @@ test('the deck routes every input through the machine, and the phone answers dm-
   assert.match(phone, /parent\.postMessage\(\{ type: 'dm-done', id \}, '\*'\)/);
 });
 
+test('a slide’s leave message goes out first, with no id, whichever way the deck leaves it, and never while it stays', () => {
+  const leave = { type: 'act', name: 'back' };
+  const deck = [{ phone: { type: 'go', hash: '#/a' } }, { phone: { type: 'act', name: 'x' }, leave, acts: [{ type: 'act', name: 's' }] }, { phone: { type: 'go', hash: '#/c' } }, { phone: null }];
+  /** Feeds events, answering every awaited message and every dwell, so the deck comes to rest after each one. */
+  const settle = (events, s0) => {
+    let s = s0; const out = [];
+    for (const e of events) {
+      const pend = [e];
+      while (pend.length) { const r = step(s, pend.shift()); s = r.state; out.push(...r.effects);
+        for (const fx of r.effects) { if (fx.type === 'send' && fx.msg.id != null) pend.push({ type: 'done', id: fx.msg.id }); if (fx.type === 'timer') pend.push({ type: 'dwell', token: fx.token }); } }
+    }
+    return { s, effects: out };
+  };
+  const on1 = () => settle([{ type: 'goto', slide: 0 }, { type: 'ready' }, { type: 'next' }], initial(deck));
+  // Coming in, playing its step, undoing it and R: the slide is still up, so nothing is put back.
+  const stay = settle([{ type: 'next' }, { type: 'prev' }, { type: 'reset' }, { type: 'goto', slide: 1 }], on1().s);
+  assert.equal(stay.s.cur, 1);
+  assert.ok(![...on1().effects, ...stay.effects].some(fx => fx.type === 'send' && fx.msg === leave), 'not sent while the slide is up');
+  // Every way out: → past its last step, ←, a dot forward, a dot back, and to a slide with no phone message.
+  for (const [name, events, to] of [['→', [{ type: 'next' }, { type: 'next' }], 2], ['←', [{ type: 'prev' }], 0], ['a dot ahead', [{ type: 'goto', slide: 2 }], 2], ['a dot back', [{ type: 'goto', slide: 0 }], 0], ['a slide with no message', [{ type: 'goto', slide: 3 }], 3]]) {
+    let s = on1().s;
+    for (const e of events.slice(0, -1)) s = settle([e], s).s;
+    const r = step(s, events.at(-1));
+    assert.equal(r.state.cur, to, name);
+    const out = sent(r.effects);
+    assert.equal(out[0], leave, `${name}: the leave message is the first thing sent, as it is (no id)`);
+    assert.equal(out[0].id, undefined);
+    assert.ok(r.effects.findIndex(fx => fx.type === 'send') < r.effects.findIndex(fx => fx.type === 'show'), `${name}: before the next slide shows`);
+    // The lock waits for the slide being entered, not for the leave.
+    if (deck[to].phone) { assert.equal(out.length, 2); assert.equal(r.state.pending, out[1].id); assert.ok(Number.isInteger(out[1].id)); assert.equal(out[1].hash, deck[to].phone.hash); }
+    else { assert.equal(out.length, 1); assert.equal(r.state.pending, null); assert.equal(r.state.waitPhone, false); }
+    assert.equal(r.state.phase, 'busy');
+  }
+  // Leaving a slide that has none sends nothing extra.
+  assert.equal(sent(step(settle([{ type: 'goto', slide: 0 }, { type: 'ready' }], initial(deck)).s, { type: 'next' }).effects).length, 1);
+});
+
 // ───────────────────────── auto-play (dossier ch. 14 §11): the deck walks itself, through the same lock
 
-/** The deck as sunum.js hands it to the machine. */
-const asFlow = slides => slides.map(x => ({ phone: x.phone ?? null, acts: (x.acts ?? []).map(a => a[1]), read: readMs(x) }));
+/** The deck as sunum.js hands it to the machine: the same function, deck/slides.js asFlow. */
+const asFlow = slides => slides.map(flowSlide);
 /**
  * Plays a deck as sunum.js does, with a phone that answers every message and timers that fire in the order they were
  * set. Auto-play is switched on at the cover; the walk ends when no timer is left (or after `limit` of them).
@@ -178,9 +215,12 @@ test('auto-play presses → by itself: every step and every slide, in order, the
 
 test('auto-play walks the real deck end to end: every phone message the slides hold, once, in order', () => {
   const { s, trace, pauses, ended } = autoWalk(asFlow(DECK));
-  const expected = DECK.flatMap(x => [...(x.phone ? [x.phone] : []), ...(x.acts ?? []).map(a => a[1])]);
+  // … and a slide's `leave` message as the walk moves off it (Ayarlar puts the phone back in Turkish).
+  const expected = DECK.flatMap((x, i) => [...(x.phone ? [x.phone] : []), ...(x.acts ?? []).map(a => a[1]), ...(x.leave && i < DECK.length - 1 ? [x.leave] : [])]);
   assert.deepEqual(trace.map(({ id, ...m }) => m), expected);
-  assert.ok(trace.every(m => Number.isInteger(m.id)), 'each one carries an id, so each one is waited for');
+  const leaves = DECK.filter(x => x.leave).map(x => x.leave);
+  assert.ok(leaves.length >= 1, 'the deck has a slide that tidies up after itself');
+  assert.ok(trace.every(m => leaves.includes(m) || Number.isInteger(m.id)), 'each one but a leave carries an id, so each one is waited for');
   assert.ok(ended);
   assert.equal(s.cur, DECK.length - 1);
   assert.equal(s.auto, false);
@@ -190,7 +230,8 @@ test('auto-play walks the real deck end to end: every phone message the slides h
 
 test('auto-play\'s pauses are readable: a slide stays for its reading time, a step long enough to watch, the foundation slides longest', () => {
   const { pauses } = autoWalk(asFlow(DECK));
-  for (const p of pauses) assert.equal(p.ms, p.sub === 0 ? Math.max(AUTO_SLIDE, readMs(DECK[p.cur])) : AUTO_STEP, `slide ${p.cur + 1}, after step ${p.sub}`);
+  const holdOf = p => DECK[p.cur].acts[p.sub - 1][2]?.hold;
+  for (const p of pauses) assert.equal(p.ms, p.sub === 0 ? Math.max(AUTO_SLIDE, readMs(DECK[p.cur])) : holdOf(p) ?? AUTO_STEP, `slide ${p.cur + 1}, after step ${p.sub}`);
   assert.ok(AUTO_STEP >= 3000 && AUTO_SLIDE >= 4000, 'long enough to see what the phone did and to read a title');
   // Reading time follows the words on the slide, so the foundation's text slides (dark, full width, no phone) stay
   // longer than any slide of the tour, and nothing stays past READ_MAX.
@@ -199,8 +240,19 @@ test('auto-play\'s pauses are readable: a slide stays for its reading time, a st
   assert.ok(text.length >= 3, 'the section has its text slides');
   const tour = DECK.filter(x => !FOUNDATION_SLIDES.includes(x) && x.id !== 'kapanis').map(x => slidePause(x.id));
   for (const x of text) assert.ok(slidePause(x.id) > Math.max(...tour), `${x.id} (${slidePause(x.id)} ms) stays longer than the longest tour slide (${Math.max(...tour)} ms)`);
-  assert.ok(pauses.every(p => p.ms <= READ_MAX));
+  assert.ok(pauses.every(p => p.sub > 0 || p.ms <= READ_MAX), 'no slide waits past READ_MAX before its first step');
   assert.equal(readMs({ html: '<h1 class="x">bir iki</h1> <p>üç</p>' }), 2500 + 3 * 300, 'words are counted, markup is not');
+  // The song is left playing: after its step auto-play rests for the step's own hold, far longer than after any other
+  // step, and only that step has one (owner: "let the song be heard").
+  const SARKI = DECK.findIndex(x => x.id === 'sarki');
+  const songStep = DECK[SARKI].acts.findIndex(a => JSON.stringify(a[1]).includes('"song.play"'));
+  assert.ok(songStep >= 0, 'the Şarkı slide has the step that plays the song');
+  assert.equal(pauses.find(p => p.cur === SARKI && p.sub === songStep + 1).ms, SONG_HOLD);
+  assert.ok(SONG_HOLD >= 3 * AUTO_STEP && SONG_HOLD <= 30000, `the song is heard for a while, and not for ever (${SONG_HOLD} ms)`);
+  assert.deepEqual(pauses.filter(p => p.sub > 0 && p.ms !== AUTO_STEP).map(p => [p.cur, p.sub]), [[SARKI, songStep + 1]], 'no other step has a pause of its own');
+  // The machine itself: a step with a hold rests that long, the step beside it the usual time.
+  const held = autoWalk([{ phone: null, acts: [{ type: 'act', name: 'a' }, { type: 'act', name: 'b' }], holds: [9000, null], read: 0 }, { phone: null }]);
+  assert.deepEqual(held.pauses.map(p => p.ms), [AUTO_SLIDE, 9000, AUTO_STEP]);   // the slide's own rest first: autoWalk switches on while the cover is coming in
   // ?bekle= (tools/auto-e2e.mjs) replaces every pause and nothing else.
   const fast = autoWalk(asFlow(DECK), { pause: 300 });
   assert.ok(fast.pauses.every(p => p.ms === 300));
@@ -282,8 +334,12 @@ test('sunum.js drives auto-play only through the machine: the control, A and the
   assert.match(deck, /^\$\('#auto'\)\.onclick = \(\) => dispatch\(\{ type: 'auto' \}\);$/m);
   assert.match(deck, /^  if \(k === 'a' \|\| k === 'A'\) dispatch\(\{ type: 'auto' \}\);$/m);
   assert.match(deck, /^  else if \(fx\.type === 'autotimer'\) setTimeout\(\(\) => dispatch\(\{ type: 'autotick', token: fx\.token \}\), fx\.ms\);$/m);
-  // The machine is given each slide's reading time, and the test-only pause comes from ?bekle= alone.
-  assert.match(deck, /read: readMs\(s\) \}\)\), \{ pause: Number\.isFinite\(pause\) \? pause : null \}\)/);
+  // The machine is given each slide's reading time and holds (asFlow), and the test-only pause comes from ?bekle= alone.
+  assert.match(deck, /^let flow = initial\(SLIDES\.map\(asFlow\), \{ pause: Number\.isFinite\(pause\) \? pause : null \}\);$/m);
+  assert.match(deck, /^const pause = Number\.parseInt\(query\.get\('bekle'\) \?\? '', 10\);$/m);
+  assert.deepEqual(flowSlide({ html: '<p>bir</p>', phone: { type: 'go' }, acts: [['A', { n: 1 }], ['B', { n: 2 }, { hold: 7000 }]] }),
+    { phone: { type: 'go' }, leave: null, acts: [{ n: 1 }, { n: 2 }], holds: [null, 7000], read: 2500 + 300 });
+  assert.deepEqual(flowSlide({ html: '', leave: { n: 3 } }), { phone: null, leave: { n: 3 }, acts: [], holds: [], read: 2500 });
   // No loop of its own that clicks → or presses a step: every move is the machine's `next`.
   // (Read without its comments: one of them names the phone's own element.click().)
   const code = deck.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');

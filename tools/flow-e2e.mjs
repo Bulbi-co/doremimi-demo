@@ -98,17 +98,15 @@ try {
   check(stepMs >= 1500, `the step kept the deck locked while the phone typed (${stepMs} ms)`);
 
   // ← undoes the step, also under the lock.
-  // The undo replays fast, so pressing ← "until it unlocks" races it: the last press can land just after the lock
-  // lifts, and that one is a real press. So: the slide must never change while the deck says busy, and at most one
-  // slide may pass in total.
+  // Every further ← is pressed inside the page, in the same task that reads the lock, and only while it is held. Read
+  // from here and then pressed, the last press could land just after the lock lifted: a real press, which undid a
+  // second step, and the check failed one run in a few (2026-11-16) on a deck that was doing the right thing.
   await key('ArrowLeft');
-  let presses = 0, movedWhileBusy = false;
-  for (;;) { const st = await state(); if (st.busy !== 'true') break; if (st.count !== count(GAME)) movedWhileBusy = true; await key('ArrowLeft'); presses++; await sleep(30); }
-  await idle();
+  const pressIfBusy = () => ev(`(() => { if (document.querySelector('#stage').getAttribute('aria-busy') !== 'true') return false; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })); return true; })()`);
+  let presses = 0;
+  while (await pressIfBusy()) { presses++; await sleep(30); }
   s = await state();
-  check(!movedWhileBusy && [count(GAME), count(GAME - 1)].includes(s.count), `← pressed ${presses} times during the undo: no move while busy, at most one after (${s.count})`);
-  if (s.count === count(GAME - 1)) { await ev(`document.querySelector('[data-dot="${GAME}"]').click()`); await idle(); }
-  { const d = (await state()).done; check(d === BEFORE || d === 0, `the undo takes back the typing step only (${d} done)`); }
+  check(presses >= 3 && s.count === count(GAME) && s.done === BEFORE, `← pressed ${presses} more times while the undo played: it took back the typing step only (${s.count}, ${s.done} done)`);
 
   // Ayarlar's steps are whole states (deck/slides.js settings): ← takes the phone back one language and one Zorluk,
   // and R to the slide's own opening state, whatever was pressed in between.
@@ -123,6 +121,14 @@ try {
   check(await phoneSettings() === 'en orta #/ayarlar', `← takes it back to English (${await phoneSettings()})`);
   await press('r');
   check(await phoneSettings() === 'tr baslangic #/ayarlar' && (await state()).done === 0, `R puts the slide back as it opened (${await phoneSettings()})`);
+
+  // Left by a dot while the phone is in French, the slide puts Turkish back first (its leave message), so no other
+  // slide is ever shown in French.
+  await press('ArrowRight'); await press('ArrowRight'); await press('ArrowRight');
+  check((await phoneSettings()).startsWith('fr '), 'in French again');
+  await ev(`document.querySelector('[data-dot="${GAME}"]').click()`); await idle();
+  { const lang = await ev(`document.querySelector('#phone').contentDocument.documentElement.lang`), hash = await ev(`document.querySelector('#phone').contentWindow.location.hash`);
+    check((await state()).count === count(GAME) && lang === 'tr' && hash === '#/', `a dot pressed in French: the next slide's phone is in Turkish (${lang} ${hash})`); }
 
   check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
   ws.close();

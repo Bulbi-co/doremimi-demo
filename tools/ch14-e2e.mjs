@@ -10,6 +10,7 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { SCRIPT } from '../app/data/script.js';
 
 const base = (process.argv[2] ?? 'http://127.0.0.1:4177').replace(/\/$/, '');
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -89,7 +90,7 @@ try {
 
   // The deck's whole story, step by step: no level name on the phone at any point.
   await send('Page.navigate', { url: `${base}/app/?still&reset&embed#/` }); await sleep(1500);
-  for (let step = 0; step <= 13; step++) {
+  for (let step = 0; step < SCRIPT.length; step++) {
     await ev(`window.postMessage({ type: 'act', name: 'goto', step: ${step}, play: true }, '*')`);
     await sleep(step >= 9 ? 9000 : 4000);
     const seen = await text('#game:not([hidden]), .overlay-host, #page');

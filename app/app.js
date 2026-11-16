@@ -9,6 +9,7 @@ import { QuestionDeck, LearningRound, Stage, Resolution, isRight } from './lib/r
 import { Move } from './lib/ladder.js';
 import { RoundOrigin, ORIGIN_OF_LEVEL, ladderFor, rulesOf, dealRound, prepCount, kesfetCategories, DIFFICULTIES } from './lib/modes.js';
 import { HUB, HUB_HEADER } from './data/hub.js';
+import { SCRIPT } from './data/script.js';
 import { Mastery, addXp, toNextLevel, stars as starsOf, pickConcepts, newlyEarned, today } from './lib/progress.js';
 import { seeded, fromClock } from './lib/rng.js';
 import { Backdrop } from './lib/backdrop.js';
@@ -250,7 +251,7 @@ function categoryCard(id) {
 }
 
 // No "Tekrar zamanı" row any more (ch. 14 §1): every round deals the cards that are due first (QuestionDeck.Deal), so
-// the review happens inside OYNA. `.topics` stays on the grid because the deck's Keşfet slide scrolls to it.
+// the review happens inside OYNA. The deck's Keşfet slide scrolls to `.kats-sec`.
 function home() {
   return `<div class="stack home">
     <div class="carousel">
@@ -259,7 +260,7 @@ function home() {
     </div>
     ${oynaHtml()}
     <div class="kats-sec"><h2 class="h2 khead">Kategoriler</h2>
-      <div class="kats topics">${kesfetCategories(deck, CONCEPTS).map(categoryCard).join('')}</div></div>
+      <div class="kats">${kesfetCategories(deck, CONCEPTS).map(categoryCard).join('')}</div></div>
     ${todayHtml()}
   </div>`;
 }
@@ -1660,6 +1661,8 @@ const ACTS = {
       await sleep(m.gap ?? 600);
     }
   },
+  /** A slide that opens on a tab, as a script step, so the script still knows where the phone is (data/script.js). */
+  'page': async m => { goNow(m.hash); await sleep(300); },
   /** Öğren: a category's Hazırlan sheet, opened from its page or its family card as a child would. */
   'prep.open': async m => { goNow(m.hash); await sleep(300); await pressDo(`[data-prep="${m.concept}"]`); },
   'prep.start': async () => { await pressDo('[data-do="prep-start"]'); },
@@ -1671,31 +1674,11 @@ const ACTS = {
 };
 
 /*
- * The deck's game slides as one script (dossier ch. 10 part 5, re-told by ch. 14 §9): a slide or a button asks for a
- * step, and the phone plays the steps between where it is and there. Going back, jumping to a slide, or a phone the
- * presenter touched by hand starts over from a fresh child and replays fast to the step before, then plays the asked
- * step. The rules are the real ones and every round is seeded (G-05), so a replay lands on the same cards every time.
- *
- * The story: Keşfet's round at the top, where the child writes (steps 0-8); then Öğren, the Hazırlan sheet of a
- * family and its cards turned over (9-10); then Çal, a song's round at the choices, to its results (11-13). Each way
- * in plays the way it plays in the app; nothing here picks a level. Steps 0-7 kept their numbers from before ch. 14.
+ * The deck's script (app/data/script.js): a slide or a button asks for a step, and the phone plays the steps between
+ * where it is and there. Going back, jumping to a slide, or a phone the presenter touched by hand starts over from a
+ * fresh child and replays fast to the step before, then plays the asked step. The rules are the real ones and every
+ * round is seeded (G-05), so a replay lands on the same cards every time.
  */
-const SCRIPT = [
-  [{ name: 'game.start', deck: 'sunum', origin: 'kesfet', intro: true }],                             // 0  Keşfet · OYNA: the level question
-  [{ name: 'intro.finish' }],                                                                           // 1  Başlangıç, Hadi oynayalım!
-  [{ name: 'game.type', text: 'sol', send: true }],                                                     // 2  Yanlış yaz: "sol", harf kutuları
-  [{ name: 'game.fill', send: true }],                                                                  // 3  Kutuları doldur
-  [{ name: 'game.next' }],                                                                              // 4  Diyez
-  [{ name: 'game.type', text: 'bemol', send: true }, { name: 'game.type', text: 'solm', send: true }],  // 5  İki deneme de yanlış: dört seçenek
-  [{ name: 'game.choose', right: false }],                                                              // 6  Yanlış seç: kart anlatır
-  [{ name: 'game.next' }],                                                                              // 7  Bemol, yine yazarak
-  [{ name: 'game.type', text: 'bemol', send: true }],                                                   // 8  Doğru yaz: tek zorlanma oyunu indirmez
-  [{ name: 'prep.open', hash: '#/ogren/aileler', concept: 'family:YayliCalgilar' }],                    // 9  Öğren › Aileler: Hazırlan, "7 kart"
-  [{ name: 'prep.start' }, { name: 'game.flip' }, { name: 'game.grade', knew: true }],                  // 10 Başla: kartı çevir, Bildim
-  [{ name: 'song.game', hash: '#/sarki/keman' }, { name: 'game.choose', right: true }],                 // 11 Çal › Keman: Bu çalgıyla oyna, seç
-  [{ name: 'game.next' }, { name: 'game.finish' }],                                                     // 12 Turu bitir: sonuçlar
-  [{ name: 'results.scroll', to: 'badges' }],                                                           // 13 Rozetler
-];
 const script = { pos: -1, dirty: false, at: null };
 /** Where the phone is, as the script left it: the round on screen (if any), the page, the sheet. */
 const scriptPlace = () => [gameEl.hidden ? '' : G.roundId, location.hash, overlay.kind === 'prep' ? overlay.data : ''].join('|');

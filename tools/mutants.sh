@@ -94,3 +94,15 @@ mutatef "Tekrar oyna forgets the way in"         app/app.js         's/openGame\
 mutatef "the Tekrar row is back"                 app/app.js         's/    \$\{oynaHtml\(\)\}/    \${oynaHtml()}<button class="trow" data-do="review">Tekrar zamanı<\/button>/'
 mutatef "the sheet promises a round's worth"     app/app.js         's/Bu kategoride \$\{n\} kart var/Bu kategoride \${LEARNING.cardsPerRound} kart var/'
 mutatef "OYNA is a bar again"                    app/style.css      's/width: min\(56%, 220px\); aspect-ratio: 1;/width: 100%;/'
+# the deck's story against the phone's script, dossier ch. 14 §9 (tests/deck.test.mjs)
+mutatef "CONTROL: slides comment only"           deck/slides.js     's/Its own module, apart from sunum.js/Its own module, separate from sunum.js/'
+mutatef "CONTROL: script comment only"           app/data/script.js 's/It is data in its own module/It is plain data in its own module/'
+mutatef "Tur sonu asks for the old steps"        deck/slides.js     "s/phone: at\(13\)/phone: at(10)/; s/\['Turu bitir', play\(14\)\]/['Turu bitir', play(11)]/"
+mutatef "a step the script does not have"        deck/slides.js     "s/\['Rozetler', play\(15\)\]/['Rozetler', play(16)]/"
+mutatef "the script loses Öğren's page step"     app/data/script.js "s/  \[\{ name: 'page', hash: '#\/ogren\/aileler' \}\],[^\n]*\n//"
+mutatef "Öğren opens with a plain go()"          deck/slides.js     "s/phone: at\(9\)/phone: go('#\/ogren\/aileler')/"
+mutatef "OYNA only in the fast replay"           deck/slides.js     "s/\['OYNA', play\(0\)\]/['OYNA', at(0)]/"
+mutatef "Çal's round not played on Çal"          deck/slides.js     "s/\['Keman: bu çalgıyla oyna', play\(13\)\]/['Keman: bu çalgıyla oyna', at(13)]/"
+mutatef "Çal told before Öğren"                  deck/slides.js     "s/id: 'ogren'/id: 'TMP'/; s/id: 'cal'/id: 'ogren'/; s/id: 'TMP'/id: 'cal'/"
+mutatef "the ladder bullet is back"              deck/slides.js     "s/'Ancak üst üste dört zorlanmada kolaylaşır'/\"Zorlandıkça Yaz → Seç → Çevir'e iner, bildikçe çıkar\"/"
+mutatef "the script picks a level"               app/data/script.js "s/origin: 'kesfet', intro: true/origin: 'kesfet', level: 'yaz', intro: true/"

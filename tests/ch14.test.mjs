@@ -15,6 +15,7 @@ import { QUESTIONS, LEARNING, SUNUM_DECK, BADGES, CONCEPTS, FAMILIES, SIGN_CARDS
 import { GROUP_COLORS, DIFFICULTY } from '../app/data/site.js';
 import { HUB, HUB_HEADER, hubDestinations } from '../app/data/hub.js';
 import { OGREN_TABS, TABS, resolve, PAGE_HOME } from '../app/lib/nav.js';
+import { SCRIPT } from '../app/data/script.js';
 
 const app = readFileSync(new URL('../app/app.js', import.meta.url), 'utf8');
 const deck = new QuestionDeck(QUESTIONS);
@@ -308,14 +309,14 @@ test('the deck’s script plays as ch. 14 tells it: Keşfet writes, Öğren turn
   // Diyez, picked wrong, comes back two cards later; Fa anahtarı, found with the tiles, counts as learned (Baba Sesler)
   assert.deepEqual(k.queue.map(x => x.question.id), ['sign:fa-anahtari', 'sign:diyez', 'sign:bemol', 'q:guitar-family', 'sign:diyez', 'q:violin-family', 'q:guitar-strings']);
   assert.deepEqual(earned, ['ilk-nota', 'baba-sesler', 'bemol-avcisi']);
-  // Öğren › Aileler › Yaylı: the sheet's 7 cards, turned over (steps 9-10)
+  // Öğren › Aileler › Yaylı: the sheet's 7 cards, turned over (steps 10-11)
   random = seeded(11);
   const oCards = dealRound({ deck, origin: RoundOrigin.Ogren, concept: 'family:YayliCalgilar', level: 'baslangic', mastery, random, count: LEARNING.cardsPerRound });
   const o = new LearningRound(oCards, deck, ladderFor(RoundOrigin.Ogren, LEARNING.ladder), LEARNING, random);
   assert.equal(o.count, 7);
   assert.equal(o.stage, Stage.Question);
   o.flip(); o.grade(true); run(o)();
-  // Çal › Keman: Bu çalgıyla oyna, every card at the choices, all right (steps 11-12)
+  // Çal › Keman: Bu çalgıyla oyna, every card at the choices, all right (steps 13-14)
   random = seeded(11);
   const cCards = dealRound({ deck, origin: RoundOrigin.Cal, concept: 'instrument:violin', level: 'baslangic', mastery, random, count: LEARNING.cardsPerRound });
   const c = new LearningRound(cCards, deck, ladderFor(RoundOrigin.Cal, LEARNING.ladder), LEARNING, random);
@@ -326,10 +327,10 @@ test('the deck’s script plays as ch. 14 tells it: Keşfet writes, Öğren turn
   // what the running phone showed for this round (ch14-37-script-results.png): 6/6, +24 XP, 3 stars, Yaylı Şarkıcı
   assert.deepEqual([c.count, c.xpEarned, stars(c.outcomes, LEARNING.roundStars)], [6, 24, 3]);
   assert.deepEqual(earned.slice(before), ['yayli-sarkici']);
-  // and the script in app.js is that story
-  const script = slice('const SCRIPT = [', '\n];');
-  assert.match(script, /name: 'game\.start', deck: 'sunum', origin: 'kesfet', intro: true/);
-  assert.match(script, /name: 'prep\.open', hash: '#\/ogren\/aileler', concept: 'family:YayliCalgilar'/);
-  assert.match(script, /name: 'song\.game', hash: '#\/sarki\/keman'/);
-  assert.doesNotMatch(script, /level: '/, 'the script never picks a level');
+  // and the script the phone plays (app/data/script.js) is that story
+  const script = JSON.stringify(SCRIPT);
+  assert.match(script, /"name":"game\.start","deck":"sunum","origin":"kesfet","intro":true/);
+  assert.match(script, /"name":"prep\.open","hash":"#\/ogren\/aileler","concept":"family:YayliCalgilar"/);
+  assert.match(script, /"name":"song\.game","hash":"#\/sarki\/keman"/);
+  assert.doesNotMatch(script, /"level":/, 'the script never picks a level');
 });

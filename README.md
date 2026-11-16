@@ -53,18 +53,23 @@ the server.
 - **Typing in the game:** while the game asks for a typed answer, the laptop keyboard types into it. During that time
   N, F and R are letters, not shortcuts.
 - **Demo PIN: `135790`.** The parent gate accepts only this demo PIN, never the app's own default (ch. 10 G-06). It
-  is in the notes of slide 7.
+  is in the notes of slide 8 (Aile ve içerik).
 - `?notlar` on the deck URL opens the notes. `#7` opens slide 7.
 
-The deck has 9 slides, each with at most two "canlı göster" steps: Kapak, Gezinme (the new dock; logo, Öğren),
-Keşfet (OYNA; a foundation banner), Oyun (Yaz → harf kutuları → seçenekler and the flipped card; the ladder), Tur sonu,
-Çal (piano, a song), Aile ve içerik (profiles, parent PIN, content the foundation edits), Platformlar and Kapanış. The
-game slides replay one fixed, seeded round, so every press lands on the same card each time.
+The deck has 10 slides, each with at most two "canlı göster" steps, and tells dossier ch. 14 §9's story: Kapak,
+Gezinme (the dock; logo, Öğren), Keşfet (the categories; OYNA, and the first game's level question), Oyun (Keşfet's
+round: a wrong typing, the letter tiles, the choices and the card that explains), Öğren (a family's Hazırlan sheet;
+its cards turned over), Çal (the piano; a song's round at the choices), Tur sonu (the results; the new badge), Aile ve
+içerik (profiles, parent PIN, content the foundation edits), Platformlar and Kapanış (the foundation's page). The
+slides are data in `deck/slides.js`; the phone's side is one seeded script, `app/data/script.js`, that the scripted
+slides walk front to back, so every press lands on the same card each time and → never makes the phone start over.
+`tests/deck.test.mjs` holds the two lists to each other.
 
 ## What is where
 
 ```
-index.html  sunum.js  sunum.css    the deck: the SLIDES list, keys, notes, the phone frame, the sound button
+index.html  sunum.js  sunum.css    the deck: keys, notes, the phone frame, the sound button
+deck/slides.js  deck/flow.js       the slides as data; the lock that waits for the phone
 app/index.html  app.js  style.css  the phone: shell, every screen, the game, overlays
 app/lib/                           the app's rules ported to JavaScript:
   answers.js tiles.js ladder.js round.js progress.js   the game (Yaz/Seç/Çevir, tiles, matching, XP, badges)
@@ -74,6 +79,7 @@ app/lib/                           the app's rules ported to JavaScript:
   backdrop.js icons.js rng.js      the 2.5D note canvas, the app's icons, seeded random
 app/data/content.js  site.js       content copied from the app's C# (signs, questions, directory, people, texts)
 app/data/hub.js                    the logo's page (ch. 14 §6), as data
+app/data/script.js                 the deck's live demo as the phone's steps (ch. 14 §9)
 app/data/songs/*.json              the app's 42 song files, unchanged
 app/data/site/*.json               the app's videos, lyrics and library lists, unchanged
 assets/                            fonts, logo, characters, banners, sprites, instrument photos, thumbnails
@@ -164,7 +170,7 @@ Guards: `tests/ch14.test.mjs`, mutants in `tools/mutants.sh`, and `tools/ch14-e2
   only the foundation's own address. The buttons still ask the gate.
 - **The sign category page** (`Aç` on a flipped tile) is a simple list with `Pratik yap`. Its copy is PROPOSED,
   because the app's own layout was not screenshotted.
-- **The content panel** is described on slide 7, not shown, until the real panel is screenshotted.
+- **The content panel** is described on slide 8, not shown, until the real panel is screenshotted.
 - **Azaltılmış hareket** stops the CSS motion and the canvas. The app also slows the card's deal, and the demo does not.
 - **The phone keeps one state** in `localStorage` (`doremimi-demo-v1`). Slide 1 and `?reset` wipe it.
 

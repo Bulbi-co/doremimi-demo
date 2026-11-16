@@ -9,6 +9,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { SLIDES as DECK_SLIDES } from '../deck/slides.js';
 
 const base = (process.argv[2] ?? 'http://localhost:4175').replace(/\/$/, '');
 const out = process.argv[3] ?? 'docs/screens';
@@ -63,15 +64,18 @@ const deckKey = k => `document.dispatchEvent(new KeyboardEvent('keydown', { key:
 const msg = m => `window.postMessage(${JSON.stringify(m)}, '*')`;
 const tap = sel => `(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) throw new Error('no ' + ${JSON.stringify(sel)}); el.click(); })()`;
 
-const SLIDES = 9;
+const SLIDES = DECK_SLIDES.length;
 const DECK = [];
-// Every slide as it opens, then after each "canlı göster" step (→ plays the next one).
-const STEPS = { 2: 2, 3: 2, 4: 2, 5: 1, 6: 2, 7: 2 };
-const GAME = n => n === 4 || n === 5;   // the scripted round replays fast to the slide's step first
+// Every slide as it opens, then after each "canlı göster" step (→ plays the next one). Read from deck/slides.js, so a
+// slide added or a step moved is shot without editing this list.
+const STEPS = Object.fromEntries(DECK_SLIDES.map((s, i) => [i + 1, (s.acts ?? []).length]));
+const scripted = m => m?.type === 'act' && m.name === 'goto';
+// the scripted story replays fast to the slide's step first
+const GAME = n => [DECK_SLIDES[n - 1].phone, ...(DECK_SLIDES[n - 1].acts ?? []).map(a => a[1])].some(scripted);
 for (let n = 1; n <= SLIDES; n++) {
   DECK.push({ name: `slide-${String(n).padStart(2, '0')}`, url: `${base}/?v=shoot#${n}`, w: 1440, h: 900, wait: GAME(n) ? 9000 : 3500 });
   for (let s = 1; s <= (STEPS[n] ?? 0); s++) {
-    DECK.push({ name: `slide-${String(n).padStart(2, '0')}-step${s}`, cont: true, steps: [deckKey('ArrowRight')], w: 1440, h: 900, wait: GAME(n) ? 9000 : n === 6 ? 5000 : 3500 });
+    DECK.push({ name: `slide-${String(n).padStart(2, '0')}-step${s}`, cont: true, steps: [deckKey('ArrowRight')], w: 1440, h: 900, wait: GAME(n) ? 12000 : 5000 });
   }
 }
 
@@ -110,12 +114,13 @@ const PHONE = [
   ['phone-33-game-solved', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 3 })], 5000],
   ['phone-34-game-choices', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 5 })], 7000],
   ['phone-35-game-reveal', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 6 })], 7000],
-  // Since ch. 14 the script's later steps are other ways in: Öğren's sheet and turned cards, then Çal's choices.
+  // Since ch. 14 the script's later steps are other ways in: Öğren's sheet and turned cards, then Çal's choices
+  // (app/data/script.js; the numbers are its steps).
   ['phone-36-game-typed-right', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 8 })], 8000],
-  ['phone-37-ogren-cevir', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 10 })], 10000],
-  ['phone-38-cal-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 11000],
-  ['phone-39-game-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 12 })], 14000],
-  ['phone-39b-game-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 13 })], 15000],
+  ['phone-37-ogren-cevir', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 10000],
+  ['phone-38-cal-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 13 })], 11000],
+  ['phone-39-game-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 14 })], 14000],
+  ['phone-39b-game-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 15 })], 15000],
 ].map(([name, url, steps = [], wait = 1200]) => ({ name, url, steps, wait, w: 430, h: 932 }));
 // The Platformlar slide's frames (index.html #frames) are copied from these into assets/screens/, so they show the
 // demo's own navigation: the app's c33d9ff captures still had the old four-tab dock.
@@ -140,7 +145,7 @@ const V3 = [
   ['v3/18-game-solved', ...sunum(3, [], 5000)],
   ['v3/14-game-choices', ...sunum(5, [], 7000)],
   ['v3/19-game-reveal', ...sunum(6, [], 7000)],
-  ['v3/20-game-results', ...sunum(12, [], 14000)],
+  ['v3/20-game-results', ...sunum(14, [], 14000)],
 ].map(([name, url, steps = [], wait = 1200, h = 932]) => ({ name, url, steps, wait, w: 430, h }));
 // Dossier ch. 14: every screen the revision changed. `node … tools/shoot.mjs <base> <dir> '^ch14-'`. The two OYNA shots
 // run without ?still, at two points of the card's 4.5 s loop, to show it moving; the rest are still.
@@ -176,11 +181,11 @@ const CH14 = [
   ['ch14-31-script-choices', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 5 })], 7000],
   ['ch14-32-script-reveal', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 6 })], 7000],
   ['ch14-33-script-typed-right', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 8 })], 8000],
-  ['ch14-34-script-hazirlan', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 9 })], 9000],
-  ['ch14-35-script-cevir', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 10 })], 10000],
-  ['ch14-36-script-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 11000],
-  ['ch14-37-script-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 12 })], 14000],
-  ['ch14-38-script-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 13 })], 15000],
+  ['ch14-34-script-hazirlan', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 10 })], 9000],
+  ['ch14-35-script-cevir', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 10000],
+  ['ch14-36-script-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 13 })], 11000],
+  ['ch14-37-script-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 14 })], 14000],
+  ['ch14-38-script-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 15 })], 15000],
   ['ch14-40-cal-song-sec', app('#/sarki/keman'), [`new Promise(r => setTimeout(r, 600))`, tap('[data-play][data-origin="cal"]')]],
   ['ch14-41-calgi-keman', app('#/calgi/keman'), [`document.querySelector('[data-play]').scrollIntoView()`]],
   ['ch14-50-hub', app('#/doremimi')],
@@ -195,6 +200,14 @@ const CH14 = [
   ['ch14-59-vakif', app('#/vakif')],
   ['ch14-60-ayarlar-zorluk', app('#/ayarlar'), [tap('[data-zorluk="orta"]')]],
 ].map(([name, url, steps = [], wait = 1200]) => ({ name, url, steps, wait, w: 430, h: 932 }));
+// The Platformlar slide's three still frames (index.html #frames), at the sizes they were first taken. Until ch. 14 they
+// still showed the OYNA bar, Konu seç and the game's Çevir · Seç · Yaz strip. Copy them into assets/screens/ by hand
+// after looking at them: `node … tools/shoot.mjs <base> <dir> '^frames/'`.
+const FRAMES = [
+  { name: 'frames/phone-kesfet-new-nav', url: app('#/'), steps: [], wait: 1500, w: 430, h: 932 },
+  { name: 'frames/tablet-kesfet-new-nav', url: app('#/', '&embed'), steps: [], wait: 1500, w: 1024, h: 1366 },
+  { name: 'frames/12g-game-yaz-tablet-1366x1024', url: app('#/', '&embed'), steps: [msg({ type: 'act', name: 'goto', step: 1 })], wait: 5000, w: 1366, h: 1024 },
+];
 const TABLET = [
   // &embed: the standalone page narrows to a 440 px phone column on a wide screen (style.css .app:not(.embed)), and a
   // tablet runs the app full width with the content column centred, as dossier screen 20-tablet-home.png shows.
@@ -202,7 +215,8 @@ const TABLET = [
 ];
 
 mkdirSync(join(out, 'v3'), { recursive: true });
-for (const s of [...DECK, ...PHONE, ...TABLET, ...V3, ...CH14]) {
+mkdirSync(join(out, 'frames'), { recursive: true });
+for (const s of [...DECK, ...PHONE, ...TABLET, ...V3, ...CH14, ...FRAMES]) {
   if (only && !only.test(s.name)) continue;
   if (!s.cont) await load(s.url, s.w, s.h);
   for (const st of s.steps ?? []) { await evaluate(st); await sleep(250); }

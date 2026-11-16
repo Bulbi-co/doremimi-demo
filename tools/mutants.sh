@@ -326,9 +326,10 @@ mutatef "copy CONTROL: benign wording"           deck/slides.js     's/Soruları
 mutatef "copy: Testçiler back in a note"         deck/slides.js     's/Her sayfaya tek bir yerden gidilir\./Testçiler dolaşmayı karışık bulmuştu./'
 mutatef "copy: Keşfet named in a note"           deck/slides.js     's/Uygulama Oyna sekmesiyle açılır;/Keşfet artık Oyna;/'
 mutatef "copy: Avalonia in the closing notes"    deck/slides.js     's/<b>Aynı uygulama her cihazda:<\/b>/<b>Tek kod (Avalonia):<\/b>/'
-mutatef "copy: the piano is a klavye again"      deck/slides.js     's/uygulamanın piyanosunda",/uygulamanın klavyesinde",/'
+mutatef "copy: the piano is a klavye again"      deck/slides.js     "s/step\('Şarkı: Keman, piyanoda',/step('Şarkı: Keman, klavyede',/"
 mutatef "copy: the slide says 11 categories"     deck/slides.js     's/altında 12 kategori/altında 11 kategori/'
 mutatef "copy: six families in the notes"        deck/slides.js     's/yedi müzik işareti ve beş çalgı ailesi/yedi müzik işareti ve altı çalgı ailesi/'
 mutatef "copy: 40 instruments on Öğren"          deck/slides.js     "s/'41 çalgı: her birinin/'40 çalgı: her birinin/"
 mutatef "copy: the gate locks for a minute"      deck/slides.js     's/üç yanlışta 30 saniye kilitlenir/üç yanlışta 60 saniye kilitlenir/'
 mutatef "copy: the phone's gate locks after five" app/app.js        's/if \(gate\.wrong >= 3\) \{ gate\.lockedUntil/if (gate.wrong >= 5) { gate.lockedUntil/'
+mutatef "copy: Çal says 40 songs"                deck/slides.js     's/altında 41 şarkı\./altında 40 şarkı./'

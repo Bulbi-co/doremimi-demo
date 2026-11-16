@@ -137,6 +137,7 @@ test('the numbers typed on the slides are the phone’s: 12 categories, 7 signs,
   assert.match(words(slide('kesfet')), new RegExp(`${NUM[signs]} müzik işareti ve ${NUM[families]} çalgı ailesi`));
   assert.match(slide('ogren').html, new RegExp(`>${NUM[families][0].toLocaleUpperCase('tr')}${NUM[families].slice(1)} aile:`));
   assert.match(slide('ogren').html, new RegExp(`>${DIRECTORY.length} çalgı:`));
+  assert.match(slide('cal').html, new RegExp(`altında ${SONGS.filter(x => x.slug !== 'ana-tema').length} şarkı\\.`));
   assert.match(words(slide('ogren')), new RegExp(`Öğren'in ${NUM[OGREN_TABS.length]} sekmesi`));
   assert.match(app, /if \(gate\.wrong >= 3\) \{ gate\.lockedUntil = Date\.now\(\) \+ 30_000;/, 'the gate locks for 30 s after three wrong PINs');
   assert.match(words(slide('aile')), /üç yanlışta 30 saniye kilitlenir/);

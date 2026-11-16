@@ -127,7 +127,7 @@ export const DIFFICULTY = { 'guitar-family': 'Başlangıç Seviyesi', 'guitar-st
  * ShellViewModel.cs:22-31 (GroupAccent): each instrument's group colour. Four of them moved in dossier ch. 14 §1
  * (data/content.js FAMILIES says why and what was measured).
  */
-export const GROUP_COLORS = { 'Yaylı': '#3E3A9E', 'Telli': '#C2379B', 'Tuşlu': '#12B5C9', 'Nefesli': '#1E7A4C', 'Bakır nefesli': '#F6B53A', 'Vurmalı': '#7A5C4E', 'Diğer': '#6B6E85' };
+export const GROUP_COLORS = { 'Yaylı': '#3E3A9E', 'Telli': '#C2379B', 'Tuşlu': '#12B5C9', 'Nefesli': '#1E7A4C', 'Bakır nefesli': '#F6B53A', 'Vurmalı': '#C6E01E', 'Diğer': '#6B6E85' };
 
 /*
  * Doremimi/Accounts/LegalTexts.cs. Three sentences name the old paths through Daha fazla; with the navigation

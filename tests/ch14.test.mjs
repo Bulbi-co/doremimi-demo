@@ -170,7 +170,7 @@ test('a round at exactly half right still earns two stars (learning.json roundSt
 // ───────────────────────── §2 no level names in front of the child
 const LEVEL_WORD = /(?<!\p{L})(Çevir|Seç|Yaz|ÇEVİR|SEÇ|YAZ|Yazma|Seçme|Çevirme)(?!\p{L})/u;
 /** The Turkish strings the game, its intro and results show (i18n/ui.js), which is where the words are now. */
-const GAME_KEYS = Object.keys(UI.tr).filter(k => /^(game|results|levelUp|intro|kb|oyna)\./.test(k));
+const GAME_KEYS = Object.keys(UI.tr).filter(k => /^(game|results|intro|kb|oyna)\./.test(k));
 
 test('no level name reaches the screen: the game, its intro, results and badges (plain verbs on a control stay)', () => {
   const game = code(slice('// ───────────────────────── the game (MusicCardGameViewModel.cs)', '// ───────────────────────── taps'));
@@ -353,7 +353,8 @@ test('the deck’s script plays as ch. 14 tells it: Oyna writes, Öğren is read
   const before = earned.length;
   while (!c.isOver) { assert.equal(c.stage, Stage.Choices); assert.equal(c.choose(c.current.answer), true); endC(); }
   assert.equal(c.ladder.level, Level.Sec);
-  // what the running phone showed for this round (ch14-37-script-results.png): 6/6, +24 XP, 3 stars, Yaylı Şarkıcı
+  // what the running phone showed for this round (ch14-37-script-results.png): 6/6, 3 stars, Yaylı Şarkıcı; the 24 is the
+  // round's progress number, still recorded and since §14 not shown
   assert.deepEqual([c.count, c.xpEarned, stars(c.outcomes, LEARNING.roundStars)], [6, 24, 3]);
   assert.deepEqual(earned.slice(before), ['yayli-sarkici']);
   // and the script the phone plays (app/data/script.js) is that story

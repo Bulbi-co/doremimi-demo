@@ -13,7 +13,7 @@ import { Move } from './lib/ladder.js';
 import { RoundOrigin, ORIGIN_OF_LEVEL, ladderFor, rulesOf, dealRound, kesfetCategories } from './lib/modes.js';
 import { HUB, BANNER_GO, FAMILY_GROUP } from './data/hub.js';
 import { SCRIPT } from './data/script.js';
-import { Mastery, addXp, toNextLevel, stars as starsOf, pickConcepts, newlyEarned, today } from './lib/progress.js';
+import { Mastery, addXp, stars as starsOf, pickConcepts, newlyEarned, today } from './lib/progress.js';
 import { seeded, fromClock } from './lib/rng.js';
 import { Backdrop } from './lib/backdrop.js';
 import { pageAccentOf } from './lib/canvas.js';
@@ -151,7 +151,7 @@ function openIn(tabKey, hash) { leavePage(); route = { tab: tabKey, page: null }
 function back() {
   if (gate.open) return closeGate();
   if (overlay.kind) return closeOverlay();
-  if (!gameEl.hidden) { if (G.levelUp) { G.levelUp = null; renderGame(); } else if (G.intro && profile.difficulty) closeIntro(); else exitGame(); return; }
+  if (!gameEl.hidden) { if (G.intro && profile.difficulty) closeIntro(); else exitGame(); return; }
   if (stack.length) { stack.pop(); location.hash = stack.at(-1) ?? TABS.find(x => x.key === route.tab).hash; return; }
   if (route.tab !== 'kesfet') location.hash = '#/';   // back on any other root, the logo's included, goes to Oyna (OC-24)
 }
@@ -180,23 +180,20 @@ function renderTopbar() {
   const tab = TABS.find(x => x.key === route.tab);
   const view = route.page ? PAGES[route.page] : null;
   const title = view ? (typeof view.title === 'function' ? view.title(route.arg, route.query) : t(view.title)) : tabTitle(tab);
-  const ratio = profile.xp / toNextLevel(LEARNING, profile.level);
   const kid = childOf();
-  // NR-05: [back][title][level chip][avatar]. No logo here any more (it is in the dock); the avatar, top right, opens
-  // Profilim (OC-05), and so does the chip, as before.
+  // NR-05: [back][title][avatar]. No logo here any more (it is in the dock) and no level chip (ch. 14 §14: the level
+  // it showed was the XP level, which is never on screen); the avatar, top right, opens Profilim (OC-05).
   topbar.innerHTML = `
     ${stack.length ? `<button class="chunky white round backbtn" data-do="back" title="${esc(t('back'))}" aria-label="${esc(t('back'))}"><span class="face">${icon('IconBack')}</span></button>` : ''}
     <div class="title"><h1>${esc(title)}</h1></div>
-    <button class="tile levelbtn" data-go="#/profil" title="${esc(t('page.profil'))}" aria-label="${esc(t('level.n', { n: profile.level }))}">
-      <span class="lv"><b class="num">${esc(t('level.n', { n: profile.level }))}</b><span class="slim"><i style="width:${Math.round(Math.min(1, ratio) * 100)}%"></i></span></span>
-    </button>
     <button class="tile" data-go="#/profil" data-do="avatar" title="${esc(t('page.profil'))}" aria-label="${esc(t('page.profil'))}"><span class="avatar who"><img src="../assets/site/characters/${kid.image}" alt=""></span></button>`;
   fitTitle();
 }
 /*
- * The page title fits its room: 28 px, else 22, else two lines at 18. Beside the back button, the level chip and the
- * avatar a title has about 176 px on a 390 px phone, and "Etkinlikler ve materyaller" needs 324 at 28 (French and English
- * run longer still); cut with an ellipsis, the title of the page you are on read as "Etkinlikler ve…". Measured again
+ * The page title fits its room: 28 px, else 22, else two lines at 18. Beside the back button and the avatar a title has
+ * 248 px on a 390 px phone (176 while the level chip sat there, until ch. 14 §14), and "Etkinlikler ve materyaller"
+ * needs 324 at 28 (French and English run longer still); cut with an ellipsis, the title of the page you are on read as
+ * "Etkinlikler ve…". Measured again
  * when a font finishes loading and when the bar changes width: document.fonts.ready alone was not enough, because it
  * can resolve before the first render has asked for Inter at all, and the English hub title stayed cut at 430 px.
  */
@@ -762,24 +759,22 @@ const kidName = k => k.nameKey ? t(k.nameKey) : k.name;
 const kidAge = k => k.age ? t('age', { range: k.age }) : '';
 function profilePage() {
   const kid = childOf();
-  const goal = toNextLevel(LEARNING, profile.level);
   const totalStars = profile.stars ?? 0;
   const instr = DIRECTORY_TR.length, riddles = DIRECTORY_TR.filter(d => d.riddle).length;
   const general = deck.concepts.length ? deck.concepts.reduce((a, c) => a + mastery.conceptMastery(c, deck), 0) / deck.concepts.length : 0;
   const seen = (profile.seen ?? []).length;
   // Slim rows on white (ch. 13): the old slate panels put white labels on grey at about 1.4:1.
+  // İstatistikler has no "En iyi tur" (ch. 14 §14): in the app that row is the best round's XP (ch. 03 §16.4) and went
+  // with it. The phone drew the best round's right answers under the same label, which the app never showed.
   const bar = (label, v, text) => `<div class="prow"><span>${esc(label)}</span><em class="num">${esc(text)}</em><span class="slim"><i style="width:${Math.round(Math.min(1, v) * 100)}%"></i></span></div>`;
   const earned = L.BADGES.filter(b => profile.badges.includes(b.id));
   return `<div class="stack">
     <div class="card child-head"><div class="who-line"><span class="avatar big"><img src="../assets/site/characters/${kid.image}" alt=""></span><div class="mt"><b class="h2">${esc(kidName(kid))}</b>${kid.age ? `<small>${esc(kidAge(kid))}</small>` : ''}</div></div>
       <button class="chunky white" data-do="switcher"><span class="face">${icon('IconSmile')}${esc(t('who.title'))}</span></button></div>
-    <div class="card prof-level">
-      <div class="top"><span class="lvbox"><small>${esc(up(t('level')))}</small><b class="num">${profile.level}</b></span><div class="mt"><b>${esc(t('profile.rank'))}</b><span class="slim"><i style="width:${Math.round(Math.min(1, profile.xp / goal) * 100)}%"></i></span><small class="num">${esc(t('xp.of', { xp: profile.xp, goal }))}</small></div></div>
-      <div class="three"><span><b class="num">${profile.badges.length}</b>${esc(t('profile.badges', { n: profile.badges.length }))}</span><span><b class="num">${profile.rounds ?? 0}</b>${esc(t('profile.rounds', { n: profile.rounds ?? 0 }))}</span><span><b class="num">${totalStars}</b>${esc(t('profile.stars', { n: totalStars }))}</span></div></div>
+    <div class="card prof-counts"><span><b class="num">${profile.badges.length}</b>${esc(t('profile.badges', { n: profile.badges.length }))}</span><span><b class="num">${profile.rounds ?? 0}</b>${esc(t('profile.rounds', { n: profile.rounds ?? 0 }))}</span><span><b class="num">${totalStars}</b>${esc(t('profile.stars', { n: totalStars }))}</span></div>
     ${ribbon(t('profile.progress'))}<div class="card plist">${bar(t('profile.general'), general, pct(general))}${bar(t('profile.instruments'), seen / instr, `${pct(seen / instr)} (${seen}/${instr})`)}${bar(t('profile.riddles'), 0, `${pct(0)} (0/${riddles})`)}</div>
-    ${ribbon(t('profile.stats'))}<div class="card plist stats">${[['stats.rounds', profile.rounds ?? 0], ['stats.best', profile.best ?? 0], ['stats.answered', profile.answered ?? 0]].map(([k, v]) => `<div class="srow"><span>${esc(t(k))}</span><b class="num">${v}</b></div>`).join('')}</div>
+    ${ribbon(t('profile.stats'))}<div class="card plist stats">${[['stats.rounds', profile.rounds ?? 0], ['stats.answered', profile.answered ?? 0]].map(([k, v]) => `<div class="srow"><span>${esc(t(k))}</span><b class="num">${v}</b></div>`).join('')}</div>
     ${earned.length ? `${ribbon(t('profile.badgeList'))}<div class="card badges">${earned.map(b => `<span class="bdg">${medalHtml(b)}<small>${esc(b.name)}</small></span>`).join('')}</div>` : ''}
-    <div class="card note"><p class="p strong c">${esc(t('profile.xpNote'))}</p></div>
     ${group(t('profile.family'), [
       menuRow('IconGrid', t('page.ayarlar'), t('profile.settings.line'), 'data-push="#/ayarlar"'),
       menuRow('IconLock', t('page.hesabim'), t('profile.account.line'), 'data-do="hesabim"'),
@@ -805,9 +800,11 @@ const account = () => `<div class="stack"><div class="card who-card"><b class="h
   ${ribbon(t('account.lock'), ' small')}<button class="chunky white" data-do="soon"><span class="face">${esc(t('account.pin'))}</span></button>
   <button class="chunky indigo" data-do="soon"><span class="face">${esc(t('account.signout'))}</span></button><span class="caption on-canvas">${esc(t('account.signout.line'))}</span>
   <button class="chunky orange" data-do="wipe"><span class="face">${esc(t('account.wipe'))}</span></button></div>`;
-const parentPanel = () => { const kid = childOf(); return `<div class="stack"><div class="card child-head"><span class="avatar big"><img src="../assets/site/characters/${kid.image}" alt=""></span><div class="mt">
-  <b class="h3">${esc(kidName(kid))}</b><small class="num" style="color:var(--text-xp)">${esc(t('panel.level', { n: profile.level, xp: profile.xp }))}</small><span class="p num">${esc(t('panel.line1', { cards: profile.answered ?? 0, days: profile.days.length, seen: Object.keys(profile.mastery).length }))}</span>
-  <small class="num">${esc(t('panel.line2', { instruments: (profile.seen ?? []).length, badges: profile.badges.length }))}</small></div></div>
+// The avatar sits beside the child's lines, as in the app (AccountPagesView.axaml: Grid Auto,*). A .card.child-head
+// stacks its children, which is right for Profilim (the child, then "Kim oynuyor?") and put the avatar above the name here.
+const parentPanel = () => { const kid = childOf(); return `<div class="stack"><div class="card child-head"><div class="who-line top"><span class="avatar big"><img src="../assets/site/characters/${kid.image}" alt=""></span><div class="mt">
+  <b class="h3">${esc(kidName(kid))}</b><span class="p num">${esc(t('panel.line1', { cards: profile.answered ?? 0, days: profile.days.length, seen: Object.keys(profile.mastery).length }))}</span>
+  <small class="num">${esc(t('panel.line2', { instruments: (profile.seen ?? []).length, badges: profile.badges.length }))}</small></div></div></div>
   <span class="caption on-canvas">${esc(t('panel.local'))}</span><button class="chunky white" data-do="soon"><span class="face">${esc(t('account.pin'))}</span></button></div>`; };
 
 /** Each pushed page: its title (a key, or a function of its argument) and its body. */
@@ -851,10 +848,11 @@ function afterRender() {
     const d = L.DIRECTORY.find(x => slug(x.name) === route.arg);
     if (!seen.has(route.arg) && d) {
       seen.add(route.arg); profile.seen = [...seen];
-      // Opening an instrument for the first time pays 10 XP (learning.json seenInstrument; ch. 02 §3.6).
+      // Opening an instrument for the first time is recorded as before (learning.json seenInstrument; ch. 02 §3.6):
+      // the number is the backend's record of progress and is never drawn (ch. 14 §14), so the toast only names it.
       const lv = addXp(LEARNING, profile.level, profile.xp, LEARNING.xp.seenInstrument);
-      profile.level = lv.level; profile.xp = lv.xp; save(); renderTopbar();
-      toast(t('xp.plus', { n: LEARNING.xp.seenInstrument }), t('instrument.discovered', { name: d.label }));
+      profile.level = lv.level; profile.xp = lv.xp; save();
+      toast(t('instrument.discovered', { name: d.label }));
     }
   }
   // Öğren's tab row scrolls; the current tab is brought into view, or a tab opened from a link would be off screen.
@@ -962,7 +960,7 @@ document.addEventListener('pointerdown', e => {
 
 // ───────────────────────── the game (MusicCardGameViewModel.cs)
 const G = { round: null, q: null, stage: null, answer: '', feedback: '', bad: false, outcome: null, outcomeSeq: 0, origin: null, roundId: 0,
-  revealTab: 1, wrongPick: null, results: null, intro: null, levelUp: null, cardSeq: 0, renderedSeq: -1, roundBadges: [], masteryBefore: {}, concept: null, fx: null };
+  revealTab: 1, wrongPick: null, results: null, intro: null, cardSeq: 0, renderedSeq: -1, roundBadges: [], masteryBefore: {}, concept: null, fx: null };
 let gameBg = null;
 
 /*
@@ -976,7 +974,7 @@ function openGame({ concept = null, origin = null, level = null, intro } = {}) {
   G.origin = origin ?? ORIGIN_OF_LEVEL[level] ?? RoundOrigin.Kesfet;
   rulesOf(G.origin);
   G.roundId = (G.roundId ?? 0) + 1;
-  G.results = null; G.levelUp = null; G.roundBadges = []; G.outcome = null;
+  G.results = null; G.roundBadges = []; G.outcome = null;
   // The first game asks the child's level before anything else (ch. 14 §4), whatever the way in.
   const pages = [...(profile.difficulty ? [] : ['level']), ...L.INTRO_STEPS.map(x => x.key)];
   // `only`: a child who has seen the intro before but has no level yet (a profile from before ch. 14) is asked the
@@ -1005,12 +1003,12 @@ function deal() {
 }
 
 function exitGame() {
-  G.results = null; G.levelUp = null; G.round = null;
+  G.results = null; G.round = null;
   gameEl.hidden = true; gameEl.innerHTML = '';
   gameBg?.stop(); gameBg = null;
   shellBg.start();
   typing(false);
-  // A round changes what the shell shows (XP, a category's %), so the page under the game is rebuilt when the game
+  // A round changes what the shell shows (a category's %, Profilim's counts), so the page under the game is rebuilt when the game
   // closes (OC-29: no stale hub).
   render();
 }
@@ -1075,10 +1073,10 @@ function flip() { if (G.stage !== Stage.Question) return; G.round.flip(); G.stag
 function grade(knew) {
   if (G.stage !== Stage.Flipped) return;
   G.round.grade(knew);
-  const o = endCard();
+  endCard();
   // "A self-graded card has nothing left to show: the answer is already up" (:409-412): straight on.
   next();
-  if (o.xp > 0) { G.outcome = { headline: t('xp.plus', { n: o.xp }), detail: t('game.knewBadge') }; G.outcomeSeq++; renderGame(); }
+  if (knew) { G.outcome = { praise: t('game.knewBadge') }; G.outcomeSeq++; renderGame(); }
 }
 
 function next() {
@@ -1091,7 +1089,7 @@ function solved(res) {
   const o = endCard();
   G.feedback = res.verdict === 'Close' ? t('game.close', { answer: res.answer ?? q.answer }) : t('game.right');   // :453
   G.bad = false;
-  G.outcome = { headline: t('xp.plus', { n: o.xp }), detail: t({ TypedFirstTry: 'game.firstTry', TypedWithTiles: 'game.withTiles' }[o.resolution] ?? 'game.rightPick') };
+  G.outcome = { praise: t({ TypedFirstTry: 'game.firstTry', TypedWithTiles: 'game.withTiles' }[o.resolution] ?? 'game.rightPick') };
   G.outcomeSeq++; G.fx = 'right';
   renderGame();
 }
@@ -1104,7 +1102,9 @@ function revealed(wrongPick) {
 
 /**
  * The card is over (:478-490): the round records it and deals the next one (which waits for Devam), the profile saves
- * it with its XP and mastery, the ladder shows any move, and badges are checked. The stage stays on the card's end.
+ * it with its mastery and its progress number, the ladder shows any move, and badges are checked. The stage stays on
+ * the card's end. The progress number (profile.xp, profile.level) is kept for the backend and never drawn (ch. 14 §14):
+ * no chip, no bar, and no popup when it crosses a level.
  */
 function endCard() {
   const ended = G.round.stage;
@@ -1122,9 +1122,7 @@ function endCard() {
   const earned = newlyEarned(L.BADGES, { mastery, deck, round: G.round.outcomes, days: profile.days }, profile.badges);
   profile.badges.push(...earned.map(b => b.id));
   G.roundBadges.push(...earned);
-  if (lv.levelsGained > 0) G.levelUp = { level: profile.level, toNext: toNextLevel(LEARNING, profile.level) - profile.xp };
   save();
-  renderTopbar();
   return o;
 }
 
@@ -1134,8 +1132,9 @@ function finish() {
     .filter(id => L.CONCEPTS[id])
     .map(id => ({ id, info: L.CONCEPTS[id], before: G.masteryBefore[id] ?? 0, after: mastery.conceptMastery(id, deck) }));
   G.results = { stars: starsOf(r.outcomes, LEARNING.roundStars), right: r.outcomes.filter(o => isRight(o.resolution)).length, count: r.outcomes.length,
-    xp: r.xpEarned, facts, badges: G.roundBadges.slice() };
-  // Profilim's counts: rounds played, the best round (cards known) and the stars (ch. 03 §16.2-16.4).
+    facts, badges: G.roundBadges.slice() };
+  // Profilim's counts: rounds played and the stars (ch. 03 §16.2-16.4). The best round is still saved, like the
+  // progress number, and since ch. 14 §14 no screen draws it.
   profile.rounds = (profile.rounds ?? 0) + 1; profile.best = Math.max(profile.best ?? 0, G.results.right); profile.stars = (profile.stars ?? 0) + G.results.stars;
   save();
   renderGame();
@@ -1169,8 +1168,7 @@ function renderGame() {
   const current = Math.min(done + (ended ? 0 : 1), r.count);
   $('#ghead').innerHTML = `
     <button class="chunky white close" data-g="exit" title="${esc(t('game.exit'))}" aria-label="${esc(t('close'))}"><span class="face">${icon('IconCross')}</span></button>
-    <div class="t"><b>${esc(t('game.title'))}</b>${playing ? `<small class="num">${esc(t('game.card', { i: Math.max(current, 1), n: r.count }))}</small>` : ''}</div>
-    <span class="avatar sv num">${esc(t('game.levelChip', { n: profile.level }))}</span>`;
+    <div class="t"><b>${esc(t('game.title'))}</b>${playing ? `<small class="num">${esc(t('game.card', { i: Math.max(current, 1), n: r.count }))}</small>` : ''}</div>`;
   // The card owns the game screen, so its colour is the one accent (Accent.cs); the popups over it reset to ink.
   gameEl.style.cssText = toneVars(playing && G.q ? accentSet(G.q.accent) : INK_SET);
   const body = $('#gbody');
@@ -1182,7 +1180,7 @@ function renderGame() {
   }
   const head = $('#ghead');
   gameEl.style.setProperty('--below', `${head.offsetTop + head.offsetHeight + 10}px`);
-  $('#gover').innerHTML = (G.results ? resultsHtml() : '') + (G.levelUp && !G.results ? levelUpHtml() : '') + (G.intro ? introHtml() : '');
+  $('#gover').innerHTML = (G.results ? resultsHtml() : '') + (G.intro ? introHtml() : '');
   typing(playing && !G.intro && isTypingStage());
   G.fx = null;
 }
@@ -1202,8 +1200,9 @@ function chipOf(q) {
 function cardAreaHtml() {
   const q = G.q;
   const back = G.stage === Stage.Revealed || G.stage === Stage.Flipped;
-  // The chip plays once: a later redraw (a tab on the information card) must not replay it.
-  const chip = G.outcome && G.shownOutcome !== G.outcomeSeq ? `<div class="xp-chip" data-seq="${G.outcomeSeq}"><span class="toastb">${esc(G.outcome.headline)}</span><small>${esc(G.outcome.detail)}</small></div>` : '';
+  // The chip is the praise line alone (ch. 14 §14: it used to lead with "+N XP"). It plays once: a later redraw (a tab
+  // on the information card) must not replay it.
+  const chip = G.outcome && G.shownOutcome !== G.outcomeSeq ? `<div class="praise-chip" data-seq="${G.outcomeSeq}"><span class="toastb">${esc(G.outcome.praise)}</span></div>` : '';
   G.shownOutcome = G.outcomeSeq;
   if (back) return `<div class="back-scroll"><div class="back" style="${accentVars(q)}">${revealHtml(q)}</div></div>${chip}`;
   const dealt = G.renderedSeq !== G.cardSeq ? ' deal' : '';
@@ -1398,7 +1397,7 @@ function resultsHtml() {
       <div class="stars">${star(0)}${star(1, true)}${star(2)}</div>
       <div class="r-title">${esc(title)}</div>
       <p class="p r-info">${esc(info)}</p>
-      <div class="stats3 num"><div class="rrow"><small>${esc(t('results.xp'))}</small><b>+${R.xp}</b></div><div class="rrow"><small>${esc(t('results.right'))}</small><b>${R.right}/${R.count}</b></div><div class="rrow"><small>${esc(t('results.stars'))}</small><b>${R.stars}/3</b></div></div>
+      <div class="stats2 num"><div class="rrow"><small>${esc(t('results.right'))}</small><b>${R.right}/${R.count}</b></div><div class="rrow"><small>${esc(t('results.stars'))}</small><b>${R.stars}/3</b></div></div>
       ${facts ? `<h3 class="group-title r-group">${esc(t('results.facts'))}</h3>${facts}` : ''}
       ${badges ? `<h3 class="group-title r-group" id="new-badges">${esc(t('results.badges', { n: R.badges.length }))}</h3>${badges}` : ''}
       <div class="r-btns"><button class="chunky white" data-g="exit"><span class="face">${esc(t('results.exit'))}</span></button>
@@ -1414,15 +1413,6 @@ function medalHtml(b) {
   return `<span class="medal" style="--accent:${b.color}"><span>${inner}</span></span>`;
 }
 const STAR = 'M12,1.5 L15.1,8.3 L22.5,9.1 L17,14.1 L18.5,21.5 L12,17.8 L5.5,21.5 L7,14.1 L1.5,9.1 L8.9,8.3 Z';
-
-function levelUpHtml() {
-  const U = G.levelUp;
-  return `<div class="overlay below"><div class="pop-wrap" style="max-width:400px"><div class="pop-card"><div class="pop-face" style="gap:12px">
-    <div class="lvl-num num">${U.level}</div><div class="r-title">${esc(t('levelUp.title', { n: U.level }))}</div>
-    <p class="p" style="text-align:center">${esc(t('levelUp.line', { next: U.level + 1, xp: U.toNext }))}</p>
-    <button class="chunky primary large" data-g="lvl-close"><span class="face">${esc(t('game.next'))}${icon('IconArrow')}</span></button></div></div>
-    <button class="chunky white close x" data-g="lvl-close" title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><span class="face">${icon('IconCross')}</span></button></div></div>`;
-}
 
 /*
  * "Nasıl oynanır?" (ch. 14 §4): the child's level first when it is not known yet, then three pages that never name a
@@ -1519,7 +1509,6 @@ document.addEventListener('click', e => {
     case 'instrument': { const k = G.links?.instrument; if (!k) return; exitGame(); return openIn('ogren', `#/calgi/${k}`); }
     // Tekrar oyna: the same way in and the same category (ch. 14 §3).
     case 'replay': { const c = G.concept === 'sunum' ? null : G.concept; return openGame({ concept: c, origin: G.origin, intro: false }); }
-    case 'lvl-close': G.levelUp = null; return renderGame();
     case 'intro-prev': G.intro.step = Math.max(0, G.intro.step - 1); return renderGame();
     case 'intro-next': if (G.intro.step < G.intro.pages.length - 1) { G.intro.step++; return renderGame(); } return closeIntro();
     case 'intro-close': return closeIntro();
@@ -1704,7 +1693,6 @@ const ACTS = {
   'page': async m => { goNow(m.hash); await sleep(300); },
   /** A page, then a tap on it as a child would (Öğren's family card, an instrument in the grid). */
   'open': async m => { goNow(m.hash); await sleep(300); if (m.tap) await pressDo(m.tap); },
-  /** Çal: a song's "Bu çalgıyla oyna", which opens its round at the choices. */
   'results.scroll': async () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); await sleep(REDUCED ? 0 : 700); },
   /** A sequence with a visible pause between presses (0.8–1.2 s, W-03), for slides that play several steps at once. */
   'seq': async m => { for (const step of m.steps) { await run({ type: 'act', ...step }); await sleep(m.gap ?? 900); } },

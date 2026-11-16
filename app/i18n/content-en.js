@@ -118,7 +118,7 @@ export default {
   intro: {
     see: { title: 'See the card', text: 'The card shows a music sign or a question about an instrument.' },
     find: { title: 'Find the answer', text: 'You write the answer, pick it, or turn the card over and read it: the card shows you how.' },
-    stars: { title: 'Collect stars', text: 'Right answers bring XP and stars. A wrong answer never costs you anything.' },
+    stars: { title: 'Collect stars', text: 'Right answers bring stars. A wrong answer never costs you anything.' },
   },
   levelQuestion: 'Where shall we start?',
   difficulties: {

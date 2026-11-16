@@ -66,12 +66,10 @@ test('each kind of text takes its role: page title, headers, sections, cards, ro
   uses('.chunky:not(.oyna)', 'label'); uses('.otab', 'label'); uses('.chip-btn, .zopt', 'chip'); uses('.dock .tab span', 'dock');
 });
 
-test('counts are set in tabular figures: the category cards, the level chip, Profilim’s numbers, the game’s counter', () => {
+test('counts are set in tabular figures: the category cards, Profilim’s numbers, the game’s counter', () => {
   assert.match(noComments(css), /\.num \{ font-variant-numeric: tabular-nums; \}/);
   for (const [where, re] of [
     ['category card', /<small class="num">\$\{esc\(t\('cards', \{ n: cards \}\)\)\}/],
-    ['level chip', /<b class="num">\$\{esc\(t\('level\.n', \{ n: profile\.level \}\)\)\}<\/b>/],
-    ['Profilim level', /<b class="num">\$\{profile\.level\}<\/b>/],
     ['Profilim three', /<b class="num">\$\{profile\.badges\.length\}<\/b>/],
     ['İstatistikler', /<b class="num">\$\{v\}<\/b>/],
     ['the game’s card counter', /<small class="num">\$\{esc\(t\('game\.card'/],

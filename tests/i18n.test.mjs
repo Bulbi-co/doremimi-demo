@@ -51,7 +51,7 @@ test('every key app.js asks for exists; a key it builds from a list exists for e
     ...['gizlilik', 'kosullar', 'kvkk'].map(k => `legal.${k}`),
     ...GROUPS.map(g => `family.${g.toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/\s+/g, '-')}`),
     ...['firstTry', 'withTiles', 'rightPick'].map(k => `game.${k}`), ...['one', 'two', 'three'].map(k => `results.${k}`),
-    ...['si', 'mi'].flatMap(k => [`burs.${k}`, `burs.${k}.line`]), ...['rounds', 'best', 'answered'].map(k => `stats.${k}`),
+    ...['si', 'mi'].flatMap(k => [`burs.${k}`, `burs.${k}.line`]), ...['rounds', 'answered'].map(k => `stats.${k}`),
     ...['oyna', 'ogren', 'izle', 'cal'].map(k => `whatis.${k}`),
   ];
   for (const k of built) assert.ok(k in UI.tr, `${k} has no entry`);

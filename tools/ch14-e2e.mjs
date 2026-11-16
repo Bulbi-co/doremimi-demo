@@ -58,10 +58,11 @@ try {
   await open('#/ayarlar');
   await tap('[data-zorluk="ileri"]');
   check((await saved())?.difficulty === 'ileri' && await ev(`document.querySelector('[data-zorluk="ileri"]').classList.contains('on')`), 'Ayarlar › Zorluk changes it');
-  await open('#/sarki/keman');   // a fresh child again (?reset): a song's way in asks it too
+  // A song page is no way in since the owner's ruling of 2026-11-16 (commit 5d0bf0a took "Bu çalgıyla oyna" off it):
+  // it used to be asked here that a song's way in asks the level too, and below that its round opens at the choices.
+  await open('#/sarki/keman');
   await sleep(500);
-  await tap('[data-play][data-origin="cal"]');
-  check(await ev(`document.querySelectorAll('[data-level]').length`) === 3, 'a song’s way in asks the level on the first game too');
+  check(await ev(`document.querySelectorAll('#page [data-play], #page [data-origin]').length`) === 0, 'a song page has no way into the game');
 
   // Each way in plays as ch. 14 says. A child with a level, so no level page: set it, then reload without ?reset.
   const withLevel = async hash => { await open('#/'); await ev(`localStorage.setItem('doremimi-demo-v1', JSON.stringify({ profile: { difficulty: 'baslangic', seenIntro: true } }))`); await send('Page.navigate', { url: `${base}/app/?still&dil=tr${hash}` }); await sleep(1500); };
@@ -76,9 +77,6 @@ try {
   const grid = await ev(`[...document.querySelectorAll('.igrid .imeta small')].map(e => e.textContent)`);
   check(grid.length === 6 && grid.every(g => g === 'Yaylı'), `Aileler › Yaylı opens the six bowed instruments (${grid.length})`);
   check(await ev(`document.querySelector('.fam') === null && /aile=yayli/.test(location.hash)`), 'on Çalgılar under the family filter');
-  await ev(`location.hash = '#/sarki/keman'`); await sleep(900);
-  await tap('[data-play][data-origin="cal"]');
-  check(await ev(`document.querySelectorAll('[data-choice]').length`) === 4, 'Çal › a song: the round opens at the four choices');
   await tap('[data-g="exit"]');
   await ev(`location.hash = '#/'`); await sleep(600);
   await tap('[data-play="family:TelliCalgilar"][data-origin="kesfet"]');
@@ -94,7 +92,14 @@ try {
     check(!hit, `script step ${step}: no level name on screen${hit ? ` ("${hit[0]}")` : ''}`);
     if (await ev(`!document.querySelector('#game').hidden`)) check(!(await ev(`!!document.querySelector('#game .ladder, #game .ladder-line')`)), `script step ${step}: no ladder strip`);
   }
-  check(/Doğru/.test(await text('#gover')) && !/Seviye/.test(await text('#results .stats2')), 'the results count right answers, not a level');
+  // The script ends on Çal's page since 5d0bf0a (its last three steps were a song's round and its results), so the
+  // results are reached the way a child reaches them: a round played to its end.
+  await open('#/');
+  await tap('[data-do="play"]'); await tap('[data-level="baslangic"]'); await tap('[data-g="intro-close"]');
+  await ev(`window.postMessage({ type: 'act', name: 'game.finish', gap: 50 }, '*')`);
+  for (let i = 0; i < 300 && !(await ev(`!!document.querySelector('#results .rrow')`)); i++) await sleep(100);
+  const tiles = await ev(`[...document.querySelectorAll('#results .stats2 .rrow small')].map(e => e.textContent)`);
+  check(tiles.join(' · ') === 'Doğru · Yıldız' && !/Seviye/.test(await text('#gover')), `the results count right answers and stars, not a level (${tiles.join(' · ')})`);
 
   // The hub: every destination once.
   await open('#/doremimi');

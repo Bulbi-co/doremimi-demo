@@ -1,9 +1,12 @@
 // Dossier ch. 14 §14 asked of the running phone, in headless Chrome: no XP, no gold and no XP level on any screen, in
 // Turkish, English and French, while the progress number is still saved. tests/xp.test.mjs holds the same in the source;
 // this one reads what the browser drew, including the two things that only show for a moment (the outcome chip over a
-// card and the toast for a first instrument), by reading the screen every 120 ms while a whole round is played.
+// card and the toast for a first instrument), by reading the screen every 120 ms while a whole round is played. The
+// chip is also measured as it flies: under the game's header and inside the screen, on a different phone per language
+// (French, whose praise lines are the longest, on the narrowest).
 //
 //   PORT=4183 node tools/serve.mjs  (in another terminal)  then  node --experimental-websocket tools/xp-e2e.mjs http://127.0.0.1:4183
+//   A third argument narrows the languages (`… http://127.0.0.1:4183 fr`); tools/xp-e2e-mutants.sh uses it.
 //
 // Exit code 0 = every check passed. No dependencies (Node 22+, or 20 with --experimental-websocket).
 import { spawn } from 'node:child_process';
@@ -13,15 +16,18 @@ import { join } from 'node:path';
 import { XP_WORD, GOLD_WORD, LEVEL_NUMBER } from '../tests/xp-words.mjs';
 
 const base = (process.argv[2] ?? 'http://127.0.0.1:4175').replace(/\/$/, '');
+const LANGS = process.argv[3] ? process.argv[3].split(',') : ['tr', 'en', 'fr'];
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const port = 9950 + Math.floor(Math.random() * 40);
+// A wide range: two runs side by side (tools/xp-e2e-mutants.sh on two PORTs) must not ask Chrome for the same port.
+const port = 20000 + Math.floor(Math.random() * 20000);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'dm-xp-'))}`, '--no-first-run', 'about:blank'], { stdio: 'ignore' });
 let failed = 0;
 const check = (ok, what) => { console.log(`${ok ? 'ok  ' : 'FAIL'}  ${what}`); if (!ok) failed++; };
 try {
   let version = null;
-  for (let i = 0; i < 50 && !version; i++) { await sleep(200); try { version = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); } catch { /* starting */ } }
+  // 30 s: beside other suites on the same machine Chrome has taken more than the 10 s the other tools give it
+  for (let i = 0; i < 150 && !version; i++) { await sleep(200); try { version = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); } catch { /* starting */ } }
   if (!version) throw new Error('Chrome did not start');
   const target = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json();
   const ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -36,7 +42,7 @@ try {
   const send = (method, params = {}) => new Promise(resolve => { const i = ++id; pending.set(i, resolve); ws.send(JSON.stringify({ id: i, method, params })); });
   const ev = async expr => { const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true }); if (r?.exceptionDetails) errors.push(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text); return r?.result?.value; };
   await send('Runtime.enable'); await send('Page.enable');
-  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
+  const SIZE = { tr: [390, 844], en: [430, 932], fr: [360, 640] };
   const tap = async sel => { const hit = await ev(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return false; el.click(); return true; })()`); await sleep(250); return hit; };
   const act = m => ev(`window.postMessage(${JSON.stringify({ type: 'act', ...m })}, '*')`);
   const saved = () => ev(`JSON.parse(localStorage.getItem('doremimi-demo-v1') || 'null')?.profile ?? null`);
@@ -53,6 +59,8 @@ try {
       parts: [...app.querySelectorAll('.levelbtn, .lvbox, .lvl-num, .xp-chip, .xpb, .prof-level, #ghead .avatar, #ghead .sv')].map(e => e.className),
       bar: [...bar.children].map(e => e.className), head: head ? [...head.children].map(e => e.className.replace(/ pressed/, '')) : null,
       chip: document.querySelector('.praise-chip')?.innerText ?? null, toast: document.querySelector('#toast .toast')?.innerText ?? null,
+      // the chip's white face as drawn (its box is taller than it: style.css .praise-chip), against the header and the screen
+      flight: (() => { const c = document.querySelector('.praise-chip .toastb')?.getBoundingClientRect(); return c && head ? { top: c.top, left: c.left, right: c.right, under: head.getBoundingClientRect().bottom, width: innerWidth } : null; })(),
       tiles: [...document.querySelectorAll('#results .stats2 .rrow small')].map(e => e.textContent) };
   })()`;
   const problems = r => [XP_WORD, GOLD_WORD, LEVEL_NUMBER].map(re => r.text.match(re)?.[0]).filter(Boolean).map(w => `"${w}"`)
@@ -61,7 +69,8 @@ try {
     .concat(!r.head || r.head.join(' | ') === 'chunky white close | t' ? [] : [`game header: ${r.head.join(' | ')}`]);
   const look = async where => { const r = await ev(READ); const p = problems(r); check(p.length === 0, `${where}${p.length ? ': ' + [...new Set(p)].join(', ') : ''}`); return r; };
 
-  for (const lang of ['tr', 'en', 'fr']) {
+  for (const lang of LANGS) {
+    await send('Emulation.setDeviceMetricsOverride', { width: SIZE[lang][0], height: SIZE[lang][1], deviceScaleFactor: 1, mobile: false });
     const open = async hash => { await send('Page.navigate', { url: 'about:blank' }); await sleep(100); await send('Page.navigate', { url: `${base}/app/?reset&sunum&dil=${lang}${hash}` }); for (let i = 0; i < 100 && !(await ev(`!!document.querySelector('#page .page-in')`)); i++) await sleep(100); await sleep(400); };
     const go = async hash => { await ev(`location.hash = ${JSON.stringify(hash)}`); await sleep(500); };
     await open('#/');
@@ -83,18 +92,35 @@ try {
     await tap('[data-g="intro-close"]');
     const playing = await look(`${lang} a card`);
     check(playing.head?.join(' | ') === 'chunky white close | t', `${lang} a card: the game header is close and the title`);
-    await act({ name: 'game.finish', gap: 350 });
-    const chips = new Set(), bad = new Set();
+    // The first card is missed once and then written with the letters' help, so the round shows all three praise lines
+    // (the longest is that one: "TROUVÉ AVEC LES LETTRES !"); the rest is played right. Each step is read while it plays.
+    const chips = new Set(), bad = new Set(), flights = [];
     let reads = 0, results = null;
-    for (let i = 0; i < 400 && !results; i++) {
-      await sleep(120);
-      const r = await ev(READ); reads++;
-      if (r.chip) chips.add(r.chip.trim());
-      for (const p of problems(r)) bad.add(p);
-      if (r.tiles.length) results = r;
-    }
+    const watch = async until => {
+      for (let i = 0; i < 400; i++) {
+        await sleep(120);
+        const r = await ev(READ); reads++;
+        if (r.chip) chips.add(r.chip.trim());
+        if (r.flight) flights.push(r.flight);
+        for (const p of problems(r)) bad.add(p);
+        if (r.tiles.length) results = r;
+        if (await until(r)) return;
+      }
+    };
+    await act({ name: 'game.type', text: 'zz', send: true });
+    await watch(() => ev(`!!document.querySelector('#aarea .tl')`));
+    await act({ name: 'game.fill', send: true });
+    await watch(r => !!r.chip);
+    // the chip's whole flight (1.6 s); it stays in the page, faded out, until the next card is drawn
+    let flown = 0; await watch(() => ++flown >= 16);
+    await act({ name: 'game.next' }); await sleep(300);
+    await act({ name: 'game.finish', gap: 1800 });
+    await watch(() => !!results);
     check(bad.size === 0, `${lang} a whole round, read ${reads} times${bad.size ? ': ' + [...bad].join(', ') : ''}`);
-    check(chips.size > 0 && [...chips].every(c => !/\d/.test(c) && !c.includes('\n')), `${lang} the outcome chip is the praise line alone (${[...chips].join(' · ') || 'never seen'})`);
+    check(chips.size === 3 && [...chips].every(c => !/\d/.test(c) && !c.includes('\n')), `${lang} the outcome chip is the praise line alone, all three of them (${[...chips].join(' · ') || 'never seen'})`);
+    const top = Math.min(...flights.map(f => f.top)), left = Math.min(...flights.map(f => f.left)), right = Math.max(...flights.map(f => f.right - f.width));
+    check(flights.length > 20 && flights.every(f => f.top >= f.under && f.left >= 0 && f.right <= f.width),
+      `${lang} the chip flies under the game’s header and inside a ${SIZE[lang][0]} px screen (${flights.length} reads; highest ${Math.round(top - (flights[0]?.under ?? 0))} px under the header, edges ${Math.round(left)} and ${Math.round(-right)} px in)`);
     check(results?.tiles.length === 2, `${lang} results: two tiles (${results?.tiles.join(', ')})`);
     await look(`${lang} results`);
     const after = await saved();

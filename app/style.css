@@ -561,9 +561,12 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 /* Profilim in white cards (ch. 13): the slate panels put white bar labels on grey at about 1.4:1. */
 .card.child-head { flex-direction: column; align-items: stretch; gap: 12px; }
 .who-line { display: flex; align-items: center; gap: 14px; }
+/* Three lines beside the avatar (the parent panel): the avatar stays at the first, as the app's does (VerticalAlignment Top). */
+.who-line.top { align-items: flex-start; }
 /* Profilim's three counts (rozet, oynanan tur, yıldız) are a card of their own since ch. 14 §14 took the level and its
-   bar from above them. */
-.card.prof-counts { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font: 400 12px/16px var(--font-body); color: var(--ink-soft); }
+   bar from above them. No font here: the labels take the type system's meta role (the rule that names .prof-counts
+   above). A font set on .card.prof-counts ties with that rule and, coming later, won: the labels were Regular 12. */
+.card.prof-counts { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; color: var(--ink-soft); }
 .prof-counts b { display: block; font: 700 20px/26px var(--font-display); color: var(--ink); }
 .card.plist { padding: 2px 16px; display: flex; flex-direction: column; }
 .prow { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 6px 8px; align-items: center; padding: 12px 0; font: 600 15px/20px var(--font-body); }
@@ -634,7 +637,7 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
   --font-display: var(--font-play); --font-body: var(--font-play-body); }
 .game[hidden] { display: none; }
 .g-head { position: relative; z-index: 5; display: grid; grid-template-columns: auto 1fr; align-items: center; margin: calc(6px + var(--safe-top)) 12px 6px; }
-/* ch. 13: the ✕ is 44 (popup ✕s stay 48), the Sv chip 32 tall; the title stays 20. */
+/* ch. 13: the ✕ is 44 (popup ✕s stay 48); the title stays 20. */
 .g-head .chunky.close > .face { width: 44px; height: 44px; }
 .g-head .t { margin: 0 0 2px 12px; display: flex; flex-direction: column; min-width: 0; }
 .g-head .t b { font: 800 20px/24px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -669,10 +672,16 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .wrong-tint { position: absolute; inset: 0; border-radius: var(--r-card); background: #FF7A6B; opacity: .35; pointer-events: none; animation: tint 320ms linear both; }
 @keyframes tint { from { opacity: .35; } to { opacity: 0; } }
 /* The outcome: a white toast with the praise line alone (ch. 14 §14 took the "+N XP" headline, so the praise is the
-   headline now, at a size its longest line fits a 360 px phone on one line). The transform is also set outside the
-   keyframes: with animations off (reduced motion, ?still) the chip started at the middle and ran off the right edge. */
-.praise-chip { position: absolute; left: 50%; top: -50px; transform: translate(-50%, 0); z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; animation: praiseChip 1.6s var(--ease-cubic-out) both; }
-.praise-chip .toastb { padding: 8px 18px 10px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--drop-toast); font: 800 20px/26px var(--font-display); white-space: nowrap; }
+   headline now). 22 px in 20 px of padding, as the app has it: the longest line in the three languages ("TROUVÉ AVEC
+   LES LETTRES !") measures 278 px, 318 with the padding, inside the app's 320 px box and a 360 px phone.
+   The box is the app's too (MusicCardGameView.axaml: Margin 0,-50, Height 170, content at the bottom): the chip lands
+   120 px under the card area's top and rises 56 from there. Placed by its own top at -50 it sat on the game's title
+   and flew off the top of the screen (measured: y 18 to -11 under a header that ends at 54), which the level strip had
+   hidden until ch. 14 §2 took the strip away.
+   The transform is also set outside the keyframes: with animations off (reduced motion, ?still) the chip started at
+   the middle and ran off the right edge. */
+.praise-chip { position: absolute; left: 50%; top: -50px; height: 170px; transform: translate(-50%, 0); z-index: 10; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; pointer-events: none; animation: praiseChip 1.6s var(--ease-cubic-out) both; }
+.praise-chip .toastb { padding: 8px 20px 10px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--drop-toast); font: 800 22px/28px var(--font-display); white-space: nowrap; }
 @keyframes praiseChip { 0% { opacity: 0; transform: translate(-50%, 0) scale(.9); } 19% { opacity: 1; transform: translate(-50%, 0) scale(1); } 76% { opacity: 1; transform: translate(-50%, -50px); } 100% { opacity: 0; transform: translate(-50%, -56px); } }
 
 /* the back: the information card (RevealCardView.axaml), white in a 4 px frame of the card's colour */

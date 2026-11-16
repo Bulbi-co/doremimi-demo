@@ -104,6 +104,7 @@ npm test                 # node --test tests/: the game rules, the music, the na
 npm run e2e              # with npm start running: mashes → in headless Chrome; the deck must wait for the phone
 npm run mutants          # every mutant must be "caught" and every CONTROL "SURVIVED"
 node --experimental-websocket tools/phone-e2e.mjs http://127.0.0.1:4175   # the phone in tr, en, fr: type, stray Turkish, fit
+node --experimental-websocket tools/xp-e2e.mjs http://127.0.0.1:4175      # no XP, gold or XP level on any screen (ch. 14 §14)
 npm run shots            # with the server running: screenshots into docs/screens/
 ```
 
@@ -128,8 +129,8 @@ Keep the published URL unlisted. Every page has `noindex`, and `robots.txt` disa
 
 - The game: the intro, Yaz with the app's own Turkish keyboard (three sizes, held ⌫), letter tiles prefilled in the card's colour,
   the four choices after two misses, the reveal card with Tanım / Çocuk anlatımı (toy piano, clef faces), Seç, Çevir
-  with Bildim / Bilemedim, the canvas mood change, the results with stars, XP, Müzik bilgin and
-  badges, and the level-up popup. These run the app's rules, ported in `app/lib`.
+  with Bildim / Bilemedim, the canvas mood change, and the results with stars, Müzik bilgin and
+  badges. These run the app's rules, ported in `app/lib`.
 - The shell's look, v3 (superapp f8c3a52, checked against its `docs/dossier/screens/v2` in `docs/screens/v3/`): milk
   white cards with one soft shadow, ink text, every button white or ink, the card's colour as the game's single accent
   (`app/lib/accent.js`), OYNA's yellow, no bounce or pulse; the near-white 2.5D note canvas with a mood per tab.
@@ -158,6 +159,16 @@ game asks the child's level, Ayarlar › Zorluk changes it, and rounds deal unde
 Four family colours moved so the 12 categories can be told apart, each family wearing the colour the app's tokens.json
 gives it (`app/data/content.js` FAMILIES says by how much; `tests/app-parity.test.mjs` holds it to the app).
 Guards: `tests/ch14.test.mjs`, mutants in `tools/mutants.sh`, and `tools/ch14-e2e.mjs` in headless Chrome.
+
+**Dossier ch. 14 §14** (owner, 2026-11-16): no XP and no gold on any screen, in Turkish, English or French. The top bar
+is the title and the avatar; the game's header is the ✕ and the title; the chip over a card and the toast for a first
+instrument are words alone; the results have two tiles, Doğru and Yıldız; Profilim has no level card, no XP bar and no
+"En iyi tur" (in the app that row is the best round's XP); the parent panel has no level line. The progress number is
+still saved after every card and every first instrument (`profile.xp`, `profile.level`): it is the record a backend
+would read, and nothing draws it. "Seviye" is left for the difficulty question and Ayarlar › Zorluk.
+Guards: `tests/xp.test.mjs` (the string tables, the content and app.js's templates; mutants in `tools/mutants.sh`) and
+`tools/xp-e2e.mjs`, which reads every screen of the running phone in the three languages while a round is played
+(mutants in `tools/xp-e2e-mutants.sh`). Both use the one word list in `tests/xp-words.mjs`.
 
 **Simplified:**
 

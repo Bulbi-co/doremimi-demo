@@ -764,6 +764,8 @@ function profilePage() {
   const general = deck.concepts.length ? deck.concepts.reduce((a, c) => a + mastery.conceptMastery(c, deck), 0) / deck.concepts.length : 0;
   const seen = (profile.seen ?? []).length;
   // Slim rows on white (ch. 13): the old slate panels put white labels on grey at about 1.4:1.
+  // İstatistikler has no "En iyi tur" (ch. 14 §14): in the app that row is the best round's XP (ch. 03 §16.4) and went
+  // with it. The phone drew the best round's right answers under the same label, which the app never showed.
   const bar = (label, v, text) => `<div class="prow"><span>${esc(label)}</span><em class="num">${esc(text)}</em><span class="slim"><i style="width:${Math.round(Math.min(1, v) * 100)}%"></i></span></div>`;
   const earned = L.BADGES.filter(b => profile.badges.includes(b.id));
   return `<div class="stack">
@@ -771,7 +773,7 @@ function profilePage() {
       <button class="chunky white" data-do="switcher"><span class="face">${icon('IconSmile')}${esc(t('who.title'))}</span></button></div>
     <div class="card prof-counts"><span><b class="num">${profile.badges.length}</b>${esc(t('profile.badges', { n: profile.badges.length }))}</span><span><b class="num">${profile.rounds ?? 0}</b>${esc(t('profile.rounds', { n: profile.rounds ?? 0 }))}</span><span><b class="num">${totalStars}</b>${esc(t('profile.stars', { n: totalStars }))}</span></div>
     ${ribbon(t('profile.progress'))}<div class="card plist">${bar(t('profile.general'), general, pct(general))}${bar(t('profile.instruments'), seen / instr, `${pct(seen / instr)} (${seen}/${instr})`)}${bar(t('profile.riddles'), 0, `${pct(0)} (0/${riddles})`)}</div>
-    ${ribbon(t('profile.stats'))}<div class="card plist stats">${[['stats.rounds', profile.rounds ?? 0], ['stats.best', profile.best ?? 0], ['stats.answered', profile.answered ?? 0]].map(([k, v]) => `<div class="srow"><span>${esc(t(k))}</span><b class="num">${v}</b></div>`).join('')}</div>
+    ${ribbon(t('profile.stats'))}<div class="card plist stats">${[['stats.rounds', profile.rounds ?? 0], ['stats.answered', profile.answered ?? 0]].map(([k, v]) => `<div class="srow"><span>${esc(t(k))}</span><b class="num">${v}</b></div>`).join('')}</div>
     ${earned.length ? `${ribbon(t('profile.badgeList'))}<div class="card badges">${earned.map(b => `<span class="bdg">${medalHtml(b)}<small>${esc(b.name)}</small></span>`).join('')}</div>` : ''}
     ${group(t('profile.family'), [
       menuRow('IconGrid', t('page.ayarlar'), t('profile.settings.line'), 'data-push="#/ayarlar"'),
@@ -798,9 +800,11 @@ const account = () => `<div class="stack"><div class="card who-card"><b class="h
   ${ribbon(t('account.lock'), ' small')}<button class="chunky white" data-do="soon"><span class="face">${esc(t('account.pin'))}</span></button>
   <button class="chunky indigo" data-do="soon"><span class="face">${esc(t('account.signout'))}</span></button><span class="caption on-canvas">${esc(t('account.signout.line'))}</span>
   <button class="chunky orange" data-do="wipe"><span class="face">${esc(t('account.wipe'))}</span></button></div>`;
-const parentPanel = () => { const kid = childOf(); return `<div class="stack"><div class="card child-head"><span class="avatar big"><img src="../assets/site/characters/${kid.image}" alt=""></span><div class="mt">
+// The avatar sits beside the child's lines, as in the app (AccountPagesView.axaml: Grid Auto,*). A .card.child-head
+// stacks its children, which is right for Profilim (the child, then "Kim oynuyor?") and put the avatar above the name here.
+const parentPanel = () => { const kid = childOf(); return `<div class="stack"><div class="card child-head"><div class="who-line top"><span class="avatar big"><img src="../assets/site/characters/${kid.image}" alt=""></span><div class="mt">
   <b class="h3">${esc(kidName(kid))}</b><span class="p num">${esc(t('panel.line1', { cards: profile.answered ?? 0, days: profile.days.length, seen: Object.keys(profile.mastery).length }))}</span>
-  <small class="num">${esc(t('panel.line2', { instruments: (profile.seen ?? []).length, badges: profile.badges.length }))}</small></div></div>
+  <small class="num">${esc(t('panel.line2', { instruments: (profile.seen ?? []).length, badges: profile.badges.length }))}</small></div></div></div>
   <span class="caption on-canvas">${esc(t('panel.local'))}</span><button class="chunky white" data-do="soon"><span class="face">${esc(t('account.pin'))}</span></button></div>`; };
 
 /** Each pushed page: its title (a key, or a function of its argument) and its body. */
@@ -1129,7 +1133,8 @@ function finish() {
     .map(id => ({ id, info: L.CONCEPTS[id], before: G.masteryBefore[id] ?? 0, after: mastery.conceptMastery(id, deck) }));
   G.results = { stars: starsOf(r.outcomes, LEARNING.roundStars), right: r.outcomes.filter(o => isRight(o.resolution)).length, count: r.outcomes.length,
     facts, badges: G.roundBadges.slice() };
-  // Profilim's counts: rounds played, the best round (cards known) and the stars (ch. 03 §16.2-16.4).
+  // Profilim's counts: rounds played and the stars (ch. 03 §16.2-16.4). The best round is still saved, like the
+  // progress number, and since ch. 14 §14 no screen draws it.
   profile.rounds = (profile.rounds ?? 0) + 1; profile.best = Math.max(profile.best ?? 0, G.results.right); profile.stars = (profile.stars ?? 0) + G.results.stars;
   save();
   renderGame();
@@ -1688,7 +1693,6 @@ const ACTS = {
   'page': async m => { goNow(m.hash); await sleep(300); },
   /** A page, then a tap on it as a child would (Öğren's family card, an instrument in the grid). */
   'open': async m => { goNow(m.hash); await sleep(300); if (m.tap) await pressDo(m.tap); },
-  /** Çal: a song's "Bu çalgıyla oyna", which opens its round at the choices. */
   'results.scroll': async () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); await sleep(REDUCED ? 0 : 700); },
   /** A sequence with a visible pause between presses (0.8–1.2 s, W-03), for slides that play several steps at once. */
   'seq': async m => { for (const step of m.steps) { await run({ type: 'act', ...step }); await sleep(m.gap ?? 900); } },

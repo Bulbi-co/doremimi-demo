@@ -179,8 +179,19 @@ mutatef "a first instrument records nothing"     app/app.js         's/      con
 mutatef "XP in a Turkish string"                 app/i18n/ui.js     "s/'results\.right': 'Doğru'/'results.right': 'Doğru XP'/"
 mutatef "Seviye N in an English string"          app/i18n/ui.js     "s/'game\.card': 'Card \{i\} of \{n\}'/'game.card': 'Level {n} · card {i}'/"
 mutatef "gold in a French string"                app/i18n/ui.js     "s/'results\.stars': 'Étoiles'/'results.stars': 'Pièces d’or'/"
-mutatef "the parent row names the level again"   app/i18n/ui.js     "s/'profile\.panel\.line': 'Çocukların ilerlemesi ve pratiği'/'profile.panel.line': 'Çocukların seviyesi ve pratiği'/"
+mutatef "a riddle's row pays XP again"            app/data/site/videos.json 's/"title": "Arp · Bilmece"/"title": "Arp · Bilmece · +3 XP"/'
+mutatef "the parent row names the level again"   app/i18n/ui.js     "s/'profile\.panel\.line': 'Çocukların pratiği ve rozetleri'/'profile.panel.line': 'Çocukların seviyesi ve pratiği'/"
+mutatef "the parent row in other words"          app/i18n/ui.js     "s/'profile\.panel\.line': 'Çocukların pratiği ve rozetleri'/'profile.panel.line': 'Çocukların ilerlemesi ve pratiği'/"
+mutatef "En iyi tur back in İstatistikler"       app/app.js         "s/(\['stats\.rounds', profile\.rounds \?\? 0\], )/\$1\['stats.rounds', profile.best ?? 0\], /"
+mutatef "the best round is no longer saved"      app/app.js         's/ profile\.best = Math\.max\(profile\.best \?\? 0, G\.results\.right\);//'
+mutatef "the best-round key is back in English"  app/i18n/ui.js     "s/( 'stats\.answered': 'Questions answered',)/ 'stats.best': 'Best round',\$1/"
 mutatef "the XP key is back in French"           app/i18n/ui.js     "s/(  'results\.info': 'Tu as trouvé)/  'results.xp': 'Points',\n\$1/"
 mutatef "the intro promises XP in French"        app/i18n/content-fr.js "s/Les bonnes réponses rapportent des étoiles\./Les bonnes réponses rapportent des XP et des étoiles./"
 mutatef "the intro promises points in Turkish"   app/data/content.js "s/Doğru cevaplar yıldız getirir\./Doğru cevaplar puan ve yıldız getirir./"
 mutatef "the level chip's style is back"         app/style.css      's/(\.praise-chip \{ position)/.levelbtn .lv { min-width: 52px; }\n$1/'
+# the outcome chip's box and rise are the app's (tests/app-parity.test.mjs reads MusicCardGameView.axaml and Controls.axaml)
+mutatef "CONTROL: the chip a pixel wider"        app/style.css      's/(\.praise-chip \.toastb \{ padding: 8px) 20px/$1 21px/'
+mutatef "the chip placed by its own top again"   app/style.css      's/(\.praise-chip \{ position: absolute; left: 50%; top: -50px;) height: 170px;/$1/'
+mutatef "the chip's box starts at the card"      app/style.css      's/(\.praise-chip \{ position: absolute; left: 50%; top:) -50px;/$1 0px;/'
+mutatef "the chip at the top of its box"         app/style.css      's/(\.praise-chip \{[^}]*)justify-content: flex-end;/$1justify-content: flex-start;/'
+mutatef "the chip rises 80"                      app/style.css      's/76% \{ opacity: 1; transform: translate\(-50%, -50px\); \}/76% { opacity: 1; transform: translate(-50%, -80px); }/'

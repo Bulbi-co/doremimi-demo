@@ -38,6 +38,19 @@ test('no string the phone can show names XP, gold or an XP level, in any languag
   }
 });
 
+// The app's own lists, copied unchanged and shown as they are (İzle's titles, the lyric sheets, the library). They stay
+// Turkish and are the foundation's words, so only the word that is never right on a screen is asked of them: a song
+// may one day sing of gold, and a method book may be called "Seviye 2".
+test('the videos, lyric sheets and library lists the phone shows never say XP either', () => {
+  let read = 0;
+  for (const file of ['videos', 'lyrics', 'library']) {
+    const all = strings(JSON.parse(readFileSync(new URL(`../app/data/site/${file}.json`, import.meta.url), 'utf8')), file);
+    read += all.length;
+    for (const [path, s] of all) assert.doesNotMatch(s, XP_WORD, path);
+  }
+  assert.ok(read > 500, `${read} strings read`);
+});
+
 test('in the tables "Seviye" is left only where it means difficulty, Ayarlar › Zorluk, and the XP keys are gone', () => {
   const WORD = { tr: /seviye/iu, en: /level/iu, fr: /niveau/iu };
   for (const lang of LANG_KEYS) {
@@ -46,8 +59,11 @@ test('in the tables "Seviye" is left only where it means difficulty, Ayarlar ›
   }
   // the keys the level chip, its card, the popup and the XP lines were drawn from are gone, not just unused
   for (const lang of LANG_KEYS) {
-    assert.deepEqual(Object.keys(UI[lang]).filter(k => /^(xp|levelUp)\.|^level(\.n)?$|^(results\.xp|profile\.xpNote|profile\.rank|panel\.level|game\.levelChip)$/.test(k)), [], lang);
+    assert.deepEqual(Object.keys(UI[lang]).filter(k => /^(xp|levelUp)\.|^level(\.n)?$|^(results\.xp|profile\.xpNote|profile\.rank|panel\.level|game\.levelChip|stats\.best)$/.test(k)), [], lang);
   }
+  // Profilim's row into the parent panel says what the panel now holds. The words are the app's on its §14 branch
+  // ("Çocukların seviyesi ve pratiği" on its main until that lands, so app-parity cannot hold this one yet).
+  assert.equal(UI.tr['profile.panel.line'], 'Çocukların pratiği ve rozetleri');
 });
 
 test('the intro’s last page promises stars and nothing else, in §14’s words', () => {
@@ -63,6 +79,9 @@ test('the progress number is still recorded, by the real rule, after every card 
   assert.deepEqual([...js.matchAll(RECORD)].map(m => m[1]), ['LEARNING.xp.seenInstrument', 'o.xp']);
   assert.match(slice('function endCard() {', '\n}'), /const lv = addXp\(LEARNING, profile\.level, profile\.xp, o\.xp\);\s*profile\.level = lv\.level; profile\.xp = lv\.xp;[\s\S]*\n  save\(\);/);
   assert.match(js, /const freshProfile = \(\) => \(\{ xp: 0, level: 1,/);
+  // the best round is kept the same way: written when a round ends, read by no screen (both mentions are that one line)
+  assert.match(slice('function finish() {', '\n}'), /profile\.best = Math\.max\(profile\.best \?\? 0, G\.results\.right\);/);
+  assert.equal(js.match(/profile\.best\b/g).length, 2);
   // and the rule it calls still counts and still crosses a level (learning.json: 80 for the first)
   assert.deepEqual(addXp(LEARNING, 1, 0, 10), { level: 1, xp: 10, levelsGained: 0 });
   assert.equal(addXp(LEARNING, 1, LEARNING.levelBaseXp - 1, 1).levelsGained, 1);
@@ -97,6 +116,9 @@ test('the screens are what §14 says: top bar, game header, outcome chip, toast,
   const profil = slice('function profilePage() {', '\n}');
   assert.deepEqual([...profil.matchAll(/<div class="card ([\w -]+)"/g)].map(m => m[1]), ['child-head', 'prof-counts', 'plist', 'plist stats', 'badges']);
   assert.deepEqual([...profil.match(/<div class="card prof-counts">[^\n]*/)[0].matchAll(/t\('([\w.]+)'/g)].map(m => m[1]), ['profile.badges', 'profile.rounds', 'profile.stars']);
+  // İstatistikler: rounds played and questions answered. "En iyi tur" was the best round's XP in the app (ch. 03 §16.4).
+  assert.deepEqual([...profil.match(/<div class="card plist stats">[^\n]*/)[0].matchAll(/\['(stats\.\w+)', ([^\]]+)\]/g)].map(m => [m[1], m[2]]),
+    [['stats.rounds', 'profile.rounds ?? 0'], ['stats.answered', 'profile.answered ?? 0']]);
   // parent panel: cards, days, questions seen; instruments, riddles, badges
   assert.deepEqual([...slice('const parentPanel = () =>', '`; };').matchAll(/t\('([\w.]+)'/g)].map(m => m[1]), ['panel.line1', 'panel.line2', 'panel.local', 'account.pin']);
 });

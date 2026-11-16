@@ -58,3 +58,24 @@ test('every sign card has the app’s difficulty', { skip }, () => {
   assert.equal(cards.length, SIGN_CARDS.length);
   for (const c of cards) assert.equal(SIGN_CARDS.find(s => s.id === c.id)?.difficulty, KEY[c.difficulty], c.id);
 });
+
+// ch. 14 §14 made the outcome chip the praise line alone, and the phone's chip turned out to be placed by its own top:
+// it sat on the game's title and flew off the top of the screen. The app holds the chip in a box that starts above the
+// card area and is taller than the flight, with the chip at the box's bottom; these are that box's numbers and the rise.
+test('the outcome chip flies in the app’s box: where it starts, how tall, the chip at the bottom, and how far it rises', { skip }, () => {
+  const view = read('Doremimi/Views/MusicCardGameView.axaml');
+  const host = view.match(/<ContentControl Content="\{Binding Outcome\}"[^>]*>/)?.[0] ?? '';
+  const box = host.match(/Margin="0,(-?\d+),0,0" Height="(\d+)"/);
+  assert.ok(box && /VerticalContentAlignment="Bottom"/.test(host), `the app’s chip host: ${host}`);
+  const css = readFileSync(new URL('../app/style.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const chip = css.match(/\.praise-chip \{([^}]*)\}/)?.[1] ?? '';
+  assert.deepEqual([chip.match(/[; ]top: (-?\d+)px/)?.[1], chip.match(/[; ]height: (\d+)px/)?.[1]], [box[1], box[2]], 'top and height');
+  assert.match(chip, /flex-direction: column; justify-content: flex-end;/, 'the chip sits at the bottom of its box');
+  // the rise: the app's keyframes (the style is xp-chip on its main and praise-chip once §14 lands there)
+  const style = read('Doremimi/Themes/Controls.axaml').match(/<Style Selector=":is\(Control\)\.(?:xp|praise)-chip">[\s\S]*?<\/Style>/)?.[0] ?? '';
+  const rise = [...style.matchAll(/Cue="(\d+)%">(?:(?!<\/KeyFrame>)[\s\S])*?TranslateTransform\.Y" Value="(-?\d+)"/g)].map(m => [m[1], m[2]]);
+  assert.ok(rise.length >= 3, `the app’s keyframes: ${JSON.stringify(rise)}`);
+  const frames = css.match(/@keyframes praiseChip \{([\s\S]*?\}) \}/)?.[1] ?? '';
+  const mine = [...frames.matchAll(/(\d+)% \{[^}]*translate\(-50%, (-?\d+)(?:px)?\)/g)].map(m => [m[1], m[2]]);
+  assert.deepEqual(mine.filter(([cue]) => rise.some(([c]) => c === cue)), rise);
+});

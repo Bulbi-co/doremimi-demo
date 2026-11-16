@@ -10,6 +10,7 @@
  * hold every scripted step they ask for to the phone's script (app/data/script.js).
  */
 import { ICONS } from '../app/lib/icons.js';
+import { FOUNDATION_SLIDES } from './foundation.js';
 
 export const icon = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n]}" fill-rule="evenodd"/></svg>`;
 /* Bir slayt: kısa başlık, bir cümle, en çok iki satır, en çok iki canlı gösterim. */
@@ -44,6 +45,8 @@ export const SLIDES = [
       <p class="lead">Dore Mimi Yetenek ve Eğitim Vakfı için: Dore ve Mimi'nin şarkıları, çalgıları ve videoları, tek bir müzik kart oyunuyla.</p>`,
     notes: `<p><b>“Doremimi'yi baştan sona birlikte gezeceğiz.”</b> Sağdaki telefon gerçek gibi çalışır; → her slaytın canlı gösterimini sırayla oynatır.</p><p>Önce sağ üstteki <b>Sesi aç</b>'a bir kez tıklayın. Bu slayta dönünce telefon sıfırlanır.</p>`,
   },
+  // What the foundation has done, before the app is shown (owner, 2026-11-16; dossier ch. 14 §13; deck/foundation.js).
+  ...FOUNDATION_SLIDES,
   {
     id: 'gezinme', label: 'Gezinme', theme: 'light', phone: go('#/'),
     html: step('Dört sekme, ortada vakıf',

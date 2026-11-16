@@ -31,3 +31,14 @@ and the three site lists (`Doremimi/Assets/Content/site/{videos,lyrics,library}.
 unchanged.
 
 Not copied: the family hero art (`art/hero-*.png`, AS-16), which only the screens still to build would use.
+
+## The deck's opening section, "Dore Mimi, bugüne kadar" (`deck/foundation.js`)
+
+Third-party pictures, not the foundation's own and not the app's. Each is shown small with its credit beside it; the
+source ids are those of the research register (`doremimi-superapp/content/doremimi-research/sources.json`, also in
+`deck/foundation-facts.js`). Replace both with the foundation's own files when it sends them.
+
+| Demo path | Source | Size | Used by |
+|---|---|---|---|
+| `foundation/kitap-seti.jpg` | A3: idefix's product photo of the ten-book set, unchanged (sha256 `cafe1fec…e886fb`). https://image03.idefix.com/resize/600/0/product/295742/dore-mimi-muzikle-degerler-egitimi-set-1-10-kitap-takim-64377e98bc126.jpg | 600 × 423, 61 KB | slide "Kitap serisi" |
+| `foundation/cso-afis-2022.jpg` | A2: the poster of "Dore Mimi CSO'da", 21 February 2022, from the Biletinial ticket page (CSO / Biletinial); the 600 × 800 PNG scaled with `sips` to a JPEG. https://b6s54eznn8xq.merlincdn.net/Uploads/Films/dore-mimi-csoda-2022214131256.png | 480 × 640, 109 KB | slide "CSO" |

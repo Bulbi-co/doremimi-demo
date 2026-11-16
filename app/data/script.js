@@ -1,7 +1,12 @@
 /*
- * The deck's live demo as one script (dossier ch. 10 part 5, re-told by ch. 14 §9). A slide or a "canlı göster"
- * button asks the phone for a step by its index (sunum's at(k) and play(k), deck/slides.js), and the phone plays the
- * steps between where it is and there (ACTS.goto in app.js). Each step is a list of the phone's ACTS, played in order.
+ * A round and two tabs as one script, each step a list of the phone's ACTS played in order (ACTS.goto in app.js plays
+ * the steps between where the phone is and the one asked for).
+ *
+ * NOT what the deck plays any more. It was the deck's live demo (dossier ch. 10 part 5, re-told by ch. 14 §9) until
+ * the owner cut the deck to nine slides (2026-11-16): the Oyna slide now only opens the game and the presenters play
+ * it by hand, and every step the deck sends is a whole state (deck/slides.js). The script is kept for the tools that
+ * need the phone at a known card with nobody tapping: tools/shoot.mjs (screens mid-round) and tools/ch14-e2e.mjs
+ * (the ladder's rules on the running phone). The paragraphs below describe it as the deck used it.
  *
  * It is data in its own module, not a constant inside app.js, so tests/deck.test.mjs can import the very list the
  * phone plays and hold the deck's slides to it. After ch. 14 the steps were renumbered while sunum.js still asked for

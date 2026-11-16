@@ -55,11 +55,6 @@ h1.title em { font-style: normal; color: var(--magenta); }
 .device.away { left: 1700px; opacity: 0; pointer-events: none; }
 .device.center { left: 573px; top: 8px; transform: scale(.82); }
 
-/* ---------- still frames for the platforms slide (S13) */
-.frames { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .6s; z-index: 4; }
-.stage.platforms .frames { opacity: 1; }
-.fr { position: absolute; margin: 0; background: #0d0e10; padding: 9px; border-radius: 16px; box-shadow: 0 0 0 2px #3a3d44, 0 30px 60px rgba(0, 0, 0, .45); }
-.fr img { display: block; width: 100%; height: 100%; border-radius: 9px; object-fit: cover; }
 .fr.phone { left: 1300px; top: 330px; width: 200px; height: 434px; border-radius: 30px; }
 .fr.phone img { border-radius: 22px; }
 .fr.tab-p { left: 960px; top: 130px; width: 300px; height: 400px; }
@@ -141,17 +136,13 @@ h1.title.tour { font-size: 60px; margin: 40px 0 18px; }
 .act.done .a-go { background: var(--ok); color: var(--ink); }
 .act.done .a-go svg { display: none; }
 .act.done .a-go::after { content: '✓'; font-weight: 900; font-size: 14px; }
-/* platforms (S13) */
-.plat { list-style: none; margin: 34px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; width: 760px; }
-.plat li { display: grid; grid-template-columns: 240px 1fr; gap: 18px; align-items: baseline; color: #fff; }
-.plat li b { font: 800 22px/1.2 var(--display); color: var(--yellow); }
-.plat li span { font-size: 18px; line-height: 1.45; font-weight: 600; color: rgba(255, 255, 255, .8); }
-
 /* closing (S14) */
 .stage .closing { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 70px; pointer-events: none; font: 800 66px/1.05 var(--display); color: #fff; }
 .closing .cl-l { width: 440px; text-align: right; }
 .closing .cl-r { width: 440px; }
 .closing em { font-style: normal; color: var(--yellow); }
+/* The platforms, one line under the closing words (they were a slide until the deck was cut to nine). */
+.closing .cl-plat { display: block; margin-top: 22px; font: 700 19px/1.4 var(--body); letter-spacing: .01em; color: rgba(255, 255, 255, .72); }
 .slide:has(.closing) { padding: 0; }
 .slide:has(.closing) .col { width: auto; }
 

@@ -1648,6 +1648,12 @@ const ACTS = {
   // deck would unlock while the page is still sliding to the section being shown.
   'scroll': async m => { const el = m.to ? document.querySelector(m.to) : null; if (el) el.scrollIntoView({ behavior: REDUCED || FAST ? 'auto' : 'smooth', block: 'start' }); else page.scrollTo({ top: m.y ?? 0, behavior: REDUCED ? 'auto' : 'smooth' }); await sleep(REDUCED ? 0 : 700); },
   'game.start': m => openGame({ concept: m.deck ?? null, origin: m.origin ?? null, level: m.level ?? null, intro: m.intro }),
+  /*
+   * The deck's "Şimdi Oyna": a press on Oyna's own circle, the way a child starts a round, and nothing after it. The
+   * presenters play the round by hand from here (owner, 2026-11-16), so this does not seed a deck or pick a level:
+   * what opens is what the button opens.
+   */
+  'oyna.press': async () => { const sel = '[data-do="play"][data-origin="kesfet"]'; if (!document.querySelector(sel)) throw new Error(`oyna.press: no ${sel}`); await pressDo(sel); },
   /** Pages through the intro; on the level page it taps `m.level` (default Başlangıç), as a child would. */
   'intro.finish': async m => {
     while (G.intro) {
@@ -1693,31 +1699,19 @@ const ACTS = {
   'page': async m => { goNow(m.hash); await sleep(300); },
   /** A page, then a tap on it as a child would (Öğren's family card, an instrument in the grid). */
   'open': async m => { goNow(m.hash); await sleep(300); if (m.tap) await pressDo(m.tap); },
-  /** A tap on the page as it is, after the steps before it in a batch (the foundation's banner on the logo's tab). */
+  /** A tap on the page as it is, after the steps before it in a batch (Öğren's family card, then an instrument's tile). */
   'tap': async m => { if (!document.querySelector(m.sel)) throw new Error(`tap: no ${m.sel}`); await pressDo(m.sel); await sleep(300); },
-  /*
-   * Ayarlar as a whole state (the deck's Ayarlar slide): the page, then Zorluk and Dil pressed until they read as
-   * asked, so ← and R land on the same screen whatever was tapped in between. `quiet`, or the flow machine's
-   * play: false on an undo, sets them with no press shown: the audience should not watch a tap nobody asked for.
-   */
-  'settings': async m => {
-    const quiet = m.quiet || m.play === false;
-    goNow('#/ayarlar'); await sleep(300);
-    for (const [attr, want] of [['zorluk', m.zorluk], ['dil', m.dil]]) {
-      if (!want || want === (attr === 'dil' ? lang : profile.difficulty)) continue;
-      const sel = `[data-${attr}="${want}"]`;
-      if (!document.querySelector(sel)) throw new Error(`settings: no ${sel}`);
-      if (quiet) document.querySelector(sel).click(); else { await pressDo(sel); await sleep(500); }
-    }
-  },
   'results.scroll': async () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); await sleep(REDUCED ? 0 : 700); },
   /** A sequence with a visible pause between presses (0.8–1.2 s, W-03), for slides that play several steps at once. */
   'seq': async m => { for (const step of m.steps) { await run({ type: 'act', ...step }); await sleep(m.gap ?? 900); } },
 };
 
 /*
- * The deck's script (app/data/script.js): a slide or a button asks for a step, and the phone plays the steps between
- * where it is and there. Going back, jumping to a slide, or a phone the presenter touched by hand starts over from a
+ * The scripted round (app/data/script.js). The deck no longer asks for it: since the nine-slide cut (2026-11-16) every
+ * step of the deck is a whole state and the round is played by hand. It stays for the tools that need a round at a
+ * known card without a person (tools/shoot.mjs, tools/ch14-e2e.mjs).
+ *
+ * A caller asks for a step, and the phone plays the steps between where it is and there. Going back, jumping to a slide, or a phone the presenter touched by hand starts over from a
  * fresh child and replays fast to the step before, then plays the asked step. The rules are the real ones and every
  * round is seeded (G-05), so a replay lands on the same cards every time.
  */

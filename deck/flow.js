@@ -38,9 +38,9 @@ export const SLIDE_DWELL = 900;
 /** After a step's dm-done, a short beat so the result is seen before the next press can land. */
 export const STEP_DWELL = 350;
 /**
- * The longest any phone step may take before the deck frees itself. The slowest scripted step today is the round's
- * finish (step 11: four presses with 0.9 s gaps plus card animations, ~7 s) and a song start; a jump to a late game
- * slide replays the round fast first. 20 s is far past all of them. If it fires, the phone missed an answer: the
+ * The longest any phone step may take before the deck frees itself. The slowest step today is Aile's PIN (the gate,
+ * then six digits typed: about 4.9 s in headless Chrome, 2026-11-16); when the deck still played a round it was the
+ * round's finish, about 7 s. 20 s is far past all of them. If it fires, the phone missed an answer: the
  * deck must never stay locked in front of an audience.
  */
 export const WATCHDOG = 20000;
@@ -149,8 +149,8 @@ function move(s, e) {
     case 'prev': {
       if (s.phase !== 'idle') return { state: s, effects: [] };
       if (s.sub > 0) {
-        // Undo one step: the phone goes back to the state before it (the scripted round replays to there; ch. 10
-        // O-12), without playing it.
+        // Undo one step: the phone goes back to the state before it (ch. 10 O-12), without playing it. Every step
+        // is a whole state, so that is the step before, resent.
         const sub = s.sub - 1;
         const msg = sub > 0 ? acts(s, s.cur)[sub - 1] : s.slides[s.cur].phone;
         const st = { ...s, sub };
@@ -186,9 +186,12 @@ function play(s, k) {
 function enter(s, i, { initial: first = false } = {}) {
   const st = { ...s, cur: i, sub: 0, held: null };
   const show = first ? [] : [{ type: 'show', slide: i }];
-  // A slide that changes something lasting on the phone (Ayarlar: the language) names a `leave` message that puts it
-  // back, sent whichever way the deck leaves the slide: a dot or End pressed while the phone was in French left every
-  // slide after it in French. It carries no id: the phone runs its messages in the order they arrive, so the slide
+  // A slide that changes something lasting on the phone names a `leave` message that puts it back, sent whichever
+  // way the deck leaves the slide. The Ayarlar slide had one for the language: a dot or End pressed while the phone
+  // was in French left every slide after it in French. No slide has one since the deck was cut to nine (2026-11-16);
+  // the rule is kept for the next slide that needs it.
+  //
+  // It carries no id: the phone runs its messages in the order they arrive, so the slide
   // being entered still plays after it, and that one is the answer the lock waits for.
   const leave = !first && s.cur !== i ? s.slides[s.cur]?.leave ?? null : null;
   const msg = s.slides[i].phone;

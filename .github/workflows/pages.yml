@@ -1,0 +1,59 @@
+# Publishes the demo to GitHub Pages: https://bulbi-co.github.io/doremimi-demo/
+#
+# Why Pages and why an Action, in a codebase whose rule is "GitHub Actions is not the release path": that rule is for
+# the Bulbi services (Docker + AWS). This repo is a static demo, and its first host was Vercel, which people in Turkey
+# could not open reliably (owner, 2026-11-16: "site bulunamadı", then it opened on a retry). The owner asked for
+# GitHub Actions and GitHub's own domain for this repo, and only this repo.
+#
+# The steps are GitHub's own static starter (actions/starter-workflows pages/static.yml, read 2026-11-16) with two
+# changes: the guards run first, so a deck that fails them is not published, and only the site is uploaded (what
+# .vercelignore kept out stays out: tests/, tools/, docs/, the README).
+#
+# It needs one setting, once, by someone with access to the repository's settings:
+# Settings → Pages → Build and deployment → Source: GitHub Actions.
+name: Deploy the demo to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a run in progress is allowed to finish, as in the starter.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node, for the guards
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The guards that compare the demo with the app's own files skip here, and say so: the app repo is not checked out.
+      - name: Guards
+        run: node --test tests/
+      - name: The site only
+        run: |
+          mkdir _site
+          cp -R index.html sunum.js sunum.css robots.txt app assets deck _site/
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

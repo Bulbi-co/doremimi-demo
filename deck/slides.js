@@ -1,16 +1,20 @@
 /*
  * The deck's slides as data: copy, the phone message each slide sends when it opens, and its "canlı göster" steps.
- * The copy began as dossier ch. 10 part 5 (PROPOSED, the owner's to change) and was cut to a short deck at the owner's
- * request (2026-11-13: no step counter, no icon tiles, nothing that is there only to be shown). Ch. 14 §9 re-tells
- * it: Oyna is the game (Keşfet until ch. 14 §10) and its whole round, one press per move → Öğren, read, not played →
- * Çal → family and the foundation. Owner, 2026-11-16: no slide about XP or results (progress is tracked, never shown as
- * XP), and no way into the game from a song or an instrument, so the "Tur sonu" slide and Çal's game step went.
- * Ch. 14 §11 asks for every tab and scenario, so after Çal and its song the walk goes on: İzle and a riddle behind
- * the parent PIN, the logo's tab and the foundation's page, the family, then Ayarlar with Zorluk and the three
- * languages.
+ * The copy began as dossier ch. 10 part 5 and was re-told by ch. 14 §9 (Oyna is the game → Öğren, read, not played →
+ * Çal → family and the foundation).
  *
- * Its own module, apart from sunum.js (which draws and drives it), so tests/deck.test.mjs can import the slides and
- * hold every scripted step they ask for to the phone's script (app/data/script.js).
+ * Nine slides, and no more (owner, 2026-11-16, after presenting it: "all slide number should not exceed the 9"). The
+ * deck had grown to 16: four on the foundation, a whole round played press by press on the Oyna slide, and a slide
+ * each for İzle, the logo's tab, Ayarlar and the platforms. What the owner said of it: every → brought up a new feature
+ * to talk about. So the foundation is one slide (deck/foundation.js), the Oyna slide only opens the game and the
+ * presenters play it by hand, İzle and the logo's tab are the two steps of the navigation slide, and the platforms
+ * are one line on the closing slide. tests/deck.test.mjs holds the count, and two steps a slide at most.
+ *
+ * Earlier the same day: no slide about XP or results (progress is tracked, never shown as XP), and no way into the
+ * game from a song or an instrument.
+ *
+ * Its own module, apart from sunum.js (which draws and drives it), so tests/deck.test.mjs can import the very slides
+ * the deck runs and hold the cut: the count, the steps, and that every hash and act is one the phone has.
  */
 import { ICONS } from '../app/lib/icons.js';
 import { FOUNDATION_SLIDES } from './foundation.js';
@@ -28,14 +32,8 @@ export const act = (name, args = {}) => ({ type: 'act', name, ...args });
  * (which resends the step before) and R always land on the same screen, whatever was tapped in between.
  */
 export const batch = (...msgs) => ({ type: 'batch', msgs });
-export const at = step => ({ type: 'act', name: 'goto', step });           // the phone's scripted story, app/data/script.js
-export const play = step => ({ type: 'act', name: 'goto', step, play: true });
-/*
- * Ayarlar as a whole state too: the phone opens the page and presses Zorluk and Dil until they read as asked
- * (app/app.js ACTS.settings). `quiet` sets them without a press, for the slide's own entry, where a tap nobody asked
- * for would be shown; the flow machine's ← and R resend a step with play: false, which the phone treats the same way.
- * A null Zorluk or Dil is left as it is.
- */
+/** A tap on the page the batch just opened, as a child would (app/app.js ACTS.tap; it throws if nothing matches). */
+export const tap = sel => act('tap', { sel });
 /*
  * How long auto-play lets Keman's song play before it moves on. The song opens with its tune alone, the karaoke line
  * showing note names; the words start at 19.2 s and a line lasts 4.8 s (the phone's own sequencer, app/lib/music.js,
@@ -43,18 +41,15 @@ export const play = step => ({ type: 'act', name: 'goto', step, play: true });
  * long to sit through. tests/deck.test.mjs holds this number to the song's data.
  */
 export const SONG_HOLD = 24000;
-export const settings = (zorluk, dil, quiet = false) => ({ type: 'act', name: 'settings', zorluk, dil, ...(quiet ? { quiet } : {}) });
 // The new dock as a small picture for the navigation slide (dossier ch. 11 NR-02).
 const dockPic = `<div class="dockpic">${[['IconCards', 'Oyna'], ['IconBook', 'Öğren'], null, ['IconEye', 'İzle'], ['IconNote', 'Çal']].map(t => t
   ? `<span class="dp">${icon(t[0])}<b>${t[1]}</b></span>` : '<span class="dp logo"><img src="assets/brand/logo.png" alt="Doremimi"></span>').join('')}</div>`;
 
 /*
- * The scripted slides (kesfet, ogren, cal) ask for steps in rising order, and the two 'page' steps of the script open
- * Öğren and Çal, so walking the deck with → plays the story once, front to back, and the phone never starts over.
- * The Çal slide's piano step is not a script step, but it stays on the page step 12 opened (#/cal).
- *
- * The slides after Çal (the song, İzle, the logo's tab, the family, Ayarlar) are off the script on purpose: each of
- * their steps is a whole state (go, batch, settings), so nothing has to be replayed to reach it.
+ * Every step is a whole state: it goes to its screen, then presses. Nothing is replayed to reach it, so ← and R land
+ * on the same screen whatever the presenter tapped on the phone in between, and a slide opened after a round played
+ * by hand never has to start the phone over. Until the nine-slide cut the Oyna, Öğren and Çal slides asked the phone
+ * for steps of a script (app/data/script.js) instead, which is what replayed a round fast when a step was skipped.
  *
  * A step is [label, message] or [label, message, { hold }]: `hold` is how long auto-play rests after that step when
  * the usual pause (deck/flow.js AUTO_STEP) is not enough.
@@ -75,14 +70,16 @@ export const SLIDES = [
       'Oyna · Öğren · İzle · Çal. Ortadaki logo vakfın sayfasını açar; çocuğun profili sağ üstte.',
       [],
       dockPic),
-    acts: [['Logoya dokun', go('#/doremimi')], ['Öğren', go('#/ogren/isaretler')]],
-    notes: `<p>Vakıfla konuştuğumuz düzen: <b>Oyna · Öğren · logo · İzle · Çal.</b> Testçiler uygulamada dolaşmayı karışık bulmuştu; her yer artık tek bir yerden açılır.</p><ol><li><b>Logo</b>: Dore Mimi Vakfı. En üstte duyurular döner; altında Faaliyetler, Katıl, Tanış, Bize ulaş ve Uygulama, her bağlantı bir kez.</li><li><b>Öğren</b>: yalnızca bilgi, dört sekme. İşaretler, Çalgılar, Aileler, Değerler.</li></ol><p>İzle'de bilmeceler dahil bütün videolar, Çal'da nota çalan her şey.</p>`,
+    // The two tabs with no slide of their own; Oyna, Öğren and Çal each get the slide after this one.
+    acts: [['Logo: Dore Mimi Vakfı', go('#/doremimi')], ['İzle', go('#/izle')]],
+    notes: `<p>Vakıfla konuştuğumuz düzen: <b>Oyna · Öğren · logo · İzle · Çal.</b> Testçiler uygulamada dolaşmayı karışık bulmuştu; her yer artık tek bir yerden açılır.</p><ol><li><b>Logo</b>: Dore Mimi Vakfı. En üstte duyurular döner; altında Faaliyetler, Katıl, Tanış, Bize ulaş ve Uygulama, her bağlantı bir kez.</li><li><b>İzle</b>: bilmeceler dahil bütün videolar. Videolar YouTube'da olduğu için oynatmadan önce ebeveyn PIN'i istenir (demo PIN'i <b>135790</b>).</li></ol><p>Oyna, Öğren ve Çal sıradaki üç slaytta.</p>`,
   },
   {
     /*
-     * The whole round is played here, one press per move (owner, 2026-11-16): the deck used to jump from step 2 to
-     * step 6 on one button, and the phone replayed the steps between with no pauses, so the retry, the card change
-     * and both wrong typings flashed past. Every step is its own button now, so each plays at its own pace.
+     * The slide opens the game and stops there (owner, 2026-11-16: "just open the game and we will demonstrate the
+     * game on ourselves"). It used to play a whole round, one button a move, nine presses, and each press was one
+     * more thing to explain. What the round does is on the slide as two lines and in the notes; the presenters show
+     * it on the phone by hand.
      */
     id: 'kesfet', label: 'Oyna', theme: 'light', phone: go('#/'),
     html: step('Oyna: oyunun kendisi',
@@ -90,30 +87,20 @@ export const SLIDES = [
       ['Bilemezse harf kutuları, sonra dört seçenek gelir', 'Yanlışta kart dönüp anlatır; yanlış cevap hiçbir şey kaybettirmez']),
     acts: [
       ['Kategoriler', batch(go('#/'), act('scroll', { to: '.kats-sec' }))],
-      // Scrolled to, not tapped: the card turns daily (app/lib/daily.js), so a tap would open a different page each day.
-      ['Bugünün kartı', batch(go('#/'), act('scroll', { to: '.today' }))],
-      ['Şimdi Oyna', play(0)],
-      ['Seviye: Başlangıç', play(1)],
-      ['Yanlış yaz: “sol”', play(2)],
-      ['Harf kutularını doldur', play(3)],
-      ['Sıradaki kart', play(4)],
-      ['İki deneme de yanlış', play(5)],
-      ['Yanlış seçim: kart anlatır', play(6)],
-      ['Anladım, devam', play(7)],
-      ['Doğru yaz', play(8)],
+      ['Şimdi Oyna', batch(go('#/'), act('oyna.press'))],
     ],
-    notes: `<p>Testçilere göre Keşfet oyunu içermiyor gibiydi. Artık sekmenin adı Oyna ve kendisi oyun; duyurular logonun sekmesine taşındı.</p><ol><li><b>Kategoriler</b>: her işaret ve her çalgı ailesi kendi renginde bir kart.</li><li><b>Bugünün kartı</b>: sayfanın en altında, her gün başka bir kart: bir çalgı, bir soru ya da bir işaret.</li><li><b>Şimdi Oyna</b>: ilk oyun çocuğun seviyesini sorar; Başlangıç seçilir.</li><li><b>Yanlış yaz</b>: “sol” olmadı; cevap harf kutularına döner, kartın renginde gelen harfler yardım eder.</li><li><b>Kutuları doldur</b>: çocuk kalan harfleri yazar.</li><li><b>Sıradaki kart</b>, <b>iki deneme de yanlış</b>: dört seçenek gelir.</li><li><b>Yanlış seçim</b>: kart dönüp anlatır; <b>Anladım, devam</b> ile sıradaki karta geçilir ve çocuk bu kez doğru yazar.</li></ol><p>Ekranda seviye adı ya da basamak şeridi yok. Oyun ancak üst üste dört zorlanmada bir adım kolaylaşır.</p>`,
+    notes: `<p>Testçilere göre Keşfet oyunu içermiyor gibiydi. Artık sekmenin adı Oyna ve kendisi oyun; duyurular logonun sekmesine taşındı.</p><ol><li><b>Kategoriler</b>: her işaret ve her çalgı ailesi kendi renginde bir kart; karta dokunmak o konunun turunu açar.</li><li><b>Şimdi Oyna</b>: oyun açılır. İlk oyun çocuğun seviyesini sorar (Başlangıç, Orta, İleri).</li></ol><p><b>Buradan sonra telefonda siz oynayın.</b> Gösterilecekler: yanlış yazınca cevap harf kutularına döner; yine olmazsa dört seçenek gelir; yanlış seçimde kart dönüp anlatır. Oyun ancak üst üste dört zorlanmada bir adım kolaylaşır; ekranda seviye adı ya da puan yok.</p><p>Bitince <b>→</b>: bir sonraki slayta geçer ve oyunu kapatır. Cevap yazılırken klavyedeki harfler telefona gider (R dahil); oyunu elle kapatmak için sol üstteki çarpı.</p>`,
   },
   {
-    id: 'ogren', label: 'Öğren', theme: 'light', phone: at(9),
+    id: 'ogren', label: 'Öğren', theme: 'light', phone: go('#/ogren/aileler'),
     html: step('Öğren: yalnızca bilgi',
       'İşaretler, çalgılar, aileler ve değerler: çocuk burada okur ve bakar, oyun başlamaz. Kartı çevirip okumak, oyunda zorlandığında yardım olarak gelir.',
       ['Çalgılar fotoğraflı bir ızgara, aile süzgeciyle', 'Bir aileye dokununca o ailenin çalgıları']),
-    acts: [['Yaylı Çalgılar', play(10)], ['Keman', play(11)]],
+    acts: [['Yaylı Çalgılar', batch(go('#/ogren/aileler'), tap('[data-fam="YayliCalgilar"]'))], ['Keman', batch(go('#/ogren/calgilar?aile=yayli'), tap('[data-push="#/calgi/keman"]'))]],
     notes: `<p>Öğren'in dört sekmesi: <b>İşaretler, Çalgılar, Aileler, Değerler.</b> Burada oynatma düğmesi yok: Öğren bilgi içindir. Bilmeceler İzle'de, notalar Çal'da.</p><ol><li><b>Yaylı Çalgılar</b>: aile kartına dokununca Çalgılar o ailenin süzgeciyle açılır; her çalgı fotoğrafıyla.</li><li><b>Keman</b>: çalgının sayfası, videoları ve şarkısı. Kartları çevirip okumak artık yalnızca oyunda, çocuk üst üste zorlandığında yardım olarak gelir.</li></ol><p>Değerler sekmesi vakfın Müzikle Değerler Eğitimi dizisini anlatır; uygulamada henüz olmayan parçalar “Hazırlanıyor” der.</p>`,
   },
   {
-    id: 'cal', label: 'Çal', theme: 'light', phone: at(12),
+    id: 'cal', label: 'Çal', theme: 'light', phone: go('#/cal'),
     html: step('Çal: piyano ve şarkılar',
       'Çocuk piyanoda serbestçe çalar; her çalgının şarkısı karaoke sözleriyle çalar.',
       []),
@@ -135,26 +122,6 @@ export const SLIDES = [
     notes: `<p>Vakfın verdiği notalar uygulamanın kendi klavyesinde çalar: ayrı bir ses dosyası yok, her nota tek tek çalınır.</p><ol><li><b>Keman şarkısını çal</b>: klavyede o an çalan tuş yanar. Karaoke satırında önce nota adları, yaklaşık 20. saniyeden sonra şarkının sözleri ilerler. Önce sağ üstten <b>Sesi aç</b>'a basılmış olmalı.</li><li><b>Şarkı sözleri</b>: on çalgının sözleri ayrı bir sayfada okunur; burada Gitar'ınki.</li></ol><p>Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı. Sonraki adıma geçince şarkı durur; otomatik oynatma şarkıyı 24 saniye dinletir.</p>`,
   },
   {
-    id: 'izle', label: 'İzle', theme: 'light', phone: go('#/izle'),
-    html: step('İzle: videolar ve bilmeceler',
-      'Bilmeceler dahil bütün videolar tek sekmede; videolar YouTube’da olduğu için oynatmadan önce ebeveyn PIN’i istenir.',
-      []),
-    // The first card on İzle is a riddle: the page lists the kinds in WATCH_KINDS' order, riddles first (app/app.js).
-    acts: [['Bir bilmece', batch(go('#/izle'), act('video.open'))], ["PIN'i gir", batch(go('#/izle'), act('video.open'), act('gate.type'))]],
-    notes: `<p>Sırayla: bilmece videoları, klipler, “Dore soruyor, müzisyen cevaplıyor”, karaoke ve jenerikler. Öğren'deki bilmeceler de buraya taşındı.</p><ol><li><b>Bir bilmece</b>: videoya dokununca ebeveyn kilidi açılır; çocuk tek başına YouTube'a çıkamaz.</li><li><b>PIN'i gir</b>: demo PIN'i <b>135790</b>. Oynatıcı açılır; demo çevrimdışı olduğu için video burada oynamaz, uygulamada YouTube'dan oynar.</li></ol>`,
-  },
-  {
-    id: 'vakif', label: 'Vakıf', theme: 'light', phone: go('#/doremimi'),
-    html: step('Logo: Dore Mimi Vakfı',
-      'Ortadaki logo vakfın sekmesini açar: en üstte duyurular döner, altında her bağlantı bir kez yer alır.',
-      []),
-    acts: [
-      ['Duyuru: Vakfımız kuruldu!', batch(go('#/doremimi'), act('banner.show', { index: 3 }))],
-      ['Vakfın sayfası', batch(go('#/doremimi'), act('banner.show', { index: 3 }), act('tap', { sel: '[data-banner="3"]' }))],
-    ],
-    notes: `<p>Sekmenin başlığı vakfın kendisi. Duyurular eskiden Oyna'nın üstündeydi; artık burada dönüyor.</p><ol><li><b>Duyuru</b>: “Vakfımız kuruldu!” duyurusu öne gelir.</li><li><b>Vakfın sayfası</b>: duyuruya dokununca vakfın kendi sayfası açılır: haber, vizyon, yönetim kurulu ve kurucular.</li></ol><p>Altta Faaliyetler, Katıl, Tanış, Bize ulaş ve Uygulama; henüz hazır olmayan sayfalar “Hazırlanıyor” der.</p>`,
-  },
-  {
     id: 'aile', label: 'Aile ve içerik', theme: 'light', phone: go('#/profil'),
     html: step('Aile, kilit, içerik',
       "Her çocuğa ayrı profil. Dışarı giden her bağlantı ebeveyn PIN'i ister. İçeriği vakıf düzenler.",
@@ -163,33 +130,10 @@ export const SLIDES = [
     notes: `<p>Profil sağ üstte; kardeşler <b>Kim oynuyor?</b> ile geçer. Ebeveyn sayfaları ve dışarı giden her bağlantı altı haneli PIN ister; üç yanlışta 30 saniye kilit. Demo PIN'i <b>135790</b> (yalnızca bu demoya ait).</p><p>İçerik kodda değil, tablolarda: vakıf ekibi panelden düzenler, yayından önce hatalar satır satır gösterilir. Her sorunun bir zorluğu var (Başlangıç, Orta, İleri); işaret kartlarınınkini biz koyduk, içerik ekibi değiştirebilir. Bugün içerik değişikliği yeni bir sürümle telefona ulaşır.</p>`,
   },
   {
-    id: 'ayarlar', label: 'Ayarlar', theme: 'light', phone: settings('baslangic', 'tr', true),
-    // Whichever way the deck leaves this slide, the phone goes back to Turkish first (deck/flow.js enter): the slides
-    // around it are told in Turkish, and a dot pressed after "Français" used to show them in French.
-    leave: settings(null, 'tr', true),
-    html: step('Ayarlar: zorluk ve dil',
-      'İlk oyunda seçilen seviye burada değişir; dil Türkçe, English ya da Français olur ve uygulama anında o dile geçer.',
-      ['Şarkı sözleri, video adları ve vakfın uzun metinleri Türkçe kalır', 'İngilizce ve Fransızca taslak: anadili olan biri okuyacak']),
-    acts: [['Zorluk: Orta', settings('orta', 'tr')], ['English', settings('orta', 'en')], ['Français', settings('orta', 'fr')], ['Türkçe', settings('orta', 'tr')]],
-    notes: `<p>Ayarlar, Profilim'in altındaki “Aile ve ayarlar” bölümünden açılır.</p><ol><li><b>Zorluk: Orta</b>: sorular seçilen seviyeye kadar gelir. Seviye ilk oyunda bir kez sorulur, sonra buradan değişir.</li><li><b>English</b>, <b>Français</b>: menüler, sorular, cevaplar, işaret ve aile adları o dile geçer; alt menü de.</li><li><b>Türkçe</b>: geri döner. Sunuma devam etmeden önce bu adımı oynatın.</li></ol><p>Uygulama, cihazın dili bu üçünden biriyse o dille açılır; değilse Türkçe. Çeviriler taslak ve tablolarında öyle işaretli.</p>`,
-  },
-  {
-    id: 'platform', label: 'Platformlar', theme: 'dark', layout: 'full', cls: 'platforms',
-    // No build numbers: they went stale within days (this slide said 0.1.73 long after newer builds were with testers).
-    html: `
-      <h1 class="title">Tek kod,<br><em>her cihaz.</em></h1>
-      <ul class="plat">
-        <li><b>iPhone · iPad</b><span>TestFlight, iOS 15+</span></li>
-        <li><b>Android</b><span>APK, Android 6+</span></li>
-        <li><b>Mac · Windows</b><span>.dmg ve .zip, henüz imzasız</span></li>
-        <li><b>Tarayıcı</b><span>WebAssembly</span></li>
-      </ul>`,
-    notes: `<p>Tek kod tabanı (Avalonia, .NET): iPhone ve iPad'de TestFlight, Android'de APK, Mac, Windows ve tarayıcı. Mağazaya çıkış için imzalar ve vakfın onayı gerekiyor.</p>`,
-  },
-  {
     id: 'kapanis', label: 'Kapanış', theme: 'dark', layout: 'center', phone: go('#/doremimi'),
-    html: `<div class="closing"><span class="cl-l">Dore ve Mimi</span><span class="cl-r">artık <em>cebinizde.</em></span></div>`,
-    notes: `<p>Telefonda vakfın kendi sayfası açık: faaliyetleri (Müzikle Değerler Eğitimi, burslar, etkinlikler), gönüllülük ve iletişim. Sorularınız ve değiştirmek istedikleriniz bizim için yol haritası.</p>`,
+    // The platforms were a slide of their own, with three still frames; under the nine-slide cap they are this line.
+    html: `<div class="closing"><span class="cl-l">Dore ve Mimi</span><span class="cl-r">artık <em>cebinizde.</em><small class="cl-plat">iPhone · iPad · Android<br>Mac · Windows · tarayıcı</small></span></div>`,
+    notes: `<p>Telefonda vakfın sekmesi açık: duyurular, faaliyetler (Müzikle Değerler Eğitimi, burslar, etkinlikler), gönüllülük ve iletişim.</p><p><b>Tek kod, her cihaz</b> (Avalonia, .NET): iPhone ve iPad'de TestFlight, Android'de APK, Mac, Windows ve tarayıcı. Mağazaya çıkış için imzalar ve vakfın onayı gerekiyor.</p><p>Sorularınız ve değiştirmek istedikleriniz bizim için yol haritası.</p>`,
   },
 ];
 

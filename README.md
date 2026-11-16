@@ -51,14 +51,19 @@ the server.
   answers `dm-done` when it has finished). A phone that never answers frees the deck after 20 s.
 - **Auto-play** (`A`, or **Otomatik** beside the counter; `?oynat` on the URL starts it). It presses → for you: every
   step and every slide, each after a pause (3.5 s after a step; on a new slide the time it takes to read it, 5 to 20 s,
-  so the foundation's text slides stay longest; Keman's song is left playing for 24 s, until its first sung line has
-  passed). It is the same `next` through the same lock, so it waits for the phone exactly as a presenter must. →, ←,
-  a dot, a step button, R, swipe, Home/End, a touch on the phone or A stops it, and it stops by itself on the last
-  slide. While the game on the phone takes letters, any letter stops it and is not typed. N, F and **Sesi aç** do not
-  stop it: they do not move the deck. The whole walk takes about six and a half minutes (380 s in headless Chrome, 2026-11-16).
+  so the foundation's slide, which is mostly text, stays longest; Keman's song is left playing for 24 s, until its
+  first sung line has passed). It is the same `next` through the same lock, so it waits for the phone exactly as a
+  presenter must. →, ←, a dot, a step button, R, swipe, Home/End, a touch on the phone or A stops it, and it stops by
+  itself on the last slide. While the game on the phone takes letters, any letter stops it and is not typed. N, F and
+  **Sesi aç** do not stop it: they do not move the deck. The whole walk takes about three minutes (175 s in headless
+  Chrome, 2026-11-16, the nine-slide deck).
 - **Slide 1 resets the phone.** Going back to it starts the demo over.
-- **The phone speaks Turkish outside the Ayarlar slide.** That slide switches it to English and French; however the
-  deck leaves it (→, ←, a dot, End), the phone is put back in Turkish first (the slide's `leave` message).
+- **The phone stays in Turkish.** No slide changes the language since the Ayarlar slide went (2026-11-16), and
+  `tools/auto-e2e.mjs` checks it through the whole walk. A language picked by hand on the phone (Ayarlar › Dil) is put
+  back by slide 1's reset, not by the slide after it.
+- **The round is played by hand.** The Oyna slide's second step presses Şimdi Oyna and stops there; the presenters
+  play on the phone. → then goes to the next slide and closes the game, at any point of the round. R opens the Oyna
+  slide again only while the game is not asking for a typed answer: there R is a letter (below).
 - **Sound:** click **Sesi aç** (top right) once before you start. Browsers start audio only after a click. This
   matters for `?oynat` most: opened that way and never clicked, the deck walks, but the Şarkı slide is silent and its
   karaoke line stands still, because the song runs on the audio clock. Starting with A or **Otomatik** is itself a
@@ -66,21 +71,23 @@ the server.
 - **Typing in the game:** while the game asks for a typed answer, the laptop keyboard types into it. During that time
   N, F, R and A are letters, not shortcuts.
 - **Demo PIN: `135790`.** The parent gate accepts only this demo PIN, never the app's own default (ch. 10 G-06). It
-  is in the notes of the İzle and Aile ve içerik slides.
+  is in the notes of the Gezinme and Aile ve içerik slides.
 - `?notlar` on the deck URL opens the notes. `#7` opens slide 7.
 
-The deck has 16 slides (dossier ch. 14 §9 to §14): Kapak; the four slides of "Dore Mimi, bugüne kadar", what the
-foundation has done (`deck/foundation.js`, numbers from `deck/foundation-facts.js`); Gezinme (the dock; logo, Öğren);
-Oyna (the categories, Bugünün kartı, then the whole round, one press per move: the level question, a wrong typing, the
-letter tiles, the choices, the card that explains); Öğren (a family's instruments, one instrument's page; nothing to
-play); Çal (the piano); Şarkı (Keman's song playing on the app's keyboard, then Gitar's lyric sheet); İzle (a riddle:
-the parent gate, then the player); Vakıf (the logo's tab: the banner, the
-foundation's page); Aile ve içerik (profiles, parent PIN); Ayarlar (Zorluk, then English, Français and back to Türkçe);
-Platformlar and Kapanış. No slide shows results or XP, and none opens the game from a song or an instrument. The slides
-are data in `deck/slides.js`. Up to Çal the phone's side is one seeded script, `app/data/script.js`, walked front to
-back, so every press lands on the same card each time and → never makes the phone start over; after Çal each step is
-a whole state of its own. `tests/deck.test.mjs` holds the slides to the script, to the phone's routes and acts, and
-`tests/foundation.test.mjs` holds the opening section to its facts.
+The deck has nine slides, and no slide has more than two steps (owner, 2026-11-16, after presenting the 16-slide deck
+of dossier ch. 14 §9 to §14: every → brought up one more feature to explain). Kapak; "Dore Mimi, bugüne kadar", what
+the foundation has done, on one slide: a timeline and three cards, the books, the concerts and the site
+(`deck/foundation.js`, numbers from `deck/foundation-facts.js`); Gezinme (the dock; the logo's tab, then İzle); Oyna
+(the categories, then Şimdi Oyna: the game opens, on the level question for a new child, and the deck plays nothing
+after it); Öğren (a family's instruments, one instrument's page; nothing to play); Çal (the piano); Şarkı (Keman's
+song playing on the app's keyboard, then Gitar's lyric sheet); Aile ve içerik (Kim oynuyor?, the parent PIN); Kapanış
+(the foundation's tab, the platforms as one line). No slide shows results or XP, and none opens the game from a song
+or an instrument. The slides are data in `deck/slides.js`. Every step is a whole state: it goes to its screen, then
+presses, so ← and R land on the same screen whatever was tapped on the phone in between, and no slide makes the phone
+replay anything to reach it. Until the cut the slides up to Çal walked one seeded script, `app/data/script.js`; no
+slide asks for it now, and it stays for `tools/shoot.mjs` and `tools/ch14-e2e.mjs`. `tests/deck.test.mjs` holds the
+count, the two steps, the Oyna slide and the phone's routes and acts, and `tests/foundation.test.mjs` holds the opening
+slide to its facts.
 
 ## What is where
 
@@ -97,7 +104,7 @@ app/lib/                           the app's rules ported to JavaScript:
 app/data/content.js  site.js       content copied from the app's C# (signs, questions, directory, people, texts)
 app/data/localise.js              the content in tr, en or fr (ch. 14 §11); app/i18n/ holds the strings and keyboards
 app/data/hub.js                    the logo's page (ch. 14 §6), as data
-app/data/script.js                 the deck's live demo as the phone's steps (ch. 14 §9)
+app/data/script.js                 a seeded round as the phone's steps, for shoot.mjs and ch14-e2e.mjs (not the deck's)
 app/data/songs/*.json              the app's 42 song files, unchanged
 app/data/site/*.json               the app's videos, lyrics and library lists, unchanged
 assets/                            fonts, logo, characters, banners, sprites, instrument photos, thumbnails
@@ -122,9 +129,9 @@ npm test                 # node --test tests/: the game rules, the music, the na
                          # tests/app-parity.test.mjs reads the app's own files (../doremimi-superapp, or DOREMIMI_APP);
                          # without the app checked out it is skipped, not passed
 npm run e2e              # with npm start running: mashes → in headless Chrome; the deck must wait for the phone
-npm run e2e:auto         # auto-play end to end: every slide and step, in order, to the last slide; about two minutes
+npm run e2e:auto         # auto-play end to end: every slide and step, in order, to the last slide; under a minute
                          # add "sahne" (… tools/auto-e2e.mjs <url> sahne) to run it at the pace an audience sees,
-                         # about six and a half minutes, with every pause timed against the one the slides ask for
+                         # about three minutes, with every pause timed against the one the slides ask for
 npm run walk             # → through the whole deck, a PNG of every slide and step into docs/screens/deck/
 npm run mutants          # every mutant must be "caught" and every CONTROL "SURVIVED"
 node --experimental-websocket tools/phone-e2e.mjs http://127.0.0.1:4175   # the phone in tr, en, fr: type, stray Turkish, fit
@@ -137,13 +144,16 @@ Chrome. It starts its own headless Chrome with a throwaway profile and stops it 
 
 ## Deploy
 
-**Vercel** (the target, ch. 10 D-03): import the folder as a static project, with no framework and no build command.
-`vercel.json` sets `trailingSlash: true`, so `/app` serves `/app/`, which the phone's relative paths need.
-`.vercelignore` keeps `tests/`, `tools/` and `docs/` out of the deployment.
+**GitHub Pages** is where the demo is published: <https://bulbi-co.github.io/doremimi-demo/>. Every push to `main`
+runs `.github/workflows/pages.yml`: the guards (`node --test tests/`), then the site alone (`index.html`, `sunum.*`,
+`robots.txt`, `app/`, `assets/`, `deck/`) goes up; `tests/`, `tools/` and `docs/` do not. It needs one repository
+setting, once: Settings → Pages → Build and deployment → Source: GitHub Actions. Every path is relative, so the
+project page's `/doremimi-demo/` prefix needs nothing, and `app/index.html` adds the missing trailing slash itself
+when a host serves `/app` without it.
 
-**GitHub Pages** (optional copy, ch. 10 D-04): push the folder to a repository and serve the root of the default
-branch. Every path is relative, so a project page (`user.github.io/repo/`) works too. `app/index.html` adds the missing
-trailing slash itself when a host serves `/app` without it.
+It moved from Vercel on 2026-11-16: people opening the link in Turkey got "site not found" until they retried.
+`vercel.json` and `.vercelignore` are still here, and <https://doremimi-demo.vercel.app/> still answers for whoever
+has that link, but it is only as new as the last `npx vercel --prod`; nothing updates it on a push.
 
 Keep the published URL unlisted. Every page has `noindex`, and `robots.txt` disallows everything (ch. 10 G-08).
 

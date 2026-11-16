@@ -83,7 +83,7 @@ document.addEventListener('click', e => {
 function render(i) {
   const s = SLIDES[i];
   document.querySelectorAll('.slide').forEach((el, k) => { const was = el.classList.contains('on'); el.classList.toggle('on', k === i); el.classList.toggle('leave', was && k !== i); });
-  stage.className = 'stage ' + (s.theme === 'dark' ? 'dark ' : '') + (s.layout === 'full' ? 'full ' : '') + (s.cls || '');
+  stage.className = 'stage ' + (s.theme === 'dark' ? 'dark ' : '') + (s.layout === 'full' ? 'full' : '');
   document.body.classList.toggle('light', s.theme !== 'dark');
   device.classList.toggle('away', s.layout === 'full');
   device.classList.toggle('center', s.layout === 'center');
@@ -129,8 +129,8 @@ document.addEventListener('keydown', e => {
   // even when the deck has the focus, so the presenter can type on the laptop without clicking into the phone.
   if (phoneTyping && (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter')) {
     e.preventDefault();
-    // During auto-play the round on the phone is being typed by the script, so a letter from the laptop (A, to stop
-    // it, above all) stops auto-play and is not typed into the answer.
+    // During auto-play nobody is at the phone, so a letter from the laptop (A, to stop it, above all) stops auto-play
+    // and is not typed into the answer: auto-play opens the game on the Oyna slide and a typing stage can be up.
     if (flow.auto) dispatch({ type: 'auto', on: false }); else phone.contentWindow.postMessage({ type: 'key', key: e.key }, '*');
     return;
   }

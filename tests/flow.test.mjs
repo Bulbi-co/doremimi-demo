@@ -215,11 +215,11 @@ test('auto-play presses → by itself: every step and every slide, in order, the
 
 test('auto-play walks the real deck end to end: every phone message the slides hold, once, in order', () => {
   const { s, trace, pauses, ended } = autoWalk(asFlow(DECK));
-  // … and a slide's `leave` message as the walk moves off it (Ayarlar puts the phone back in Turkish).
+  // … and a slide's `leave` message as the walk moves off it. No slide has one since the deck was cut to nine (the
+  // Ayarlar slide, which put the phone back in Turkish, went); the machine's own leave test above uses a made-up deck.
   const expected = DECK.flatMap((x, i) => [...(x.phone ? [x.phone] : []), ...(x.acts ?? []).map(a => a[1]), ...(x.leave && i < DECK.length - 1 ? [x.leave] : [])]);
   assert.deepEqual(trace.map(({ id, ...m }) => m), expected);
   const leaves = DECK.filter(x => x.leave).map(x => x.leave);
-  assert.ok(leaves.length >= 1, 'the deck has a slide that tidies up after itself');
   assert.ok(trace.every(m => leaves.includes(m) || Number.isInteger(m.id)), 'each one but a leave carries an id, so each one is waited for');
   assert.ok(ended);
   assert.equal(s.cur, DECK.length - 1);
@@ -233,11 +233,11 @@ test('auto-play\'s pauses are readable: a slide stays for its reading time, a st
   const holdOf = p => DECK[p.cur].acts[p.sub - 1][2]?.hold;
   for (const p of pauses) assert.equal(p.ms, p.sub === 0 ? Math.max(AUTO_SLIDE, readMs(DECK[p.cur])) : holdOf(p) ?? AUTO_STEP, `slide ${p.cur + 1}, after step ${p.sub}`);
   assert.ok(AUTO_STEP >= 3000 && AUTO_SLIDE >= 4000, 'long enough to see what the phone did and to read a title');
-  // Reading time follows the words on the slide, so the foundation's text slides (dark, full width, no phone) stay
-  // longer than any slide of the tour, and nothing stays past READ_MAX.
+  // Reading time follows the words on the slide, so the foundation's slide (dark, full width, no phone: a timeline
+  // and three cards) stays longer than any slide of the tour, and nothing stays past READ_MAX.
   const slidePause = id => pauses.find(p => p.sub === 0 && DECK[p.cur].id === id).ms;
   const text = FOUNDATION_SLIDES.filter(x => x.layout === 'full');
-  assert.ok(text.length >= 3, 'the section has its text slides');
+  assert.equal(text.length, 1, 'the section is its one text slide');
   const tour = DECK.filter(x => !FOUNDATION_SLIDES.includes(x) && x.id !== 'kapanis').map(x => slidePause(x.id));
   for (const x of text) assert.ok(slidePause(x.id) > Math.max(...tour), `${x.id} (${slidePause(x.id)} ms) stays longer than the longest tour slide (${Math.max(...tour)} ms)`);
   assert.ok(pauses.every(p => p.sub > 0 || p.ms <= READ_MAX), 'no slide waits past READ_MAX before its first step');

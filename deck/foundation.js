@@ -14,8 +14,8 @@
  *     partner's role, nothing from the study but that it exists, no phone number, no e-mail address.
  *   - Where each fact comes from is in the presenter notes ("Kaynak: …"), one line per fact, not on the slide.
  *
- * tests/foundation.test.mjs holds them: every integer against the snapshot, the banned words, the section's place,
- * the step's route, each listing's time and hall inside its fact's sentence. What it cannot hold is judgement (a new
+ * tests/foundation.test.mjs holds them: every integer against the snapshot, the banned words, the section's place
+ * and that it is one slide. What it cannot hold is judgement (a new
  * sentence that implies a concert took place, a partner's role): read CAVEATS.md before adding a line.
  *
  * It imports nothing from ../app and nothing from slides.js (which imports this), so it can be read on its own.
@@ -59,7 +59,7 @@ const line = (head, body, ids) => `<p><b>${head}</b> ${body ? body + ' ' : ''}${
 /*
  * The timeline's markers: which facts.json `timeline` entries the first slide shows, and the few words each gets.
  * Two entries are left out on purpose: the November 2020 concerts (postponed, so not something that was done) and the
- * Hürriyet report of February 2021 (a report of plans). Both are in the CSO slide's notes for the presenter.
+ * Hürriyet report of February 2021 (a report of plans). Both are in the slide's notes for the presenter.
  */
 export const MARKERS = [
   { date: '2019-01-22', text: 'YouTube kanalı açıldı' },
@@ -77,20 +77,6 @@ const dayMonth = m => { const p = parts(m.date); return [m.day === false ? null 
 const timeline = `<ol class="fnd-line">${years.map(y => `<li><b class="fnd-y">${y}</b>${MARKERS.filter(m => parts(m.date).year === y).map(m =>
   `<span class="fnd-ev">${dayMonth(m) ? `<i>${dayMonth(m)}</i>` : ''}${m.text}</span>`).join('')}</li>`).join('')}</ol>`;
 
-/*
- * The CSO slide's rows. `time` and `where` are typed here because facts.json has them only inside each entry's
- * sentence (tests/foundation.test.mjs checks the same words are there). The March 2023 row names no hall: the source gives
- * one for the 22nd and 23rd only.
- */
-export const LISTINGS = [
-  { date: '2021-12-26', time: '15.00', where: ['CSO Ada Ankara', 'Ziraat Bankası Ana Salon'] },
-  { date: '2022-02-21', time: '14.30', where: ['CSO Tarihi Salon'] },
-  { date: '2023-03-22/24', where: ['CSO Çocuk Konserleri'] },
-  { date: '2026-01-19', where: ['Dore Mimi Ritim Atölyesi', 'CSO Ada Ankara'] },
-];
-const listings = `<ul class="fnd-rows">${LISTINGS.map(l => `<li><b>${full(l.date)}</b><span>${[l.time, ...l.where].filter(Boolean).join(' · ')}</span></li>`).join('')}</ul>`;
-
-const SECTION = 'Dore Mimi, bugüne kadar';
 const head = (eyebrow, title, lead, wide = false) => `
   <span class="fnd-eyebrow">${eyebrow}</span>
   <h1 class="title tour">${title}</h1>
@@ -99,54 +85,36 @@ const head = (eyebrow, title, lead, wide = false) => `
 const figure = (cls, file, alt, credit) => `<figure class="fnd-fig ${cls}"><img src="assets/foundation/${file}" alt="${alt}"><figcaption>${credit}</figcaption></figure>`;
 const ages = FACTS.concerts.ages.replace('-', '–');
 
+/*
+ * The strip under the timeline: the books, the concerts and the site, one card each. They were three slides of their
+ * own until the owner cut them (2026-11-16: "too unnecessary", fold them into this one, compactly; the whole deck is
+ * at most nine slides). The timeline already dates the series and the concerts, so a card says only what a date
+ * cannot: what the series is, who the concerts are for, what the site holds. The list of the ten titles and the
+ * concert rows with their hours and halls went with their slides; each date's own sentence is in the notes.
+ */
+const strip = `<ul class="fnd-strip">
+  <li>${figure('fnd-set', 'kitap-seti.jpg', 'Serinin on kitabının kapakları', 'Görsel: idefix.com')}
+    <div><b>${N.books} kitap, ${FACTS.books.titlesTr.length} çalgı</b><span>${FACTS.books.seriesTr} (${FACTS.books.author}, ${FACTS.books.year}): okul öncesi ve 1. sınıf için.</span></div></li>
+  <li>${figure('fnd-poster', 'cso-afis-2022.jpg', '“Dore Mimi CSO’da” afişi', 'Afiş: CSO, Biletinial')}
+    <div><b>Dore Mimi CSO’da</b><span>${ages} yaş için ${FACTS.concerts.kindTr.toLocaleLowerCase('tr')}.</span></div></li>
+  <li><div><b>${num('siteVideos').tr}</b><span>${num('riddles').tr}; ${num('guestAnswerers').tr.replace(/^“Dore soruyor” serisinde /, '“Dore soruyor”da ')}.</span></div></li>
+</ul>`;
+
 export const FOUNDATION_SLIDES = [
   {
     id: 'bugune-kadar', label: 'Bugüne kadar', theme: 'dark', layout: 'full',
     html: `${head(FACTS.foundation.nameTr, 'Dore Mimi, <em>bugüne kadar</em>',
-      `${N.books} kitaplık seri, ${FACTS.concerts.orchestraTr} ile interaktif eğitim konserleri, ${N.riddles} çalgı için bilmece ve sitede ${N.siteVideos} video.`, true)}
-      ${timeline}`,
-    notes: `<p><b>Uygulamadan önce: vakfın bugüne kadar yaptıkları.</b> Slayttaki her tarih ve sayı bir kaynağa dayanıyor; kaynaklar aşağıda, satır satır.</p>
+      `Bir kitap serisi, ${FACTS.concerts.orchestraTr} ile konserler ve çalgıları tanıtan videolar.`, true)}
+      ${timeline}
+      ${strip}`,
+    notes: `<p><b>Uygulamadan önce: vakfın bugüne kadar yaptıkları, tek slaytta.</b> Her tarih ve sayı bir kaynağa dayanıyor; kaynaklar aşağıda, satır satır.</p>
       ${MARKERS.map(m => line(full(m.date, { day: m.day !== false }) + ':', m.text + '.', when(m.date).src)).join('')}
-      <p>Vakfın kuruluş tarihi slaytta yok: sitede “kuruldu” yazıyor, tarih verilmiyor.</p>`,
-  },
-  {
-    id: 'bugune-kitaplar', label: 'Kitap serisi', theme: 'dark', layout: 'full',
-    html: `<div class="fnd-two"><div>${head(SECTION, `${N.books} kitap,<br><em>${FACTS.books.titlesTr.length} çalgı.</em>`,
-      `${FACTS.books.seriesTr} (${FACTS.books.author}, ${FACTS.books.year}): okul öncesi ve 1. sınıf için; karekodlar çalgıya özel etkinliklere ve bestelere götürür.`)}
-      <ul class="fnd-books">${FACTS.books.titlesTr.map(([, instrument, subtitle]) => `<li><b>${instrument}</b><span>${subtitle}</span></li>`).join('')}</ul></div>
-      ${figure('fnd-set', 'kitap-seti.jpg', 'Serinin on kitabının kapakları', 'Görsel: idefix.com')}</div>`,
-    notes: `${line(`${num('books').tr}.`, `Yazar ${FACTS.books.author}, basım ${FACTS.books.year}.`, ['S14', 'S15'])}
-      ${line('Kitap adları:', 'çalışmanın tablosundaki yazımla, her kitap bir çalgı.', ['S14'])}
-      ${line(`${FACTS.books.audienceTr}:`, 'karekodlar çalgıya özel etkinliklere ve çalgılar için hazırlanan bestelere götürür.', ['S15'])}
-      <p><b>Görsel:</b> on kapağın idefix.com’daki ürün fotoğrafı. Vakıf kendi kapak görsellerini gönderirse değiştirilecek.</p>
-      <p>Slaytta yayınevi yok: yalnızca çalışmanın tablosunda geçiyor, vakfa sorulacak. Çalışmanın bulgularından söz etmeyin; yalnızca serinin incelendiği söylenir.</p>`,
-  },
-  {
-    id: 'bugune-cso', label: 'CSO', theme: 'dark', layout: 'full',
-    html: `<div class="fnd-two"><div>${head(SECTION, 'Dore Mimi <em>CSO’da</em>',
-      `${FACTS.concerts.orchestraTr} ile ${ages} yaş için ${FACTS.concerts.kindTr.toLocaleLowerCase('tr')}.`)}
-      ${listings}</div>
-      ${figure('fnd-poster', 'cso-afis-2022.jpg', '“Dore Mimi CSO’da” afişi', 'Afiş: CSO, Biletinial')}</div>`,
-    notes: `<p><b>Tarihler ilan, afiş ve sezon duyurusundan.</b> “Yapıldı” demeyin; “programda” ya da yalnızca tarih ve salon.</p>
-      ${LISTINGS.map(l => line(full(l.date) + ':', when(l.date).tr, when(l.date).src)).join('')}
-      ${line(`${ages} yaş:`, `${num('agesConcert').tr}.`, num('agesConcert').src)}
-      <p>Sorulursa:</p>
+      <p><b>Konser tarihleri ilan, afiş ve sezon duyurusundan.</b> “Yapıldı” demeyin; “programda” ya da yalnızca tarih ve salon. Sorulursa:</p>
       ${['2020-11-20/22', '2021-02-19'].map(d => line(full(d) + ':', when(d).tr, when(d).src)).join('')}
-      <p><b>Afiş:</b> ${full('2022-02-21')} konserinin Biletinial sayfasındaki afişi (CSO).</p>`,
-  },
-  {
-    // Light, unlike the three before it: the lines and the step button are the deck's own (.feats, .act), which are
-    // drawn for a light slide only (navy on navy on a dark one), and this file adds no rule to the deck's classes.
-    id: 'bugune-kutuphane', label: 'Kütüphane', theme: 'light', phone: { type: 'go', hash: '#/doremimi' },
-    html: `${head(SECTION, `Sitede <em>${N.siteVideos} video</em>`, FACTS.contentLibrary.tr)}
-      <ul class="feats"><li>${num('riddles').tr}</li><li>${num('guestAnswerers').tr}</li></ul>`,
-    // #/izle and not #/kitaplar or #/etkinlikler: the first lists school-book rows that are not this series, the
-    // second shows concerts as "Hazırlanıyor" right after a slide of dated ones.
-    acts: [['İzle: bilmeceler', { type: 'go', hash: '#/izle' }]],
-    notes: `${line(`${num('siteVideos').tr}.`, '', num('siteVideos').src)}
-      ${line(`${num('riddles').tr}.`, '', num('riddles').src)}
-      ${line(`${num('guestAnswerers').tr}.`, 'Konukların adları video başlıklarında.', num('guestAnswerers').src)}
-      <ol><li><b>İzle</b>: aynı bilmece videoları uygulamada, İzle sekmesinin başında.</li></ol>
-      <p>Kanalın abone ve izlenme sayıları slaytta yok: her gün değişiyor. Buradan sonra uygulamaya geçiyoruz.</p>`,
+      ${line(`${ages} yaş:`, `${num('agesConcert').tr}.`, num('agesConcert').src)}
+      ${line(`${num('books').tr}.`, `Yazar ${FACTS.books.author}, basım ${FACTS.books.year}; ${FACTS.books.audienceTr.toLocaleLowerCase('tr')} için. Karekodlar çalgıya özel etkinliklere ve bestelere götürür.`, ['S14', 'S15'])}
+      ${line(`${num('siteVideos').tr}.`, `${num('riddles').tr}; ${num('guestAnswerers').tr}.`, num('siteVideos').src)}
+      <p><b>Görseller:</b> on kapağın idefix.com’daki ürün fotoğrafı ve ${full('2022-02-21')} konserinin Biletinial sayfasındaki afişi (CSO). Vakıf kendi görsellerini gönderirse değiştirilecek.</p>
+      <p>Slaytta yok: yayınevi (yalnızca çalışmanın tablosunda geçiyor), vakfın kuruluş tarihi (sitede “kuruldu” yazıyor, tarih verilmiyor), kanalın abone ve izlenme sayıları (her gün değişiyor). Çalışmanın bulgularından söz etmeyin; yalnızca serinin incelendiği söylenir.</p>`,
   },
 ];

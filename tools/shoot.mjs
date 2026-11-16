@@ -69,13 +69,14 @@ const DECK = [];
 // Every slide as it opens, then after each "canlı göster" step (→ plays the next one). Read from deck/slides.js, so a
 // slide added or a step moved is shot without editing this list.
 const STEPS = Object.fromEntries(DECK_SLIDES.map((s, i) => [i + 1, (s.acts ?? []).length]));
-const scripted = m => m?.type === 'act' && m.name === 'goto';
-// the scripted story replays fast to the slide's step first
-const GAME = n => [DECK_SLIDES[n - 1].phone, ...(DECK_SLIDES[n - 1].acts ?? []).map(a => a[1])].some(scripted);
+// One wait for every slide and one for every step: since the nine-slide cut (2026-11-16) no slide asks the phone for
+// a step of the script, so none has a round to replay first (those waited 9 and 12 s). 6 s for a step, because the
+// deck ignores a → pressed while the one before is still playing, and the slowest step, Aile's PIN, holds the lock
+// for 4.9 s (tools/flow-e2e.mjs, 2026-11-16).
 for (let n = 1; n <= SLIDES; n++) {
-  DECK.push({ name: `slide-${String(n).padStart(2, '0')}`, url: `${base}/?v=shoot#${n}`, w: 1440, h: 900, wait: GAME(n) ? 9000 : 3500 });
+  DECK.push({ name: `slide-${String(n).padStart(2, '0')}`, url: `${base}/?v=shoot#${n}`, w: 1440, h: 900, wait: 3500 });
   for (let s = 1; s <= (STEPS[n] ?? 0); s++) {
-    DECK.push({ name: `slide-${String(n).padStart(2, '0')}-step${s}`, cont: true, steps: [deckKey('ArrowRight')], w: 1440, h: 900, wait: GAME(n) ? 12000 : 5000 });
+    DECK.push({ name: `slide-${String(n).padStart(2, '0')}-step${s}`, cont: true, steps: [deckKey('ArrowRight')], w: 1440, h: 900, wait: 6000 });
   }
 }
 
@@ -121,8 +122,6 @@ const PHONE = [
   ['phone-37-ogren-calgi', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 10000],
   ['phone-38-cal', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 12 })], 11000],
 ].map(([name, url, steps = [], wait = 1200]) => ({ name, url, steps, wait, w: 430, h: 932 }));
-// The Platformlar slide's frames (index.html #frames) are copied from these into assets/screens/, so they show the
-// demo's own navigation: the app's c33d9ff captures still had the old four-tab dock.
 // v3 (superapp f8c3a52, the milk-white clean-up): one shot per screen in docs/dossier/screens/v2 of the app, at the
 // app's 430 x 932, with no fake status bar (?sunum seeds the deck like the embed, without the phone frame), so the two
 // can be laid side by side. `node … tools/shoot.mjs <base> docs/screens '^v3/'`.
@@ -144,7 +143,6 @@ const V3 = [
   ['v3/18-game-solved', ...sunum(3, [], 5000)],
   ['v3/14-game-choices', ...sunum(5, [], 7000)],
   ['v3/19-game-reveal', ...sunum(6, [], 7000)],
-  ['v3/20-game-results', ...sunum(14, [], 14000)],
 ].map(([name, url, steps = [], wait = 1200, h = 932]) => ({ name, url, steps, wait, w: 430, h }));
 // Dossier ch. 14: every screen the revision changed. `node … tools/shoot.mjs <base> <dir> '^ch14-'`. The two OYNA shots
 // run without ?still, at two points of the card's 4.5 s loop, to show it moving; the rest are still.
@@ -174,10 +172,6 @@ const CH14 = [
   ['ch14-31-script-choices', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 5 })], 7000],
   ['ch14-32-script-reveal', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 6 })], 7000],
   ['ch14-33-script-typed-right', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 8 })], 8000],
-  ['ch14-36-script-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 13 })], 11000],
-  ['ch14-37-script-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 14 })], 14000],
-  ['ch14-38-script-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 15 })], 15000],
-  ['ch14-40-cal-song-sec', app('#/sarki/keman'), [`new Promise(r => setTimeout(r, 600))`, tap('[data-play][data-origin="cal"]')]],
   ['ch14-50-hub', app('#/doremimi')],
   ['ch14-51-hub-scrolled', app('#/doremimi'), [`document.querySelector('#page').scrollTop = 700`]],
   ['ch14-52-hub-bottom', app('#/doremimi'), [`document.querySelector('#page').scrollTop = 4000`]],
@@ -190,16 +184,6 @@ const CH14 = [
   ['ch14-59-vakif', app('#/vakif')],
   ['ch14-60-ayarlar-zorluk', app('#/ayarlar'), [tap('[data-zorluk="orta"]')]],
 ].map(([name, url, steps = [], wait = 1200]) => ({ name, url, steps, wait, w: 430, h: 932 }));
-// The Platformlar slide's three still frames (index.html #frames), at the sizes they were first taken. Until ch. 14 they
-// still showed the OYNA bar, Konu seç and the game's Çevir · Seç · Yaz strip. Copy them into assets/screens/ by hand
-// after looking at them: `node … tools/shoot.mjs <base> <dir> '^frames/'`.
-const FRAMES = [
-  // &dil=tr: on its own (no &embed, so no fake status bar) the phone opens in the browser's language, and headless
-  // Chrome's is English: the frame came out as "Play · Play now" beside two Turkish ones (2026-11-16).
-  { name: 'frames/phone-kesfet-new-nav', url: app('#/', '&dil=tr'), steps: [], wait: 1500, w: 430, h: 932 },
-  { name: 'frames/tablet-kesfet-new-nav', url: app('#/', '&embed'), steps: [], wait: 1500, w: 1024, h: 1366 },
-  { name: 'frames/12g-game-yaz-tablet-1366x1024', url: app('#/', '&embed'), steps: [msg({ type: 'act', name: 'goto', step: 1 })], wait: 5000, w: 1366, h: 1024 },
-];
 const TABLET = [
   // &embed: the standalone page narrows to a 440 px phone column on a wide screen (style.css .app:not(.embed)), and a
   // tablet runs the app full width with the content column centred, as dossier screen 20-tablet-home.png shows.
@@ -284,8 +268,7 @@ const LANG_SHOTS = ['tr', 'en', 'fr'].flatMap(lang => LANG_PLAN.map(([name, hash
 for (const l of ['tr', 'en', 'fr']) mkdirSync(join(out, l), { recursive: true });
 
 mkdirSync(join(out, 'v3'), { recursive: true });
-mkdirSync(join(out, 'frames'), { recursive: true });
-for (const s of [...DECK, ...PHONE, ...TABLET, ...V3, ...CH14, ...FRAMES, ...LANG_SHOTS]) {
+for (const s of [...DECK, ...PHONE, ...TABLET, ...V3, ...CH14, ...LANG_SHOTS]) {
   if (only && !only.test(s.name)) continue;
   if (!s.cont) await load(s.url, s.w, s.h);
   for (const st of s.steps ?? []) { await evaluate(st); await sleep(250); }

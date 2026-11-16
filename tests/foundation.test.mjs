@@ -11,11 +11,10 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { FOUNDATION_SLIDES, LISTINGS, MARKERS, SOURCE_TR } from '../deck/foundation.js';
+import { FOUNDATION_SLIDES, MARKERS, SOURCE_TR } from '../deck/foundation.js';
 import { FROM, FACTS, SOURCES } from '../deck/foundation-facts.js';
 import { SLIDES } from '../deck/slides.js';
 import { snapshot, digestOf, RESEARCH } from '../tools/foundation-facts.mjs';
-import { knownRoute, flat } from '../tools/phone-routes.mjs';
 
 /** What a person reads: the markup's text (attributes such as an image's file name are not read). */
 const text = html => html.replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -58,18 +57,16 @@ test('every integer on the foundation slides and in their notes is in the facts 
     ['00', '10', '15', '2021', '2023', '22', '24', '26', '2746', '2765'].sort());
 });
 
-test('each concert row gives the time and the hall its own fact gives', () => {
-  // The rows' `time` and `where` are typed in deck/foundation.js; the fact's sentence is where they come from.
-  const plain = s => s.replace(/[’']/g, "'");
-  for (const l of LISTINGS) {
-    const fact = FACTS.timeline.find(t => t.date === l.date);
-    assert.ok(fact, `${l.date} is in the timeline`);
-    if (l.time) assert.ok(fact.tr.includes(l.time), `${l.date}: ${l.time} is not in “${fact.tr}”`);
-    for (const w of l.where) assert.ok(plain(fact.tr).includes(plain(w)), `${l.date}: “${w}” is not in “${fact.tr}”`);
-  }
+test('each timeline marker is a dated fact, and nothing postponed or only planned is drawn as done', () => {
   for (const m of MARKERS) assert.ok(FACTS.timeline.some(t => t.date === m.date), `the timeline marker ${m.date} is a fact`);
+  assert.ok(MARKERS.length >= 6, 'the timeline was read');
   // Postponed, or a report of plans: said in the notes if asked, never drawn as something done.
-  for (const date of ['2020-11-20/22', '2021-02-19']) assert.ok(![...MARKERS, ...LISTINGS].some(x => x.date === date), `${date} is not on a slide`);
+  const [shown, notes] = [said()[0].shown, said()[0].notes];
+  for (const date of ['2020-11-20/22', '2021-02-19']) {
+    assert.ok(!MARKERS.some(x => x.date === date), `${date} is not on the slide`);
+    assert.ok(FACTS.timeline.some(t => t.date === date && notes.includes(text(t.tr))), `${date} is in the notes, in its fact's own words`);
+  }
+  assert.doesNotMatch(shown, /ertelendi|planlandı|hazırlıyor/);
 });
 
 test('the snapshot was not edited by hand: its digest is its own values’', () => {
@@ -108,21 +105,25 @@ test('no phone number and no e-mail address, and each note names where its facts
   assert.ok(Object.values(SOURCE_TR).every(name => !/undefined|NaN/.test(name)));
 });
 
-test('the section sits right after the cover, whole and in order, before the app is shown', () => {
-  const ids = FOUNDATION_SLIDES.map(s => s.id);
-  assert.ok(ids.length >= 3);
-  assert.equal(SLIDES[0].id, 'kapak');
-  assert.deepEqual(SLIDES.slice(1, 1 + ids.length).map(s => s.id), ids);
-  assert.ok(SLIDES.slice(1, 1 + ids.length).every((s, i) => s === FOUNDATION_SLIDES[i]), 'the deck draws the module’s own slides');
-  assert.equal(SLIDES[1 + ids.length].id, 'gezinme', 'the app’s tour starts right after');
-  assert.equal(new Set(SLIDES.map(s => s.id)).size, SLIDES.length, 'no slide twice');
+test('the section is one slide, right after the cover, with the books, the concerts and the site as its three cards', () => {
+  // One slide, not four (owner, 2026-11-16: the books and CSO slides were "too unnecessary", fold them into this one).
+  assert.deepEqual(FOUNDATION_SLIDES.map(s => s.id), ['bugune-kadar']);
+  assert.deepEqual(SLIDES.slice(0, 3).map(s => s.id), ['kapak', 'bugune-kadar', 'gezinme'], 'cover, the foundation, then the app’s tour');
+  assert.equal(SLIDES[1], FOUNDATION_SLIDES[0], 'the deck draws the module’s own slide');
+  const html = FOUNDATION_SLIDES[0].html;
+  const cards = [...html.matchAll(/<li>[^]*?<b>([^<]+)<\/b><span>([^<]+)<\/span><\/div><\/li>/g)].map(m => [m[1], m[2]]);
+  const N = Object.fromEntries(FACTS.numbers.map(n => [n.key, n]));
+  assert.equal(cards.length, 3);
+  assert.equal(cards[0][0], `${N.books.value} kitap, ${FACTS.books.titlesTr.length} çalgı`);
+  assert.ok(cards[0][1].includes(FACTS.books.seriesTr) && cards[0][1].includes(FACTS.books.author) && cards[0][1].includes(String(FACTS.books.year)));
+  assert.ok(cards[1][1].startsWith(`${FACTS.concerts.ages.replace('-', '–')} yaş için`), cards[1][1]);
+  assert.equal(cards[2][0], N.siteVideos.tr);
+  assert.ok(cards[2][1].includes(N.riddles.tr) && cards[2][1].includes(String(N.guestAnswerers.value)), cards[2][1]);
+  // Both pictures are someone else's, and each says whose beside it (the repo is public).
+  assert.deepEqual([...html.matchAll(/<figcaption>([^<]+)<\/figcaption>/g)].map(m => m[1]), ['Görsel: idefix.com', 'Afiş: CSO, Biletinial']);
+  for (const [, file] of html.matchAll(/src="(assets\/foundation\/[^"]+)"/g)) assert.ok(existsSync(new URL(`../${file}`, import.meta.url)), `${file} is in the repo`);
 });
 
-test('the section’s live steps open pages the phone has', () => {
-  const sent = FOUNDATION_SLIDES.flatMap(s => [s.phone, ...(s.acts ?? []).map(a => a[1])].filter(Boolean).flatMap(flat).map(m => ({ id: s.id, m })));
-  assert.ok(sent.length >= 2, 'the section has a live step');
-  for (const { id, m } of sent) {
-    assert.equal(m.type, 'go', `${id}: a foundation slide only opens a page`);
-    assert.ok(knownRoute(m.hash), `${id} opens ${m.hash}, which the phone does not have`);
-  }
+test('the section sends the phone nothing: it is read before the app is shown', () => {
+  for (const s of FOUNDATION_SLIDES) { assert.equal(s.layout, 'full'); assert.ok(!s.phone && !(s.acts ?? []).length, `${s.id} has a live step`); }
 });

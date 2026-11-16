@@ -1,0 +1,171 @@
+/*
+ * The deck's frame, after the Eylül demo (eylul-fuarcilik/sunum.css): a fixed 1600 × 900 stage scaled to fit, slides
+ * on the left, a real phone on the right. Colours and type are Doremimi's (dossier ch. 10 S-01): Navy for dark slides,
+ * the app's canvas for light ones, Yellow as the accent and its gold text tone where yellow would not read on white.
+ */
+:root {
+  --navy: #0A0A3C; --indigo: #14107A; --blue: #2B9BFF; --cyan: #3FDAFF; --yellow: #FFCC00; --orange: #FF4D00;
+  --orchid: #E85BE6; --magenta: #E0109E; --mint: #38E08C; --steel: #1C6FAA;
+  --canvas: #F7F6FB; --ink: #0A0A3C; --ink-2: #45485E; --muted: #585B72; --line: #E3E2EE;
+  --gold-text: #7A5C00; --ok: #38E08C;   /* --ok lives in the deck's own :root (the reference forgot it, ch. 10 R-05) */
+  --display: 'Baloo 2', 'Nunito', system-ui, sans-serif; --body: 'Nunito', system-ui, sans-serif; --music: 'Noto Music', serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body { background: var(--navy); font-family: var(--body); color: var(--ink); -webkit-font-smoothing: antialiased; transition: background .6s; }
+body.light { background: var(--canvas); }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
+svg.i { width: 22px; height: 22px; fill: currentColor; flex: none; }
+
+.viewport { position: fixed; inset: 0; overflow: hidden; }
+.stage { position: absolute; left: 50%; top: 50%; width: 1600px; height: 900px; overflow: hidden; transform-origin: center; transform: translate(-50%, -50%); background: var(--canvas); }
+
+/* ---------- background: flat. The note field and the gradient halos round the phone went with the 2026-11-13 cut. */
+.bg { position: absolute; inset: 0; background: var(--canvas); transition: background .6s; }
+.stage.dark .bg { background: var(--navy); }
+
+/* ---------- slides */
+.slides { position: absolute; inset: 0; }
+.slide { position: absolute; inset: 0; padding: 124px 0 0 120px; opacity: 0; pointer-events: none; transform: translateY(18px); transition: opacity .5s ease, transform .6s cubic-bezier(.2, .8, .2, 1); }
+.slide.on { opacity: 1; pointer-events: auto; transform: none; transition-delay: .12s; }
+.slide.leave { transform: translateY(-14px); }
+.slide .col { width: 700px; }
+.slide.wide .col { width: 1360px; }
+
+h1.title { font: 800 64px/1.02 var(--display); letter-spacing: -.01em; margin: 40px 0 20px; }
+h1.title em { font-style: normal; color: var(--magenta); }
+.dark h1.title { color: #fff; }
+.dark h1.title em { color: var(--yellow); }
+.lead { font-size: 23px; line-height: 1.45; font-weight: 600; color: var(--ink-2); margin: 0; max-width: 640px; }
+.dark .lead { color: rgba(255, 255, 255, .8); }
+
+/* ---------- the phone (S-02): a 430 × 932 screen, the size of every screenshot, in a 454 × 956 frame at 0.8 */
+.device { position: absolute; left: 1048px; top: 8px; width: 454px; height: 956px; border-radius: 16px; background: #0d0e10; padding: 12px; box-shadow: 0 0 0 2px #3a3d44, 0 0 0 5px #17181c, 0 14px 28px rgba(10, 10, 60, .22); transform-origin: 50% 50%; transform: scale(.8); transition: transform .9s cubic-bezier(.2, .8, .2, 1), left .9s cubic-bezier(.2, .8, .2, 1), opacity .6s; z-index: 5; }
+/* The shadow stays short: the stage clips at its bottom edge, and a long one ended there in a hard line. */
+/* A phone's corner is an exact circle segment, which is the one place the boxy 16 px radius rule (T-05) does not apply. */
+.device, .device .screen { border-radius: 68px / 68px; }
+.device .screen { position: relative; width: 430px; height: 932px; border-radius: 56px; overflow: hidden; background: var(--canvas); }
+.device iframe { width: 430px; height: 932px; border: 0; display: block; }
+.device .island { position: absolute; top: 12px; left: 50%; width: 126px; height: 36px; margin-left: -63px; border-radius: 18px; background: #000; z-index: 3; pointer-events: none; }
+.device .home-ind { position: absolute; bottom: 8px; left: 50%; width: 140px; height: 5px; margin-left: -70px; border-radius: 3px; background: rgba(10, 10, 60, .75); z-index: 3; pointer-events: none; }
+.device span[class^='btn-'] { position: absolute; width: 4px; border-radius: 2px; background: #2a2c31; }
+.device .btn-l1 { left: -6px; top: 196px; height: 64px; }
+.device .btn-l2 { left: -6px; top: 276px; height: 64px; }
+.device .btn-r { right: -6px; top: 236px; height: 100px; }
+.device.away { left: 1700px; opacity: 0; pointer-events: none; }
+.device.center { left: 573px; top: 8px; transform: scale(.82); }
+
+.fr.phone { left: 1300px; top: 330px; width: 200px; height: 434px; border-radius: 30px; }
+.fr.phone img { border-radius: 22px; }
+.fr.tab-p { left: 960px; top: 130px; width: 300px; height: 400px; }
+.fr.tab-l { left: 930px; top: 570px; width: 330px; height: 247px; }
+
+/* ---------- footer */
+.foot { position: absolute; left: 120px; bottom: 26px; display: flex; align-items: center; gap: 22px; z-index: 6; }
+.dots { display: flex; gap: 7px; }
+.dots button { width: 10px; height: 10px; border-radius: 50%; background: rgba(10, 10, 60, .18); transition: all .3s; }
+.dots button.on { width: 30px; border-radius: 5px; background: var(--magenta); }
+.dark .dots button { background: rgba(255, 255, 255, .22); }
+.dark .dots button.on { background: var(--yellow); }
+.nav { display: flex; align-items: center; gap: 10px; }
+.nav .count { font: 800 15px/1 var(--display); color: var(--muted); letter-spacing: .08em; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.nav button { width: 46px; height: 46px; border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px var(--line), 0 4px 0 0 #C9CFE6; font-size: 20px; font-weight: 800; }
+.nav button:active { transform: translateY(3px); box-shadow: inset 0 0 0 1px var(--line), 0 1px 0 0 #C9CFE6; }
+.dark .nav button { background: rgba(255, 255, 255, .08); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
+.dark .nav .count { color: rgba(255, 255, 255, .55); }
+.madeby { font-size: 13px; font-weight: 700; color: var(--muted); }
+.dark .madeby { color: rgba(255, 255, 255, .4); }
+/* The centred phone (the closing slide) stands on the footer's row from x = 614 (573 + the 9% its .82 scale takes off
+   each side). The line beside the dots always ran under it; with 16 dots and the auto-play control the dots do too
+   (they end at x = 727, measured 2026-11-16), and the active one showed through the phone's chin. The arrows, the
+   counter and the bar across the top still say where the deck is. */
+.stage:has(.device.center) :is(.madeby, .dots) { display: none; }
+.progress { position: absolute; left: 0; right: 0; top: 0; height: 4px; z-index: 7; }
+.progress b { display: block; height: 100%; background: var(--yellow); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+
+/* ---------- notes (R-10) */
+.notes { position: fixed; left: 18px; bottom: 18px; width: 440px; max-height: 56vh; overflow: auto; z-index: 50; background: rgba(10, 10, 60, .96); color: #fff; border-radius: 14px; padding: 16px 18px 14px; box-shadow: 0 20px 50px rgba(0, 0, 0, .4); font-size: 15px; line-height: 1.55; }
+.notes-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.notes-head strong { color: var(--yellow); font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; }
+.notes-head span { color: rgba(255, 255, 255, .5); font-size: 12.5px; font-weight: 700; }
+.notes-head button { margin-left: auto; color: #fff; font-size: 22px; line-height: 1; }
+.notes p { margin: 0 0 8px; }
+.notes b { color: #ffd38a; }
+.notes ol { margin: 4px 0 8px; padding-left: 20px; color: rgba(255, 255, 255, .8); }
+.notes small { display: block; margin-top: 8px; color: rgba(255, 255, 255, .4); font-size: 12px; }
+
+/* ---------- top chrome (R-11) */
+.topbrand { position: absolute; z-index: 8; left: 120px; top: 36px; display: flex; align-items: center; gap: 14px; height: 54px; padding: 0 18px 0 8px; border-radius: 14px; background: #fff; box-shadow: 0 1px 2px rgba(10, 10, 60, .06), 0 10px 26px rgba(10, 10, 60, .10); }
+.topbrand img.dm { height: 44px; }
+.topbrand b { font: 800 22px/1 var(--display); color: var(--ink); margin-left: -4px; }
+.topbrand img.bulbi { height: 22px; }
+.topbrand i { width: 1px; height: 26px; background: var(--line); }
+.dark .topbrand { box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+.open-app { position: absolute; z-index: 8; right: 28px; top: 36px; display: inline-flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px; border-radius: 14px; background: #fff; color: var(--ink); text-decoration: none; box-shadow: 0 1px 2px rgba(10, 10, 60, .06), 0 10px 26px rgba(10, 10, 60, .10); transition: transform .15s, box-shadow .2s; }
+.open-app:hover { transform: translateY(-2px); }
+.open-app svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.open-app b { display: block; font: 800 16px/1 var(--display); }
+.open-app .oa-go { color: var(--muted); }
+/* S-04: the sound pill sits top right, where Uygulamayı aç was until the owner took it out (2026-11-15: a
+   presentation, not an app showcase); browsers start audio only after a gesture in the deck. */
+.sound-btn { right: 28px; border: 0; cursor: pointer; font: inherit; text-align: left; }
+.sound-btn.on { box-shadow: inset 0 0 0 2px var(--ok), 0 10px 26px rgba(10, 10, 60, .10); }
+/* the new dock, drawn small on the navigation slide (dossier ch. 11 NR-02) */
+.dockpic { display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; gap: 6px; width: 520px; margin: 40px 0 10px; padding: 12px 10px 14px; border-radius: 16px; background: linear-gradient(#fff, #ECEFFB); box-shadow: 0 5px 0 0 #14107A, 0 14px 26px -6px rgba(10,10,60,.35); }
+.dockpic .dp { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #585B72; }
+.dockpic .dp svg { width: 26px; height: 26px; }
+.dockpic .dp b { font: 800 14px/1 var(--display); }
+.dockpic .dp.logo { position: relative; height: 44px; }
+.dockpic .dp.logo img { position: absolute; bottom: 0; width: 76px; height: 76px; padding: 6px; border-radius: 50%; background: linear-gradient(#fff, #ECEFFB); box-shadow: 0 5px 0 0 #14107A; }
+
+/* ---------- tour slides (R-04) */
+h1.title.tour { font-size: 60px; margin: 40px 0 18px; }
+.feats { list-style: none; margin: 28px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; width: 640px; }
+.feats li { position: relative; padding-left: 22px; font: 700 20px/1.35 var(--body); color: var(--ink); }
+.feats li::before { content: ''; position: absolute; left: 0; top: .5em; width: 8px; height: 8px; border-radius: 2px; background: var(--magenta); }
+.acts { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; width: 700px; }
+.act { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 20px; border-radius: 14px; background: var(--ink); color: #fff; text-align: left; box-shadow: 0 6px 0 0 #000, 0 12px 26px rgba(10, 10, 60, .18); transition: transform .15s, box-shadow .2s; margin-bottom: 6px; }
+.act:hover { transform: translateY(-2px); }
+.act:active { transform: translateY(5px); box-shadow: 0 1px 0 0 #000, 0 6px 14px rgba(10, 10, 60, .18); }
+.act b { font: 800 17px/1.1 var(--display); margin-right: 6px; }
+.act .a-go { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .12); flex: none; }
+.act .a-go svg.i { width: 14px; height: 14px; }
+.act.ghost { background: #fff; color: var(--ink); box-shadow: 0 6px 0 0 #C9CFE6, 0 12px 26px rgba(10, 10, 60, .08); }
+.act.ghost .a-go { background: var(--canvas); }
+.act.upnext { outline: 3px solid var(--magenta); outline-offset: 3px; }
+.act.done .a-go { background: var(--ok); color: var(--ink); }
+.act.done .a-go svg { display: none; }
+.act.done .a-go::after { content: '✓'; font-weight: 900; font-size: 14px; }
+/* closing (S14) */
+.stage .closing { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 70px; pointer-events: none; font: 800 66px/1.05 var(--display); color: #fff; }
+.closing .cl-l { width: 440px; text-align: right; }
+.closing .cl-r { width: 440px; }
+.closing em { font-style: normal; color: var(--yellow); }
+/* The platforms, one line under the closing words (they were a slide until the deck was cut to nine). */
+.closing .cl-plat { display: block; margin-top: 22px; font: 700 19px/1.4 var(--body); letter-spacing: .01em; color: rgba(255, 255, 255, .72); }
+.slide:has(.closing) { padding: 0; }
+.slide:has(.closing) .col { width: auto; }
+
+@media (hover: none) { .act:hover, .open-app:hover { transform: none; } .nav button { width: 54px; height: 54px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* The flow lock (deck/flow.js): while the phone plays a step or a slide comes in, the controls are disabled and say
+   so, rather than taking a press that would skip what the audience is watching. Dimmed, not hidden: the presenter
+   should see the deck is waiting, not that it broke. */
+.nav button:disabled, .dots button:disabled { opacity: .45; cursor: default; transform: none; }
+.act:disabled { cursor: default; transform: none; }
+.act:disabled:not(.playing) { opacity: .55; }
+.act.playing { outline: 3px solid var(--magenta); outline-offset: 3px; }
+.act.playing .a-go svg { display: none; }
+.act.playing .a-go::after { content: ''; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: act-spin .8s linear infinite; }
+@keyframes act-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .act.playing .a-go::after { animation: none; border-right-color: currentColor; opacity: .6; } }
+
+/* ---------- auto-play (deck/flow.js): a control the presenter can always reach, lit while it runs. `.nav .auto-btn`
+   and not `.auto-btn`: it sits in .nav, whose square 46 px (54 px on touch) button rule would clip the label. */
+.nav .auto-btn { display: inline-flex; align-items: center; gap: 9px; width: auto; padding: 0 16px 0 14px; margin-left: 10px; font-size: 15px; }
+.nav .auto-btn b { font: 800 15px/1 var(--display); }
+.auto-i { width: 0; height: 0; border-left: 11px solid currentColor; border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
+.stage.auto .nav .auto-btn { background: var(--magenta); color: #fff; box-shadow: 0 4px 0 0 #8A0A61; }
+.stage.auto .auto-i { width: 11px; height: 13px; border: 0; border-left: 4px solid currentColor; border-right: 4px solid currentColor; }
+.stage.dark.auto .nav .auto-btn { background: var(--yellow); color: var(--ink); box-shadow: 0 4px 0 0 #9C7C00; }

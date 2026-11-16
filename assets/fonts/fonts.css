@@ -1,0 +1,18 @@
+/* The app's own fonts (Doremimi/Assets/Fonts, SIL OFL; licences beside them). Not subset: the music glyphs live in
+   U+1D100–1D1FF, which a Latin subset would drop (dossier ch. 10 AS-10). */
+@font-face { font-family: 'Baloo 2'; src: url('Baloo2-Bold.ttf') format('truetype'); font-weight: 700; font-display: block; }
+@font-face { font-family: 'Baloo 2'; src: url('Baloo2-ExtraBold.ttf') format('truetype'); font-weight: 800 900; font-display: block; }
+@font-face { font-family: 'Nunito'; src: url('Nunito-Medium.ttf') format('truetype'); font-weight: 400 500; font-display: block; }
+/* The app asks for SemiBold in places and ships no 600 file (ch. 05 §16.12). 600 maps to Bold here, as CSS matching
+   would pick anyway; which weight Avalonia substitutes is UNVERIFIED. */
+@font-face { font-family: 'Nunito'; src: url('Nunito-Bold.ttf') format('truetype'); font-weight: 600 700; font-display: block; }
+@font-face { font-family: 'Nunito'; src: url('Nunito-ExtraBold.ttf') format('truetype'); font-weight: 800; font-display: block; }
+@font-face { font-family: 'Nunito'; src: url('Nunito-Black.ttf') format('truetype'); font-weight: 900; font-display: block; }
+@font-face { font-family: 'Noto Music'; src: url('NotoMusic-Regular.ttf') format('truetype'); font-weight: 400; font-display: block; }
+/* Inter, the app register (dossier ch. 13 §2): the same four files as the app (Doremimi/Assets/Fonts, carved from
+   Avalonia.Fonts.Inter and subset to Nunito's cmap). 800/900 map to Bold: the app ships no heavier Inter, and a rule
+   that still asks for 800 outside the game must not get a synthesized faux-black. */
+@font-face { font-family: 'Inter'; src: url('Inter-Regular.ttf') format('truetype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Inter'; src: url('Inter-Medium.ttf') format('truetype'); font-weight: 500; font-display: block; }
+@font-face { font-family: 'Inter'; src: url('Inter-SemiBold.ttf') format('truetype'); font-weight: 600; font-display: block; }
+@font-face { font-family: 'Inter'; src: url('Inter-Bold.ttf') format('truetype'); font-weight: 700 900; font-display: block; }

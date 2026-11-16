@@ -120,7 +120,7 @@ mutatef "Öğren opens on a step of the script"    deck/slides.js     "s/id: 'og
 mutatef "Keman is a step of the script again"    deck/slides.js     "s/\['Keman', batch\(go\('#\/ogren\/calgilar\?aile=yayli'\), tap\('\[data-push=\"#\/calgi\/keman\"\]'\)\)\]/['Keman', act('goto', { step: 11, play: true })]/"
 mutatef "a scripted step behind its own go"      deck/slides.js     "s/\['Serbest çal', batch\(go\('#\/cal'\), act\('keys\.play', [^\n]*\n/['Serbest çal', batch(go('#\/cal'), act('goto', { step: 12, play: true }))]],\n/"
 mutatef "Çal told before Öğren"                  deck/slides.js     "s/id: 'ogren'/id: 'TMP'/; s/id: 'cal'/id: 'ogren'/; s/id: 'TMP'/id: 'cal'/"
-mutatef "the ladder bullet is back"              deck/slides.js     "s/'Bilemezse harf kutuları, sonra dört seçenek gelir'/\"Zorlandıkça Yaz → Seç → Çevir'e iner, bildikçe çıkar\"/"
+mutatef "the ladder bullet is back"              deck/slides.js     "s/'Takılırsa önce harfler, sonra dört seçenek yardıma gelir'/\"Zorlandıkça Yaz → Seç → Çevir'e iner, bildikçe çıkar\"/"
 mutatef "the script picks a level"               app/data/script.js "s/origin: 'kesfet', intro: true/origin: 'kesfet', level: 'yaz', intro: true/"
 # the demo against the app's own files (tests/app-parity.test.mjs)
 mutatef "CONTROL: family comment only"           app/data/content.js 's/Which family wears which is the app.s/Which family wears which colour is the app\x27s/'
@@ -238,7 +238,7 @@ mutatef "deck: a tenth slide"                    deck/slides.js     "s/(  \{\n  
 mutatef "deck: a third step on a slide"          deck/slides.js     "s/act\('gate\.type'\)\)\]\],/act('gate.type'))], ['Ayarlar', go('#\/ayarlar')]],/"
 mutatef "deck: two buttons with one label"       deck/slides.js     "s/\[\"Ebeveyn PIN'i\", batch/['Kim oynuyor?', batch/"
 mutatef "deck: a step presses before it opens its screen" deck/slides.js "s/\['Serbest çal', batch\(go\('#\/cal'\), (act\('keys\.play', \{ keys: \[[^\]]*\] \}\))\)\]/['Serbest çal', \$1]/"
-mutatef "deck: a slide opens a page the phone lacks" deck/slides.js "s/id: 'aile', label: 'Aile ve içerik', theme: 'light', phone: go\('#\/profil'\)/id: 'aile', label: 'Aile ve içerik', theme: 'light', phone: go('#\/aile')/"
+mutatef "deck: a slide opens a page the phone lacks" deck/slides.js "s/id: 'aile', label: 'Aile', theme: 'light', phone: go\('#\/profil'\)/id: 'aile', label: 'Aile', theme: 'light', phone: go('#\/aile')/"
 mutatef "deck: a step names an act the phone lacks" deck/slides.js  "s/act\('switcher\.open'\)/act('switcher.show')/"
 mutatef "deck: the phone loses the tap act"      app/app.js         "s/  'tap': async m => \{/  'press': async m => {/"
 # the Oyna slide: the categories, then the game opened and nothing after it
@@ -276,7 +276,7 @@ mutatef "deck: the deck closes on Oyna"          deck/slides.js     "s/layout: '
 mutatef "deck: XP on a slide"                    deck/slides.js     "s/Oyna, Öğren ve Çal sıradaki üç slaytta\./Oyna, Öğren ve Çal sıradaki üç slaytta. Her tur XP kazandırır./"
 mutatef "deck: Seviye 3 on a slide"              deck/slides.js     "s/Oyna, Öğren ve Çal sıradaki üç slaytta\./Oyna, Öğren ve Çal sıradaki üç slaytta. Çocuk Seviye 3 oldu./"
 mutatef "deck: the closing line drops a platform" deck/slides.js    's/Mac · Windows · tarayıcı/Mac · tarayıcı/'
-mutatef "deck: a slide without presenter notes"  deck/slides.js     "s/    notes: \`<p>Öğren'in dört sekmesi:[^\n]*\n/    notes: '',\n/"
+mutatef "deck: a slide without presenter notes"  deck/slides.js     "s/    notes: \`<p>Öğren'in üç sekmesi:[^\n]*\n/    notes: '',\n/"
 mutatef "deck: a tour title grows into a sentence" deck/slides.js   "s/step\('Çal: piyano ve şarkılar'/step('Çal: piyano, şarkılar, karaoke sözleri ve Melodim, hepsi bir arada'/"
 # the deck: the song slide (tests/deck.test.mjs; owner, 2026-11-16)
 mutatef "deck CONTROL: the song slide's comment" deck/slides.js     's/A song of its own \(owner, 2026-11-16\)/A song with a slide of its own (owner, 2026-11-16)/'
@@ -299,7 +299,7 @@ mutatef "deck: the timeline says an 80-book series" deck/foundation.js 's/text: 
 mutatef "deck: the report of plans drawn as done" deck/foundation.js "s/\{ date: '2021-12-26', text: '“Dore Mimi CSO’da”, CSO Ada Ankara' \}/{ date: '2021-02-19', text: 'CSO ile yeni konserler' }/"
 mutatef "deck: a number changed in the snapshot" deck/foundation-facts.js 's/"value": 74,/"value": 80,/'
 mutatef "deck: a year typed into the notes"      deck/foundation.js  "s/<p>Slaytta yok: yayınevi/<p>Vakıf 2018’de kuruldu. Slaytta yok: yayınevi/"
-mutatef "deck: Harika on a slide"                deck/foundation.js  "s/\`Bir kitap serisi, /\`Harika bir kitap serisi, /"
+mutatef "deck: Harika on a slide"                deck/foundation.js  "s/\`Bir YouTube kanalı, /\`Harika bir YouTube kanalı, /"
 mutatef "deck: thanks in capitals"               deck/foundation.js  "s/Dore Mimi, <em>bugüne kadar<\/em>/TEŞEKKÜRLER, <em>bugüne kadar<\/em>/"
 mutatef "deck: MEB onaylı on a card"             deck/foundation.js  "s/okul öncesi ve 1\. sınıf için\.<\/span>/okul öncesi ve 1. sınıf için, MEB onaylı.<\/span>/"
 mutatef "deck: the section moved after the tour" deck/slides.js      "s/(  \/\/ What the foundation has done, before the app is shown[^\n]*\n  \.\.\.FOUNDATION_SLIDES,\n)((?:.*\n)*?)(  \{\n    id: 'kapanis')/\$2\$1\$3/"
@@ -322,9 +322,9 @@ mutate  "clock: minutes before hours"            clock.js           's/two\(date
 mutatef "clock: formatted in the app's language again" app/app.js   "s/deviceClock\(new Date\(\)\)/new Date().toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })/"
 mutatef "clock: Intl in the app's language"      app/app.js         "s/deviceClock\(new Date\(\)\)/new Intl.DateTimeFormat(lang, { timeStyle: 'short' }).format(new Date())/"
 # the deck's words: one name for a thing, the phone's; none of our own words; typed numbers held to the phone (tests/deck.test.mjs)
-mutatef "copy CONTROL: benign wording"           deck/slides.js     's/Sorularınızı ve değiştirmek istediklerinizi dinleyelim\./Sorularınızı ve değiştirmek istediklerinizi dinlemek isteriz./'
-mutatef "copy: Testçiler back in a note"         deck/slides.js     's/Her sayfaya tek bir yerden gidilir\./Testçiler dolaşmayı karışık bulmuştu./'
-mutatef "copy: Keşfet named in a note"           deck/slides.js     's/Uygulama Oyna sekmesiyle açılır;/Keşfet artık Oyna;/'
+mutatef "copy CONTROL: benign wording"           deck/slides.js     's/sorularınızı ve değiştirmek istediklerinizi dinleyelim\./sorularınızı ve değiştirmek istediklerinizi dinlemek isteriz./'
+mutatef "copy: Testçiler back in a note"         deck/slides.js     's/Vakıfla ilgili her şey logonun arkasında, tek yerde\./Testçiler dolaşmayı karışık bulmuştu./'
+mutatef "copy: Keşfet named in a note"           deck/slides.js     "s/Uygulama doğrudan Oyna'da açılır;/Keşfet artık Oyna;/"
 mutatef "copy: Avalonia in the closing notes"    deck/slides.js     's/<b>Aynı uygulama her cihazda:<\/b>/<b>Tek kod (Avalonia):<\/b>/'
 mutatef "copy: the piano is a klavye again"      deck/slides.js     "s/step\('Şarkı: Keman, piyanoda',/step('Şarkı: Keman, klavyede',/"
 mutatef "copy: the slide says 11 categories"     deck/slides.js     's/altında 12 kategori/altında 11 kategori/'
@@ -333,3 +333,22 @@ mutatef "copy: 40 instruments on Öğren"          deck/slides.js     "s/'41 ça
 mutatef "copy: the gate locks for a minute"      deck/slides.js     's/üç yanlışta 30 saniye kilitlenir/üç yanlışta 60 saniye kilitlenir/'
 mutatef "copy: the phone's gate locks after five" app/app.js        's/if \(gate\.wrong >= 3\) \{ gate\.lockedUntil/if (gate.wrong >= 5) { gate.lockedUntil/'
 mutatef "copy: Çal says 40 songs"                deck/slides.js     's/altında 41 şarkı\./altında 40 şarkı./'
+# the revision of 2026-11-16 night: Değerler on the Doremimi tab, the orchestra once, nothing about the content panel
+mutatef "rev CONTROL: a note reworded"           deck/slides.js     's/Bilerek yanlış yazın:/Önce bilerek yanlış yazın:/'
+mutatef "rev: Değerler is an Öğren tab again"     app/lib/nav.js     "s/\{ key: 'aileler' \}\];/{ key: 'aileler' }, { key: 'degerler' }];/"
+mutatef "rev: the hub row leads to Öğren again"   app/data/hub.js    "s/\{ push: '#\/degerler' \}/{ go: '#\/ogren\/degerler' }/"
+mutatef "rev: the old address is a dead link"     app/lib/nav.js     "s/, 'ogren\/degerler': '#\/degerler' \};/ };/"
+mutatef "rev: the page loses its home"            app/lib/nav.js     "s/\n  degerler: 'doremimi' \};/ };/"
+mutatef "rev: the phone does not draw the page"   app/app.js         "s/  degerler: \{ title: 'hub\.degerler', html: valuesPage \},\n//"
+mutatef "rev: a tab label left in English"        app/i18n/ui.js     "s/'ogren\.aileler': 'Families'/'ogren.aileler': 'Families', 'ogren.degerler': 'Values'/"
+mutatef "rev: the Öğren slide claims Değerler"    deck/slides.js     "s/'Üç bölüm: İşaretler, Çalgılar, Aileler\. /'Dört bölüm: İşaretler, Çalgılar, Aileler, Değerler. /"
+mutatef "rev: the Öğren slide forgets a tab"      deck/slides.js     "s/'Üç bölüm: İşaretler, Çalgılar, Aileler\. /'Üç bölüm: İşaretler, Çalgılar. /"
+mutatef "rev: the Excel bullet is back"           deck/slides.js     's/.Kardeşler aynı telefonda, herkes kendi profilinde./"İşaret, soru, çalgı, video: Excel tabloları"/' 
+mutatef "rev: the panel is back in the notes"     deck/slides.js     "s/(yalnızca bu demoya ait\)\.<\/li><\/ol>)/\$1<p>Vakıf ekibi içerik panelinden düzenler.<\/p>/"
+mutatef "rev: the lead says the foundation edits" deck/slides.js     's/ebeveyn PIN.i ister\.",/ebeveyn PIN\x27i ister. İçeriği vakıf düzenler.",/' 
+mutatef "rev: the orchestra named in the lead too" deck/foundation.js 's/senfoni orkestrasıyla konserler\./\${FACTS.concerts.orchestraTr} ile konserler./'
+mutatef "rev: CSO back on the concerts card"      deck/foundation.js  's/<b>Eğitim konserleri<\/b>/<b>Dore Mimi CSO’da<\/b>/'
+mutatef "rev: a dated fact dropped from the slide" deck/foundation.js "s/const ORCHESTRA = \['2020-11-18', /const ORCHESTRA = [/"
+mutatef "rev: today claims a number"              deck/foundation.js  's/Önümüzde yeni yollar, sayısız fırsat var\./Önümüzde 5 yeni konser var./'
+mutatef "rev: today is not on the slide"          deck/foundation.js  's/<li class="fnd-now">.*<\/li><\/ol>`;/<\/ol>`;/' 
+

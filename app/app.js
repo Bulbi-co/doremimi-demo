@@ -565,7 +565,7 @@ function songPage(slugName, melodim = false) {
     <div class="two-btn"><button class="chunky primary large" data-song="toggle" id="song-toggle"><span class="face">${icon('IconPlay')}<span>${esc(t('song.play'))}</span></span></button>
       <button class="chunky white large sq-btn" data-song="stop" aria-label="${esc(t('song.stop'))}"><span class="face"><i class="stopsq"></i></span></button></div>
     ${lyric ? `<button class="chunky white" data-push="#/sozler/${slug(lyric.instrument)}"><span class="face">${icon('IconMic')}${esc(t('song.lyrics'))}</span></button>` : ''}
-    <button class="chunky yellow" data-play="${P.concept ?? 'karisik'}" data-origin="cal"><span class="face">${icon('IconCards')}${esc(P.concept ? t('song.game') : t('song.mixed'))}</span></button>
+    ${/* No way into the game from a song (owner, 2026-11-16): the round belongs to Oyna. */''}
   </div>`;
 }
 async function setupSong(slugName, melodim = false) {
@@ -1705,7 +1705,6 @@ const ACTS = {
   /** A page, then a tap on it as a child would (Öğren's family card, an instrument in the grid). */
   'open': async m => { goNow(m.hash); await sleep(300); if (m.tap) await pressDo(m.tap); },
   /** Çal: a song's "Bu çalgıyla oyna", which opens its round at the choices. */
-  'song.game': async m => { goNow(m.hash); await sleep(300); await pressDo('[data-play][data-origin="cal"]'); },
   'results.scroll': async () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); await sleep(REDUCED ? 0 : 700); },
   /** A sequence with a visible pause between presses (0.8–1.2 s, W-03), for slides that play several steps at once. */
   'seq': async m => { for (const step of m.steps) { await run({ type: 'act', ...step }); await sleep(m.gap ?? 900); } },

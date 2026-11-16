@@ -97,6 +97,19 @@ export const SLIDES = [
     notes: `<p>Nota çalan her şey burada.</p><ol><li><b>Piyano</b>: çalınanlar Melodim'e eklenir.</li></ol><p>41 çalgının her birinin şarkısı var; karaoke satırı ilerler, tuşlar yanar. Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı.</p>`,
   },
   {
+    /*
+     * A song of its own (owner, 2026-11-16): the deck said every instrument's song plays on the app's keyboard but
+     * never showed one. Keman's song plays here, its note names moving on the karaoke line and its notes lighting the keys;
+     * the second step opens a lyric sheet (Gitar's: Keman has no lyric sheet, its karaoke line carries note names).
+     */
+    id: 'sarki', label: 'Şarkı', theme: 'light', phone: go('#/sarki/keman'),
+    html: step("Keman'ın şarkısı, uygulamanın klavyesinde",
+      'Her çalgının kendi şarkısı var: notalar klavyede sırayla yanar, nota adları karaoke satırında ilerler.',
+      ['41 şarkının hepsi aynı klavyede, nota nota çalar', 'Şarkı sözleri ayrı bir sayfada da okunur']),
+    acts: [['Keman şarkısını çal', batch(go('#/sarki/keman'), act('song.play'))], ['Gitar: şarkı sözleri', go('#/sozler/gitar')]],
+    notes: `<p>Vakfın verdiği notalar uygulamanın kendi klavyesinde çalar: ayrı bir ses dosyası yok, her nota tek tek çalınır.</p><ol><li><b>Keman şarkısını çal</b>: karaoke satırında çalınan notanın adı vurgulanır, klavyede o an çalan tuş yanar. Önce sağ üstten <b>Sesi aç</b>'a basılmış olmalı.</li><li><b>Şarkı sözleri</b>: on çalgının sözleri ayrı bir sayfada okunur; burada Gitar'ınki.</li></ol><p>Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı. Sonraki slayta geçince şarkı durur.</p>`,
+  },
+  {
     id: 'aile', label: 'Aile ve içerik', theme: 'light', phone: go('#/profil'),
     html: step('Aile, kilit, içerik',
       "Her çocuğa ayrı profil. Dışarı giden her bağlantı ebeveyn PIN'i ister. İçeriği vakıf düzenler.",

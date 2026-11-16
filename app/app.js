@@ -20,6 +20,7 @@ import { pageAccentOf } from './lib/canvas.js';
 import { icon } from './lib/icons.js';
 import { TABS, OGREN_TABS, resolve } from './lib/nav.js';
 import { pick as pickDaily } from './lib/daily.js';
+import { deviceClock } from './lib/clock.js';
 // mixHex: the instrument page's header has called it since 1ff003b without the import, so every instrument page threw.
 import { accentSet, INK_SET, darken, edge as edgeOf, mix as mixHex } from './lib/accent.js';
 import { normalise, isLetterOrDigit } from './lib/answers.js';
@@ -95,7 +96,7 @@ shellBg.start();
 $('#dock').setAttribute('aria-label', t('dock.aria'));
 
 if (EMBED) {
-  const tick = () => { $('#clock').textContent = new Date().toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }); };
+  const tick = () => { $('#clock').textContent = deviceClock(new Date()); };
   tick(); setInterval(tick, 10_000);
 }
 

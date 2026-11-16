@@ -101,6 +101,7 @@ app/lib/                           the app's rules ported to JavaScript:
   music.js                         PianoKeys synthesis, sequencer, renderer, karaoke, ButtonMelody
   nav.js                           the dock and the routes (ch. 11), as data and one pure function
   backdrop.js icons.js rng.js      the 2.5D note canvas, the app's icons, seeded random
+  clock.js                         the fake status bar's time: the device's, 24-hour, whatever Dil says (tests/clock.test.mjs)
 app/data/content.js  site.js       content copied from the app's C# (signs, questions, directory, people, texts)
 app/data/localise.js              the content in tr, en or fr (ch. 14 §11); app/i18n/ holds the strings and keyboards
 app/data/hub.js                    the logo's page (ch. 14 §6), as data

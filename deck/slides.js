@@ -2,7 +2,7 @@
  * The deck's slides as data: copy, the phone message each slide sends when it opens, and its "canlı göster" steps.
  * The copy began as dossier ch. 10 part 5 (PROPOSED, the owner's to change) and was cut to a short deck at the owner's
  * request (2026-11-13: no step counter, no icon tiles, nothing that is there only to be shown). Ch. 14 §9 re-tells
- * it: Keşfet is the game → a Keşfet round, written → Öğren, the Hazırlan sheet and a card turned over → Çal, a round
+ * it: Oyna is the game (Keşfet until ch. 14 §10) → an Oyna round, written → Öğren, read, not played → Çal, a round
  * at the choices → results → family and the foundation.
  *
  * Its own module, apart from sunum.js (which draws and drives it), so tests/deck.test.mjs can import the slides and
@@ -26,7 +26,7 @@ export const batch = (...msgs) => ({ type: 'batch', msgs });
 export const at = step => ({ type: 'act', name: 'goto', step });           // the phone's scripted story, app/data/script.js
 export const play = step => ({ type: 'act', name: 'goto', step, play: true });
 // The new dock as a small picture for the navigation slide (dossier ch. 11 NR-02).
-const dockPic = `<div class="dockpic">${[['IconHome', 'Keşfet'], ['IconBook', 'Öğren'], null, ['IconEye', 'İzle'], ['IconNote', 'Çal']].map(t => t
+const dockPic = `<div class="dockpic">${[['IconCards', 'Oyna'], ['IconBook', 'Öğren'], null, ['IconEye', 'İzle'], ['IconNote', 'Çal']].map(t => t
   ? `<span class="dp">${icon(t[0])}<b>${t[1]}</b></span>` : '<span class="dp logo"><img src="assets/brand/logo.png" alt="Doremimi"></span>').join('')}</div>`;
 
 /*
@@ -46,35 +46,35 @@ export const SLIDES = [
   {
     id: 'gezinme', label: 'Gezinme', theme: 'light', phone: go('#/'),
     html: step('Dört sekme, ortada vakıf',
-      'Keşfet · Öğren · İzle · Çal. Ortadaki logo vakfın sayfasını açar; çocuğun profili sağ üstte.',
+      'Oyna · Öğren · İzle · Çal. Ortadaki logo vakfın sayfasını açar; çocuğun profili sağ üstte.',
       [],
       dockPic),
     acts: [['Logoya dokun', go('#/doremimi')], ['Öğren', go('#/ogren/isaretler')]],
-    notes: `<p>Vakıfla konuştuğumuz düzen: <b>Keşfet · Öğren · logo · İzle · Çal.</b> Testçiler uygulamada dolaşmayı karışık bulmuştu; her yer artık tek bir yerden açılır.</p><ol><li><b>Logo</b>: vakfın tek sayfası. Faaliyetler, Katıl, Tanış, Bize ulaş ve Uygulama; her bağlantı bir kez.</li><li><b>Öğren</b>: altı sekme. İşaretler, Çalgılar, Aileler, Bilmeceler, Değerler, Notalar.</li></ol><p>İzle'de videolar, Çal'da nota çalan her şey.</p>`,
+    notes: `<p>Vakıfla konuştuğumuz düzen: <b>Oyna · Öğren · logo · İzle · Çal.</b> Testçiler uygulamada dolaşmayı karışık bulmuştu; her yer artık tek bir yerden açılır.</p><ol><li><b>Logo</b>: Dore Mimi Vakfı. En üstte duyurular döner; altında Faaliyetler, Katıl, Tanış, Bize ulaş ve Uygulama, her bağlantı bir kez.</li><li><b>Öğren</b>: yalnızca bilgi, dört sekme. İşaretler, Çalgılar, Aileler, Değerler.</li></ol><p>İzle'de bilmeceler dahil bütün videolar, Çal'da nota çalan her şey.</p>`,
   },
   {
-    id: 'kesfet', label: 'Keşfet', theme: 'light', phone: go('#/'),
-    html: step('Keşfet: oyunun kendisi',
-      'Açılış ekranı oyundur: ortada büyük OYNA, altında her konu kendi renginde bir kart. Üstte vakfın duyuruları döner.',
+    id: 'kesfet', label: 'Oyna', theme: 'light', phone: go('#/'),
+    html: step('Oyna: oyunun kendisi',
+      'Açılış ekranı oyundur: ortada büyük Şimdi Oyna, altında her konu kendi renginde bir kart.',
       ['12 kategori tek ızgarada: 7 işaret, 5 çalgı ailesi', 'İlk oyun çocuğun seviyesini sorar']),
-    acts: [['Kategoriler', batch(go('#/'), act('scroll', { to: '.kats-sec' }))], ['OYNA', play(0)]],
-    notes: `<p>Testçilere göre Keşfet oyunu içermiyor gibiydi. Artık Keşfet'in kendisi oyun.</p><ol><li><b>OYNA</b>: yuvarlak düğmenin içinde küçük bir kart döner, dört cevap çubuğu belirir, harfler yazılır. Oyunun yollarını isim vermeden gösterir. Dokununca tur her zaman yazarak başlar.</li><li><b>Kategoriler</b>: her işaret ve her çalgı ailesi kendi renginde bir kart, kaç kartı olduğu üstünde. Oynandıkça ilerleme çubuğu çıkar. Ayrı bir “Tekrar” satırı yok: tekrarı gelen kartlar her turda önce gelir.</li><li><b>OYNA</b> (canlı): ilk oyun seviyeyi sorar: Başlangıç, Orta, İleri. Sorular bu seviyeye göre gelir; Ayarlar › Zorluk'tan değişir.</li></ol><p>Bugünün kartı en altta, eskisi gibi.</p>`,
+    acts: [['Kategoriler', batch(go('#/'), act('scroll', { to: '.kats-sec' }))], ['Şimdi Oyna', play(0)]],
+    notes: `<p>Testçilere göre Keşfet oyunu içermiyor gibiydi. Artık sekmenin adı Oyna ve kendisi oyun; duyurular logonun sekmesine taşındı.</p><ol><li><b>Şimdi Oyna</b>: yuvarlak düğmenin içinde küçük bir kart döner, dört cevap çubuğu belirir, harfler yazılır. Oyunun yollarını isim vermeden gösterir. Dokununca tur her zaman yazarak başlar.</li><li><b>Kategoriler</b>: her işaret ve her çalgı ailesi kendi renginde bir kart, kaç kartı olduğu üstünde. Oynandıkça ilerleme çubuğu çıkar. Ayrı bir “Tekrar” satırı yok: tekrarı gelen kartlar her turda önce gelir.</li><li><b>Şimdi Oyna</b> (canlı): ilk oyun seviyeyi sorar: Başlangıç, Orta, İleri. Sorular bu seviyeye göre gelir; Ayarlar › Zorluk'tan değişir.</li></ol><p>Bugünün kartı en altta, eskisi gibi.</p>`,
   },
   {
     id: 'oyun', label: 'Oyun', theme: 'light', phone: at(1),
-    html: step('Keşfet turu: cevabı yazar',
+    html: step('Oyna turu: cevabı yazar',
       'Çocuk kartı görür, cevabı kendisi yazar. Bilemezse harf kutuları, sonra dört seçenek gelir; yanlışta kart dönüp anlatır.',
       ['Ancak üst üste dört zorlanmada kolaylaşır', 'Yanlış cevap hiçbir şey kaybettirmez']),
     acts: [['Yanlış yaz: “sol”', play(2)], ['Seçenekler, bilgi kartı', play(6)]],
-    notes: `<p>Keşfet'ten (OYNA, bir kategori, oyun banner'ı) girilen her tur <b>yazarak</b> başlar; asıl beceri cevabı yazmak. Seviye sorusunda Başlangıç seçildi.</p><ol><li><b>Yanlış yaz</b>: “sol” olmadı; cevap harf kutularına döner, kartın renginde gelen harfler yardım eder.</li><li><b>Seçenekler</b>: iki yazma denemesi de yanlış olunca dört seçenek gelir; yanlış seçimde kart dönüp anlatır.</li></ol><p>Ekranda seviye adı ya da basamak şeridi yok. Oyun ancak üst üste dört zorlanmada bir adım kolaylaşır; çocuk bunu yalnızca arka planın değişen renginden görür. Laptop klavyesiyle de yazabilirsiniz.</p>`,
+    notes: `<p>Oyna'dan (Şimdi Oyna, bir kategori, oyun banner'ı) girilen her tur <b>yazarak</b> başlar; asıl beceri cevabı yazmak. Seviye sorusunda Başlangıç seçildi.</p><ol><li><b>Yanlış yaz</b>: “sol” olmadı; cevap harf kutularına döner, kartın renginde gelen harfler yardım eder.</li><li><b>Seçenekler</b>: iki yazma denemesi de yanlış olunca dört seçenek gelir; yanlış seçimde kart dönüp anlatır.</li></ol><p>Ekranda seviye adı ya da basamak şeridi yok. Oyun ancak üst üste dört zorlanmada bir adım kolaylaşır; çocuk bunu yalnızca arka planın değişen renginden görür. Laptop klavyesiyle de yazabilirsiniz.</p>`,
   },
   {
     id: 'ogren', label: 'Öğren', theme: 'light', phone: at(9),
-    html: step('Öğren: hazırlan ve çevir',
-      'Bir aileden ya da işaretten oyuna girince önce kaç kart olduğu söylenir. Kartlar çevrilerek okunur; burada çocuk öğreniyor.',
-      ['Yalnızca o kategorinin kartları gelir', 'Burada oyun zorlaşmaz da kolaylaşmaz da']),
-    acts: [['Yaylı Çalgılar', play(10)], ['Başla: kartı çevir', play(11)]],
-    notes: `<p>Öğren'in altı sekmesi: <b>İşaretler, Çalgılar, Aileler, Bilmeceler, Değerler, Notalar.</b> Çalgılar artık fotoğraflı bir ızgara, üstünde aile süzgeci.</p><ol><li><b>Yaylı Çalgılar</b>: “Hazırlan” sayfası ailenin renginde açılır ve gerçek sayıyı söyler: “Bu kategoride 7 kart var”. Bir işaretin bugün tek kartı var; o da “1 kart” der.</li><li><b>Başla</b>: kart çevrilir, okunur, “Bildim” ya da “Bilemedim”.</li></ol><p>Değerler sekmesi vakfın Müzikle Değerler Eğitimi dizisini anlatır; uygulamada henüz olmayan parçalar “Hazırlanıyor” der.</p>`,
+    html: step('Öğren: yalnızca bilgi',
+      'İşaretler, çalgılar, aileler ve değerler: çocuk burada okur ve bakar, oyun başlamaz. Kartı çevirip okumak, oyunda zorlandığında yardım olarak gelir.',
+      ['Çalgılar fotoğraflı bir ızgara, aile süzgeciyle', 'Bir aileye dokununca o ailenin çalgıları']),
+    acts: [['Yaylı Çalgılar', play(10)], ['Keman', play(11)]],
+    notes: `<p>Öğren'in dört sekmesi: <b>İşaretler, Çalgılar, Aileler, Değerler.</b> Burada oynatma düğmesi yok: Öğren bilgi içindir. Bilmeceler İzle'de, notalar Çal'da.</p><ol><li><b>Yaylı Çalgılar</b>: aile kartına dokununca Çalgılar o ailenin süzgeciyle açılır; her çalgı fotoğrafıyla.</li><li><b>Keman</b>: çalgının sayfası, videoları ve şarkısı. Kartları çevirip okumak artık yalnızca oyunda, çocuk üst üste zorlandığında yardım olarak gelir.</li></ol><p>Değerler sekmesi vakfın Müzikle Değerler Eğitimi dizisini anlatır; uygulamada henüz olmayan parçalar “Hazırlanıyor” der.</p>`,
   },
   {
     id: 'cal', label: 'Çal', theme: 'light', phone: at(12),

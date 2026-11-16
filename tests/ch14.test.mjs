@@ -1,35 +1,40 @@
-// Guards for dossier ch. 14 on the demo phone: Keşfet is the game, the way in decides how a round is played, every
-// question has a difficulty under the child's level, Öğren has six tabs and the Hazırlan sheet, and the hub leads
-// everywhere once. They import the modules the phone runs (lib/modes.js, lib/ladder.js, lib/round.js, data/*). Where
-// a rule lives only in app.js, which needs a browser, they read app.js's source for the one line that carries it;
-// tools/ch14-e2e.mjs checks the same rules in the running phone.
+// Guards for dossier ch. 14 on the demo phone, as revised (§10): Oyna is the game, the way in decides how a round is
+// played, every question has a difficulty under the child's level, Öğren is information only with four tabs, the
+// banner carousel opens the Dore Mimi Vakfı tab, and the hub leads everywhere once. They import the modules the phone
+// runs (lib/modes.js, lib/ladder.js, lib/round.js, data/*, i18n/*). Where a rule lives only in app.js, which needs a
+// browser, they read app.js's source for the one line that carries it; tools/ch14-e2e.mjs checks the running phone.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { RoundOrigin, ORIGIN_RULES, ladderFor, dealRound, byCeiling, prepCount, kesfetCategories, DIFFICULTIES, rankOf } from '../app/lib/modes.js';
+import { RoundOrigin, ORIGIN_RULES, ORIGIN_OF_LEVEL, ladderFor, dealRound, byCeiling, kesfetCategories, DIFFICULTIES, rankOf } from '../app/lib/modes.js';
 import { Level, Move } from '../app/lib/ladder.js';
 import { LearningRound, QuestionDeck, Stage } from '../app/lib/round.js';
 import { Mastery, newlyEarned, stars } from '../app/lib/progress.js';
 import { seeded } from '../app/lib/rng.js';
 import { QUESTIONS, LEARNING, SUNUM_DECK, BADGES, CONCEPTS, FAMILIES, SIGN_CARDS, SIGN_CATEGORIES, INTRO_STEPS, LEVEL_QUESTION } from '../app/data/content.js';
 import { GROUP_COLORS, DIFFICULTY } from '../app/data/site.js';
-import { HUB, HUB_HEADER, hubDestinations } from '../app/data/hub.js';
+import { HUB, BANNER_GO, FAMILY_GROUP, hubDestinations } from '../app/data/hub.js';
 import { OGREN_TABS, TABS, resolve, PAGE_HOME } from '../app/lib/nav.js';
+import { UI } from '../app/i18n/ui.js';
 import { SCRIPT } from '../app/data/script.js';
 
 const app = readFileSync(new URL('../app/app.js', import.meta.url), 'utf8');
+const VIDEOS = JSON.parse(readFileSync(new URL('../app/data/site/videos.json', import.meta.url), 'utf8'));
 const deck = new QuestionDeck(QUESTIONS);
 /** The source between two markers, so a guard reads one function, not the whole file. */
 const slice = (from, to) => { const i = app.indexOf(from); assert.ok(i >= 0, `no ${from}`); const j = app.indexOf(to, i + from.length); assert.ok(j > i, `no ${to}`); return app.slice(i, j); };
+/** String content only: comments go, so a note to the next developer that names a level is not a failure. */
+const code = src => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
 
 // ───────────────────────── §3 the way in decides
-test('each way in starts where ch. 14 says: Keşfet at Yaz and moving, Öğren at Çevir and Çal at Seç, both fixed', () => {
-  assert.deepEqual(Object.values(RoundOrigin).sort(), ['cal', 'kesfet', 'ogren']);
-  const k = ladderFor(RoundOrigin.Kesfet, LEARNING.ladder), o = ladderFor(RoundOrigin.Ogren, LEARNING.ladder), c = ladderFor(RoundOrigin.Cal, LEARNING.ladder);
+test('each way in starts where ch. 14 says: Oyna at Yaz and moving, Çal at Seç and fixed; Öğren has no round (§10)', () => {
+  assert.deepEqual(Object.values(RoundOrigin).sort(), ['cal', 'kesfet']);
+  const k = ladderFor(RoundOrigin.Kesfet, LEARNING.ladder), c = ladderFor(RoundOrigin.Cal, LEARNING.ladder);
   assert.deepEqual([k.level, k.fixed], [Level.Yaz, false]);
-  assert.deepEqual([o.level, o.fixed], [Level.Cevir, true]);
   assert.deepEqual([c.level, c.fixed], [Level.Sec, true]);
-  assert.throws(() => ladderFor('oyunlar', LEARNING.ladder), /Unknown round origin/);
+  assert.throws(() => ladderFor('ogren', LEARNING.ladder), /Unknown round origin/);
+  // an old ?seviye=cevir link lands on Oyna's round, which reaches the turned cards when the child struggles
+  assert.equal(ORIGIN_OF_LEVEL.cevir, RoundOrigin.Kesfet);
 });
 
 test('Keşfet starts at Yaz whatever the saved ladder: the round is built from the origin alone', () => {
@@ -67,38 +72,39 @@ test('Keşfet’s ladder still falls and climbs, only slower: 4 struggles to Se�
   assert.equal(round.ladder.level, Level.Yaz);
 });
 
-test('Öğren and Çal rounds never move, through a whole round of wrong and of right answers', () => {
-  for (const [origin, level, play] of [
-    [RoundOrigin.Ogren, Level.Cevir, (r, ok) => { assert.equal(r.stage, Stage.Question); r.flip(); r.grade(ok); }],
-    [RoundOrigin.Cal, Level.Sec, (r, ok) => { assert.equal(r.stage, Stage.Choices); r.choose(ok ? r.current.answer : r.choices.find(x => x !== r.current.answer)); }],
-  ]) {
-    for (const ok of [false, true]) {
-      const random = seeded(5);
-      const round = new LearningRound(deck.all.slice(0, 6), deck, ladderFor(origin, LEARNING.ladder), LEARNING, random);
-      while (!round.isOver) { play(round, ok); assert.equal(round.next().move, Move.None); assert.equal(round.ladder.level, level); }
-    }
+test('a Çal round never moves, through a whole round of wrong and of right answers', () => {
+  const play = (r, ok) => { assert.equal(r.stage, Stage.Choices); r.choose(ok ? r.current.answer : r.choices.find(x => x !== r.current.answer)); };
+  for (const ok of [false, true]) {
+    const round = new LearningRound(deck.all.slice(0, 6), deck, ladderFor(RoundOrigin.Cal, LEARNING.ladder), LEARNING, seeded(5));
+    while (!round.isOver) { play(round, ok); assert.equal(round.next().move, Move.None); assert.equal(round.ladder.level, Level.Sec); }
   }
 });
 
-test('every way into the game names its origin: Keşfet taps, Çal and the instrument page; Öğren goes through the sheet', () => {
+test('every way into the game names its origin: Oyna’s taps and Çal’s song; nothing in Öğren opens a round (§10)', () => {
   const tags = app.match(/<button[^>]*data-play="[^"]*"[^>]*>/g) ?? [];
-  assert.ok(tags.length >= 3, 'category card, instrument page, song page');
-  for (const t of tags) assert.match(t, /data-origin="(kesfet|cal)"/, t);
-  for (const t of app.match(/data-do="play"[^>]*/g)) assert.match(t, /data-origin="kesfet"/, t);
-  // the category card is Keşfet's; the instrument page and the song are Çal's (Çalgı bilgisi → Seç)
+  assert.ok(tags.length >= 2, 'category card, song page');
+  for (const tag of tags) assert.match(tag, /data-origin="(kesfet|cal)"/, tag);
+  for (const tag of app.match(/data-do="play"[^>]*/g)) assert.match(tag, /data-origin="kesfet"/, tag);
   assert.match(slice('function categoryCard(', '\n}'), /data-play="\$\{id\}" data-origin="kesfet"/);
-  assert.match(slice('function instrumentPage(', '\n}'), /data-play="instrument:\$\{qk\}" data-origin="cal"/);
-  assert.match(slice('function songPage(', '\n}'), /data-origin="cal"/);
-  // Öğren's ways in open the Hazırlan sheet, never the game directly
-  for (const f of ['function signCategory(', 'function signCard(', 'function familyCard(']) {
-    const body = slice(f, '\n}');
-    assert.match(body, /data-prep="/, f);
-    assert.doesNotMatch(body, /data-play=/, f);
-  }
-  assert.match(app, /case 'prep-start': \{ const c = overlay\.data; closeOverlay\(\); return openGame\(\{ concept: c, origin: RoundOrigin\.Ogren \}\); \}/);
+  assert.match(slice('function songPage(', '\n}'), /data-play="\$\{P\.concept \?\? 'karisik'\}" data-origin="cal"/);
   // every call passes an origin, and Tekrar oyna keeps the round's own
   for (const call of app.match(/openGame\(\{[^}]*\}/g)) assert.match(call, /origin/, call);
   assert.match(app, /openGame\(\{ concept: c, origin: G\.origin, intro: false \}\)/);
+});
+
+test('Öğren is information only: no page reached from it has a play button, a Hazırlan sheet or a round to start', () => {
+  const PLAY = /data-play=|data-do="play"|data-prep|prep-start|openPrep|RoundOrigin\.Ogren/;
+  for (const f of ['function learn(', 'const LEARN_TABS = {', 'function familyCard(', 'function valuesTab(', 'function signTile(',
+    'function signCategory(', 'function signCard(', 'function explainHtml(', 'function instrumentPage(']) {
+    const body = code(slice(f, '\n}'));
+    assert.doesNotMatch(body, PLAY, f);
+  }
+  // the instrument page's question cards to turn over were the game's Çevir cards under another name (ShellView.axaml
+  // "Kendini dene"); they went with the play button
+  assert.doesNotMatch(slice('function instrumentPage(', '\n}'), /iflip|Kendini dene|instrumentFlips/);
+  assert.doesNotMatch(app, /function prepHtml|overlay\.kind === 'prep'/);
+  // Değerler's games part goes to the Oyna tab, a link, not a round
+  assert.match(slice('function valuesTab(', '\n}'), /part\('IconCards', t\('values\.games'\), t\('values\.games\.line'\), 'data-go="#\/"'\)/);
 });
 
 // ───────────────────────── §4 difficulty
@@ -143,13 +149,13 @@ test('the deal is a ceiling: the child’s level first, then below, and above on
 test('the first game asks the level before anything else and stores it; Ayarlar › Zorluk changes it', () => {
   assert.equal(LEVEL_QUESTION, 'Hangi seviyeden başlayalım?');
   const open = slice('function openGame(', '\n}');
-  assert.match(open, /const pages = \[\.\.\.\(profile\.difficulty \? \[\] : \['level'\]\), \.\.\.INTRO_STEPS\.map\(x => x\.key\)\];/);
+  assert.match(open, /const pages = \[\.\.\.\(profile\.difficulty \? \[\] : \['level'\]\), \.\.\.L\.INTRO_STEPS\.map\(x => x\.key\)\];/);
   assert.match(open, /\|\| !profile\.difficulty\)\s*\? \{ step: 0, pages/);
   assert.match(slice('function chooseLevel(', '\n}'), /profile\.difficulty = key; save\(\);[\s\S]*deal\(\)/);
   assert.match(slice('function introHtml(', '\n}'), /data-level="\$\{d\.key\}"/);
-  assert.match(app, /if \(t\.dataset\.level\) return chooseLevel\(t\.dataset\.level\);/);
-  assert.match(slice('function settingsPage(', '\n}'), /data-zorluk="\$\{d\.key\}"/);
-  assert.match(app, /if \(t\.dataset\.zorluk\) \{ profile\.difficulty = t\.dataset\.zorluk; save\(\);/);
+  assert.match(app, /if \(d\.level\) return chooseLevel\(d\.level\);/);
+  assert.match(slice('function settingsPage(', '\n}'), /segmented\('zorluk', L\.DIFFICULTIES\.map\(d => \[d\.key, d\.name\]\), profile\.difficulty, 'data-zorluk'\)/);
+  assert.match(app, /if \(d\.zorluk\) \{ profile\.difficulty = d\.zorluk; save\(\);/);
   // and the round is dealt under it
   assert.match(slice('function deal() {', '\n}'), /level: profile\.difficulty/);
 });
@@ -162,62 +168,91 @@ test('a round at exactly half right still earns two stars (learning.json roundSt
 
 // ───────────────────────── §2 no level names in front of the child
 const LEVEL_WORD = /(?<!\p{L})(Çevir|Seç|Yaz|ÇEVİR|SEÇ|YAZ|Yazma|Seçme|Çevirme)(?!\p{L})/u;
-/** String content only: comments go, so a note to the next developer that names a level is not a failure. */
-const code = src => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1');
+/** The Turkish strings the game, its intro and results show (i18n/ui.js), which is where the words are now. */
+const GAME_KEYS = Object.keys(UI.tr).filter(k => /^(game|results|levelUp|intro|kb|oyna)\./.test(k));
 
 test('no level name reaches the screen: the game, its intro, results and badges (plain verbs on a control stay)', () => {
   const game = code(slice('// ───────────────────────── the game (MusicCardGameViewModel.cs)', '// ───────────────────────── taps'));
   assert.doesNotMatch(game, LEVEL_WORD, game.match(LEVEL_WORD)?.[0]);
   assert.doesNotMatch(game, /ladderHtml|ladder-line|levelLabel|Seviye<\/small>/);
+  assert.ok(GAME_KEYS.length > 40, `the game's keys: ${GAME_KEYS.length}`);
+  for (const k of GAME_KEYS) assert.doesNotMatch(String(UI.tr[k]), LEVEL_WORD, `${k}: ${UI.tr[k]}`);
   for (const s of INTRO_STEPS) assert.doesNotMatch(`${s.title} ${s.text}`, LEVEL_WORD, s.title);
   for (const b of BADGES) assert.doesNotMatch(`${b.name} ${b.description}`, LEVEL_WORD, b.id);
   assert.deepEqual(BADGES.filter(b => ['yazma-zirvesi', 'cevir-kahramani'].includes(b.id)).map(b => [b.name, b.description]),
     [['Zirve', 'Zorlandın ama yine en üste tırmandın!'], ['Kart Kahramanı', 'Kartları çevirip üç kez "Bildim" dedin.']]);
-  // Keşfet's OYNA shows the moves, never their names
+  // Şimdi Oyna shows the moves, never their names
   assert.doesNotMatch(code(slice('function oynaHtml(', '\n}')), LEVEL_WORD);
-  // the verbs a child presses are not level names and stay
-  assert.match(game, /Kartı çevir/);
-  assert.match(game, /Cevabını yaz/);
+  // the verbs a child presses are not level names and stay, and the game draws them from the table
+  assert.equal(UI.tr['game.flip'], 'Kartı çevir');
+  assert.match(UI.tr['game.typeHint'], /^Cevabını yaz/);
+  assert.match(game, /t\('game\.flip'\)/);
+  assert.match(game, /t\('game\.typeHint'\)/);
 });
 
-// ───────────────────────── §5 Öğren
-test('Öğren has six tabs, in ch. 14’s order, each a root of the Öğren tab with its own page', () => {
-  assert.deepEqual(OGREN_TABS.map(t => t.label), ['İşaretler', 'Çalgılar', 'Aileler', 'Bilmeceler', 'Değerler', 'Notalar']);
-  for (const t of OGREN_TABS) {
-    assert.deepEqual([resolve(`#/ogren/${t.key}`).kind, resolve(`#/ogren/${t.key}`).tab, resolve(`#/ogren/${t.key}`).segment], ['root', 'ogren', t.key]);
-    assert.match(slice('const LEARN_TABS = {', '\n};'), new RegExp(`\\n  ${t.key}: \\(\\) =>`), t.key);
+// ───────────────────────── §5 Öğren, as revised in §10
+test('Öğren has four tabs, İşaretler · Çalgılar · Aileler · Değerler, each a root of the Öğren tab with its own page', () => {
+  assert.deepEqual(OGREN_TABS.map(x => UI.tr[`ogren.${x.key}`]), ['İşaretler', 'Çalgılar', 'Aileler', 'Değerler']);
+  for (const x of OGREN_TABS) {
+    assert.deepEqual([resolve(`#/ogren/${x.key}`).kind, resolve(`#/ogren/${x.key}`).tab, resolve(`#/ogren/${x.key}`).segment], ['root', 'ogren', x.key]);
+    assert.match(slice('const LEARN_TABS = {', '\n};'), new RegExp(`\\n  ${x.key}: \\(\\) =>`), x.key);
   }
-  assert.equal(TABS.find(t => t.key === 'ogren').hash, '#/ogren/isaretler');
-  assert.doesNotMatch(app, /segtrack/, 'the two-button track is gone');
+  assert.doesNotMatch(slice('const LEARN_TABS = {', '\n};'), /bilmeceler:|notalar:/);
+  assert.equal(TABS.find(x => x.key === 'ogren').hash, '#/ogren/isaretler');
+  // the two that left land where the same things live: the riddles in İzle, the scores in Çal
+  assert.equal(resolve('#/ogren/bilmeceler').to, '#/izle');
+  assert.equal(resolve('#/ogren/notalar').to, '#/cal');
 });
 
-test('the Hazırlan sheet says the true count, and the round deals exactly that category, every card of it', () => {
-  const cats = kesfetCategories(deck, CONCEPTS);
-  for (const c of cats) {
-    const cards = dealRound({ deck, origin: RoundOrigin.Ogren, concept: c, level: 'baslangic', mastery: new Mastery(LEARNING), random: seeded(9), count: LEARNING.cardsPerRound });
-    assert.equal(cards.length, prepCount(deck, c), c);
-    assert.ok(cards.every(q => q.conceptIds.includes(c)), `${c}: no other category's cards`);
-    assert.equal(new Set(cards).size, cards.length);
-  }
-  assert.equal(prepCount(deck, 'signcat:bemol'), 1, 'a sign category has one card today, and the sheet says 1');
-  assert.equal(prepCount(deck, 'family:YayliCalgilar'), 7, 'more than a round: Öğren reads the whole family');
-  assert.match(slice('function prepHtml(', '\n}'), /const n = prepCount\(deck, concept\);[\s\S]*Bu kategoride \$\{n\} kart var/);
+test('every riddle the Öğren tab showed is in İzle: İzle lists every kind of video the site has, riddles first', () => {
+  const kinds = [...new Set(VIDEOS.map(v => v.kind))];
+  assert.ok(kinds.includes('riddle'));
+  const listed = JSON.parse(app.match(/const WATCH_KINDS = (\[[^\]]*\]);/)[1].replace(/'/g, '"'));
+  assert.equal(listed[0], 'riddle');
+  for (const k of kinds) assert.ok(listed.includes(k), `İzle leaves out ${k}`);
+  assert.match(slice('function watch() {', '\n}'), /WATCH_KINDS\.map\(k => \{ const list = VIDEOS\.filter\(v => v\.kind === k\)/);
+  assert.equal(VIDEOS.filter(v => v.kind === 'riddle').length, 23, 'the banner promises 23 video riddles');
 });
 
-// ───────────────────────── §1 Keşfet
-test('Keşfet is OYNA, the twelve categories in one grid and Bugünün kartı; no Tekrar row, no İşaretler/Çalgılar split', () => {
+test('an Aileler card shows its family’s instruments: the Çalgılar grid under that family, with the true count', () => {
+  const body = slice('function familyCard(', '\n}');
+  assert.match(body, /data-go="#\/ogren\/calgilar\?aile=\$\{slug\(g\)\}"/);
+  assert.match(body, /const n = L\.DIRECTORY\.filter\(d => d\.group === g\)\.length;/);
+  assert.deepEqual(Object.keys(FAMILIES).sort(), Object.keys(FAMILY_GROUP).sort());
+});
+
+// ───────────────────────── §1 and §10: the Oyna tab
+test('the first tab is Oyna, its circle says Şimdi Oyna, and the tab is the circle, the twelve categories and Bugünün kartı', () => {
+  assert.equal(TABS[0].key, 'kesfet');
+  assert.deepEqual([UI.tr['tab.kesfet'], UI.tr['tab.kesfet.title'], UI.tr['oyna.button']], ['Oyna', 'Oyna', 'Şimdi Oyna']);
+  assert.ok(!Object.entries(UI.tr).some(([k, v]) => k.startsWith('tab.') && /Keşfet/.test(v)), 'no tab is called Keşfet');
   const cats = kesfetCategories(deck, CONCEPTS);
   assert.equal(cats.length, 12);
   assert.deepEqual(cats.slice(0, 7), SIGN_CATEGORIES.map(c => 'signcat:' + c.key));
   assert.deepEqual(cats.slice(7), Object.keys(FAMILIES).map(k => 'family:' + k));
   const home = slice('function home() {', '\n}');
-  assert.match(home, /\$\{oynaHtml\(\)\}[\s\S]*Kategoriler[\s\S]*kesfetCategories\(deck, CONCEPTS\)\.map\(categoryCard\)[\s\S]*\$\{todayHtml\(\)\}/);
+  assert.match(home, /^function home\(\) \{\n  return `<div class="stack home">\n    \$\{oynaHtml\(\)\}[\s\S]*kesfet\.categories[\s\S]*kesfetCategories\(deck, L\.CONCEPTS\)\.map\(categoryCard\)[\s\S]*\$\{todayHtml\(\)\}/);
+  assert.doesNotMatch(home, /carousel|banner/i, 'the banners moved to the Doremimi tab');
   assert.doesNotMatch(code(app), /Tekrar zamanı|data-do="review"|'İŞARETLER'|'ÇALGILAR'/);
-  // OYNA is a circle, and its card loop stops under reduced motion (every animation does: style.css's last rules)
-  assert.match(slice('function oynaHtml(', '\n}'), /class="chunky oyna circle" data-do="play" data-origin="kesfet"/);
+  // a circle whose word is the table's, and whose card loop stops under reduced motion (style.css's last rules)
+  const oyna = slice('function oynaHtml(', '\n}');
+  assert.match(oyna, /class="chunky oyna circle" data-do="play" data-origin="kesfet" aria-label="\$\{esc\(t\('oyna\.button'\)\)\}"/);
+  assert.match(oyna, /<b class="word">\$\{esc\(t\('oyna\.button'\)\)\}<\/b>/);
   const css = readFileSync(new URL('../app/style.css', import.meta.url), 'utf8');
   assert.match(css, /\.chunky\.oyna\.circle \{[^}]*width: min\(56%, 220px\); aspect-ratio: 1;/);
   assert.match(css, /animation: okFlip 4\.5s/);
+});
+
+test('the banner carousel opens the Dore Mimi Vakfı tab, where the foundation’s card was, and turns only there', () => {
+  assert.equal(UI.tr['tab.doremimi.title'], 'Dore Mimi Vakfı');
+  const hub = slice('function hub() {', '\n}');
+  assert.match(hub, /return `<div class="stack hub">\n    \$\{carouselHtml\(\)\}\n    \$\{HUB\.map\(/, 'the carousel is the first thing on the tab');
+  assert.doesNotMatch(hub, /hub-hero|HUB_HEADER|VISION/, 'the foundation card went');
+  assert.match(app, /if \(route\.tab === 'doremimi' && !route\.page\) startCarousel\(\); else stopCarousel\(\);/);
+  // every banner still leads somewhere real, the foundation's page among them now that its card is gone
+  assert.equal(BANNER_GO.length, 5);
+  assert.ok(BANNER_GO.includes('#/vakif'));
+  for (const go of BANNER_GO.filter(x => x.startsWith('#/') && x !== '#/izle')) assert.equal(resolve(go).kind, 'page', go);
 });
 
 // CIEDE2000 (Sharma, Wu and Dalal 2005), checked against three pairs of their published test data below.
@@ -270,11 +305,10 @@ test('the twelve Keşfet colours and the seven group colours are at least ΔE 15
 });
 
 // ───────────────────────── §6 the hub
-test('the hub leads everywhere once, every place it leads exists, and the foundation is its header', () => {
+test('the hub leads everywhere once, every place it leads exists, in ch. 14 §6’s five groups', () => {
   const to = hubDestinations();
   assert.equal(new Set(to).size, to.length, `duplicates: ${to.filter((x, i) => to.indexOf(x) !== i)}`);
-  assert.deepEqual(HUB.map(g => g.title), ['Faaliyetler', 'Katıl', 'Tanış', 'Bize ulaş', 'Uygulama']);
-  assert.equal(HUB_HEADER.push, '#/vakif');
+  assert.deepEqual(HUB.map(g => UI.tr[`hub.group.${g.key}`]), ['Faaliyetler', 'Katıl', 'Tanış', 'Bize ulaş', 'Uygulama']);
   for (const d of to.filter(x => x.startsWith('#/'))) {
     const r = resolve(d);
     if (r.kind === 'root') continue;
@@ -283,11 +317,12 @@ test('the hub leads everywhere once, every place it leads exists, and the founda
     assert.match(app, new RegExp(`\\n  '?${r.page}'?: \\{ title:`), `${d} is not a page app.js draws`);
   }
   assert.ok(to.includes('#/ogren/degerler'), 'Müzikle Değerler Eğitimi opens Öğren › Değerler');
+  for (const g of HUB) for (const [, k] of g.rows) assert.ok(UI.tr[`hub.${k}`] && UI.tr[`hub.${k}.line`], `hub.${k}`);
   assert.match(slice('function hub() {', '\n}'), /HUB\.map\(/);
 });
 
 // ───────────────────────── the deck's story (ch. 14 §9), played through the real rules
-test('the deck’s script plays as ch. 14 tells it: Keşfet writes, Öğren turns cards, Çal picks, nothing moves the child', () => {
+test('the deck’s script plays as ch. 14 tells it: Oyna writes, Öğren is read, Çal picks, nothing moves the child', () => {
   const mastery = new Mastery(LEARNING);
   const earned = [];
   const run = round => () => { const o = round.next(); mastery.record(o.questionId, o.evidence); earned.push(...newlyEarned(BADGES, { mastery, deck, round: round.outcomes, days: [] }, earned).map(b => b.id)); return o; };
@@ -309,13 +344,6 @@ test('the deck’s script plays as ch. 14 tells it: Keşfet writes, Öğren turn
   // Diyez, picked wrong, comes back two cards later; Fa anahtarı, found with the tiles, counts as learned (Baba Sesler)
   assert.deepEqual(k.queue.map(x => x.question.id), ['sign:fa-anahtari', 'sign:diyez', 'sign:bemol', 'q:guitar-family', 'sign:diyez', 'q:violin-family', 'q:guitar-strings']);
   assert.deepEqual(earned, ['ilk-nota', 'baba-sesler', 'bemol-avcisi']);
-  // Öğren › Aileler › Yaylı: the sheet's 7 cards, turned over (steps 10-11)
-  random = seeded(11);
-  const oCards = dealRound({ deck, origin: RoundOrigin.Ogren, concept: 'family:YayliCalgilar', level: 'baslangic', mastery, random, count: LEARNING.cardsPerRound });
-  const o = new LearningRound(oCards, deck, ladderFor(RoundOrigin.Ogren, LEARNING.ladder), LEARNING, random);
-  assert.equal(o.count, 7);
-  assert.equal(o.stage, Stage.Question);
-  o.flip(); o.grade(true); run(o)();
   // Çal › Keman: Bu çalgıyla oyna, every card at the choices, all right (steps 13-14)
   random = seeded(11);
   const cCards = dealRound({ deck, origin: RoundOrigin.Cal, concept: 'instrument:violin', level: 'baslangic', mastery, random, count: LEARNING.cardsPerRound });
@@ -330,7 +358,10 @@ test('the deck’s script plays as ch. 14 tells it: Keşfet writes, Öğren turn
   // and the script the phone plays (app/data/script.js) is that story
   const script = JSON.stringify(SCRIPT);
   assert.match(script, /"name":"game\.start","deck":"sunum","origin":"kesfet","intro":true/);
-  assert.match(script, /"name":"prep\.open","hash":"#\/ogren\/aileler","concept":"family:YayliCalgilar"/);
+  // Öğren is information (§10): a family's instruments, then one instrument's page, with no round in between
+  assert.match(script, /"name":"open","hash":"#\/ogren\/aileler","tap":"\[data-fam=\\"YayliCalgilar\\"\]"/);
+  assert.match(script, /"name":"open","hash":"#\/ogren\/calgilar\?aile=yayli","tap":"\[data-push=\\"#\/calgi\/keman\\"\]"/);
+  assert.doesNotMatch(script, /prep\.|game\.flip|game\.grade/, 'no step turns a card over outside a round that needs it');
   assert.match(script, /"name":"song\.game","hash":"#\/sarki\/keman"/);
   assert.doesNotMatch(script, /"level":/, 'the script never picks a level');
 });

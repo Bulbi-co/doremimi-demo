@@ -5,12 +5,18 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { TABS, resolve } from '../app/lib/nav.js';
+import { UI } from '../app/i18n/ui.js';
 
-test('the dock is Keşfet · Öğren · logo · İzle · Çal, the logo in the centre slot with no label (NR-02, OC-02)', () => {
-  assert.deepEqual(TABS.map(t => t.logo ? 'LOGO' : t.label), ['Keşfet', 'Öğren', 'LOGO', 'İzle', 'Çal']);
+test('the dock is Oyna · Öğren · logo · İzle · Çal, the logo in the centre slot with no label (NR-02, OC-02, ch. 14 §10)', () => {
+  // Keşfet was renamed Oyna in ch. 14 §10; its key and hash did not change, only what the child reads.
+  assert.deepEqual(TABS.map(t => t.logo ? 'LOGO' : UI.tr[`tab.${t.key}`]), ['Oyna', 'Öğren', 'LOGO', 'İzle', 'Çal']);
   assert.equal(TABS.findIndex(t => t.logo), Math.floor(TABS.length / 2), 'the logo is centred');
-  assert.equal(TABS.find(t => t.logo).title, 'Doremimi');
-  assert.ok(!TABS.some(t => /Oyunlar|Daha fazla/.test(t.label + t.title)));
+  assert.equal(UI.tr['tab.doremimi.aria'], 'Doremimi');
+  for (const lang of ['tr', 'en', 'fr']) {
+    const labels = TABS.filter(t => !t.logo).map(t => UI[lang][`tab.${t.key}`]);
+    assert.equal(new Set(labels).size, labels.length, `${lang}: two tabs share a name (${labels})`);
+    assert.ok(!labels.some(l => /Oyunlar|Daha fazla|Keşfet/.test(l)), lang);
+  }
 });
 
 test('the dock draws the official logo file, the same one as the app icon (NR-04, D21)', () => {

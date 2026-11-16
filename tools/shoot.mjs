@@ -114,10 +114,10 @@ const PHONE = [
   ['phone-33-game-solved', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 3 })], 5000],
   ['phone-34-game-choices', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 5 })], 7000],
   ['phone-35-game-reveal', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 6 })], 7000],
-  // Since ch. 14 the script's later steps are other ways in: Öğren's sheet and turned cards, then Çal's choices
-  // (app/data/script.js; the numbers are its steps).
+  // Since ch. 14 the script's later steps leave the round: Öğren's family and an instrument (information only since
+  // revision 2), then Çal's choices (app/data/script.js; the numbers are its steps).
   ['phone-36-game-typed-right', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 8 })], 8000],
-  ['phone-37-ogren-cevir', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 10000],
+  ['phone-37-ogren-calgi', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 10000],
   ['phone-38-cal-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 13 })], 11000],
   ['phone-39-game-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 14 })], 14000],
   ['phone-39b-game-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 15 })], 15000],
@@ -163,14 +163,8 @@ const CH14 = [
   ['ch14-11-ogren-calgilar', app('#/ogren/calgilar')],
   ['ch14-12-ogren-calgilar-yayli', app('#/ogren/calgilar?aile=yayli')],
   ['ch14-13-ogren-aileler', app('#/ogren/aileler')],
-  ['ch14-14-ogren-bilmeceler', app('#/ogren/bilmeceler')],
   ['ch14-15-ogren-degerler', app('#/ogren/degerler')],
-  ['ch14-16-ogren-notalar', app('#/ogren/notalar')],
-  ['ch14-17-ogren-tabs-scrolled', app('#/ogren/notalar'), [`document.querySelector('.otab.on').scrollIntoView({ inline: 'center' })`]],
   ['ch14-18-isaret-kategori-bemol', app('#/isaret-kategori/bemol')],
-  ['ch14-19-hazirlan-bemol', app('#/isaret-kategori/bemol'), [tap('[data-prep]')]],
-  ['ch14-20-hazirlan-yayli', app('#/ogren/aileler'), [tap('[data-prep="family:YayliCalgilar"]')]],
-  ['ch14-21-ogren-round-cevir', app('#/ogren/aileler'), [tap('[data-prep="family:YayliCalgilar"]'), tap('[data-do="prep-start"]')]],
   ['ch14-22-first-game-level', app('#/'), [tap('[data-do="play"]')]],
   ['ch14-23-intro-see', app('#/'), [tap('[data-do="play"]'), tap('[data-level="orta"]')]],
   ['ch14-24-intro-find', app('#/'), [tap('[data-do="play"]'), tap('[data-level="orta"]'), tap('[data-g="intro-next"]')]],
@@ -181,13 +175,10 @@ const CH14 = [
   ['ch14-31-script-choices', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 5 })], 7000],
   ['ch14-32-script-reveal', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 6 })], 7000],
   ['ch14-33-script-typed-right', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 8 })], 8000],
-  ['ch14-34-script-hazirlan', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 10 })], 9000],
-  ['ch14-35-script-cevir', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 11 })], 10000],
   ['ch14-36-script-sec', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 13 })], 11000],
   ['ch14-37-script-results', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 14 })], 14000],
   ['ch14-38-script-results-badges', app('#/', '&embed'), [msg({ type: 'act', name: 'goto', step: 15 })], 15000],
   ['ch14-40-cal-song-sec', app('#/sarki/keman'), [`new Promise(r => setTimeout(r, 600))`, tap('[data-play][data-origin="cal"]')]],
-  ['ch14-41-calgi-keman', app('#/calgi/keman'), [`document.querySelector('[data-play]').scrollIntoView()`]],
   ['ch14-50-hub', app('#/doremimi')],
   ['ch14-51-hub-scrolled', app('#/doremimi'), [`document.querySelector('#page').scrollTop = 700`]],
   ['ch14-52-hub-bottom', app('#/doremimi'), [`document.querySelector('#page').scrollTop = 4000`]],
@@ -214,9 +205,85 @@ const TABLET = [
   { name: 'tablet-01-kesfet', url: app('#/', '&embed'), steps: [], wait: 1500, w: 1024, h: 1366 },
 ];
 
+/*
+ * Dossier ch. 14 §10-§11: every phone screen in each of the three languages, `<dir>/<lang>/NN-name.png`, for looking at
+ * the type system and the translations side by side. `node … tools/shoot.mjs <base> <dir> '^(tr|en|fr)/'`. ?dil= picks
+ * the language for the load (i18n/index.js pickLang); &sunum seeds the game, so each language deals the same cards.
+ */
+const act = (name, m = {}) => msg({ type: 'act', name, ...m });
+const pin = '135790'.split('').map(d => tap(`[data-pin="${d}"]`));
+const wait = ms => `new Promise(r => setTimeout(r, ${ms}))`;
+const level = [tap('[data-do="play"]'), tap('[data-level="baslangic"]')];
+const playing = [...level, tap('[data-g="intro-close"]')];
+// Four "Bilmiyorum" in a row take Oyna's round down one level (learning.json downAfterStruggles); eight reach the cards
+// turned over, which since revision 2 is the only place a child meets them.
+const struggle = n => Array.from({ length: n }, () => [act('game.dontknow'), wait(150), act('game.next'), wait(150)]).flat();
+const LANG_PLAN = [
+  ['01-oyna', '#/'],
+  ['02-oyna-kategoriler', '#/', [`document.querySelector('.kats-sec').scrollIntoView()`]],
+  ['03-oyna-bugun', '#/', [`document.querySelector('.today').scrollIntoView()`]],
+  ['10-ogren-isaretler', '#/ogren/isaretler'],
+  ['11-ogren-isaretler-flipped', '#/ogren/isaretler', [tap('[data-flip="bemol"]')]],
+  ['12-ogren-calgilar', '#/ogren/calgilar'],
+  ['13-ogren-calgilar-yayli', '#/ogren/calgilar?aile=yayli'],
+  ['14-ogren-aileler', '#/ogren/aileler'],
+  ['15-ogren-degerler', '#/ogren/degerler'],
+  ['16-isaret-kategori', '#/isaret-kategori/diyez'],
+  ['17-isaret-kart', '#/isaret/diyez'],
+  ['18-isaret-kart-tanim', '#/isaret/fa-anahtari', [tap('[data-sekme="0"]')]],
+  ['19-calgi-keman', '#/calgi/keman'],
+  ['20-izle', '#/izle'],
+  ['21-izle-gate', '#/izle', [tap('[data-video]')]],
+  ['22-izle-player', '#/izle', [tap('[data-video]'), ...pin]],
+  ['30-cal', '#/cal'],
+  ['31-cal-songs', '#/cal', [`document.querySelector('.songs').scrollIntoView()`]],
+  ['32-sarki-keman', '#/sarki/keman', [wait(500)]],
+  ['33-sozler', '#/sozler/akordeon'],
+  ['34-melodim', '#/cal', [tap('#free-keys [data-key="60"]'), tap('#free-keys [data-key="64"]'), `location.hash = '#/melodim'`]],
+  ['40-vakif-tab', '#/doremimi'],
+  ['41-vakif-tab-scrolled', '#/doremimi', [`document.querySelector('#page').scrollTop = 620`]],
+  ['42-vakif-tab-bottom', '#/doremimi', [`document.querySelector('#page').scrollTop = 4000`]],
+  ['43-vakif', '#/vakif'],
+  ['44-dore-ve-mimi', '#/dore-ve-mimi'],
+  ['45-ekip', '#/ekip'],
+  ['46-burslar', '#/burslar'],
+  ['47-gonullu', '#/gonullu'],
+  ['48-iletisim', '#/iletisim'],
+  ['49-etkinlikler', '#/etkinlikler'],
+  ['50-bulten', '#/bulten'],
+  ['51-destek', '#/destek'],
+  ['52-destekciler', '#/destekciler'],
+  ['53-yasal', '#/yasal'],
+  ['54-metin-gizlilik', '#/metin/gizlilik'],
+  ['55-yardim', '#/yardim'],
+  ['56-hakkinda', '#/hakkinda'],
+  ['57-kitaplar', '#/kitaplar'],
+  ['60-profil', '#/profil'],
+  ['61-profil-bottom', '#/profil', [`document.querySelector('#page').scrollTop = 4000`]],
+  ['62-kim-oynuyor', '#/profil', [tap('[data-do="switcher"]')]],
+  ['63-ayarlar', '#/ayarlar'],
+  ['64-ebeveyn-pin', '#/profil', [tap('[data-do="hesabim"]')]],
+  ['65-hesabim', '#/profil', [tap('[data-do="hesabim"]'), ...pin]],
+  ['66-ebeveyn-paneli', '#/profil', [tap('[data-do="panel"]'), ...pin]],
+  ['70-oyun-seviye', '#/', [tap('[data-do="play"]')]],
+  ['71-oyun-tanitim-gor', '#/', level],
+  ['72-oyun-tanitim-bul', '#/', [...level, tap('[data-g="intro-next"]')]],
+  ['73-oyun-tanitim-yildiz', '#/', [...level, tap('[data-g="intro-next"]'), tap('[data-g="intro-next"]')]],
+  ['74-oyun-yaz', '#/', [...playing, act('game.type', { text: 'abc' })], 2000],
+  ['75-oyun-harfler', '#/', [...playing, act('game.type', { text: 'abc', send: true })], 2500],
+  ['76-oyun-secenekler', '#/', [...playing, act('game.type', { text: 'abc', send: true }), wait(1200), act('game.type', { text: 'zzzzzzzzzzzz', send: true })], 3500],
+  ['77-oyun-bilgi', '#/', [...playing, act('game.dontknow')], 2000],
+  ['79-oyun-cevir', '#/', [...playing, ...struggle(8)], 2500],
+  ['80-oyun-sonuc', '#/', [...playing, act('game.finish', { gap: 50 })], 22000],
+  ['81-cal-turu', '#/sarki/keman', [wait(500), tap('[data-play][data-origin="cal"]'), tap('[data-level="orta"]'), tap('[data-g="intro-close"]')], 1500],
+];
+const LANG_SHOTS = ['tr', 'en', 'fr'].flatMap(lang => LANG_PLAN.map(([name, hash, steps = [], waitMs = 1200]) =>
+  ({ name: `${lang}/${name}`, url: app(hash, `&sunum&dil=${lang}`), steps, wait: waitMs, w: 430, h: 932 })));
+for (const l of ['tr', 'en', 'fr']) mkdirSync(join(out, l), { recursive: true });
+
 mkdirSync(join(out, 'v3'), { recursive: true });
 mkdirSync(join(out, 'frames'), { recursive: true });
-for (const s of [...DECK, ...PHONE, ...TABLET, ...V3, ...CH14, ...FRAMES]) {
+for (const s of [...DECK, ...PHONE, ...TABLET, ...V3, ...CH14, ...FRAMES, ...LANG_SHOTS]) {
   if (only && !only.test(s.name)) continue;
   if (!s.cont) await load(s.url, s.w, s.h);
   for (const st of s.steps ?? []) { await evaluate(st); await sleep(250); }

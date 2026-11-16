@@ -1,14 +1,17 @@
 /*
  * Doremimi, recreated for the presentation (dossier ch. 10). The rules live in ./lib and are the app's, ported; this
  * file only draws what they decide, the way Doremimi/ViewModels/ShellViewModel.cs and MusicCardGameViewModel.cs do.
- * Every on-screen string is copied from the source line named next to it. Copy written for the demo itself (the
- * "yakında" notes) is marked PROPOSED.
+ *
+ * Since dossier ch. 14 §11 the phone speaks Türkçe, English and Français: every word it shows comes from t(key)
+ * (./i18n/ui.js) and the game's content from L (./data/localise.js), so this file holds no player-facing text of its
+ * own; tests/i18n.test.mjs fails when it does. Copy written for the demo itself is marked PROPOSED in the tables.
  */
-import { QUESTIONS, LEARNING, SUNUM_DECK, BADGES, BANNERS, INTRO_STEPS, LEVEL_QUESTION, CONCEPTS, SIGN_CARDS, SIGN_CATEGORIES, INSTRUMENTS, FAMILIES } from './data/content.js';
-import { QuestionDeck, LearningRound, Stage, Resolution, isRight } from './lib/round.js';
+import { LEARNING, SUNUM_DECK, SIGN_CARDS as SIGN_CARDS_TR, SIGN_CATEGORIES as SIGN_CATEGORIES_TR, INSTRUMENTS as INSTRUMENTS_TR } from './data/content.js';
+import { localise } from './data/localise.js';
+import { QuestionDeck, LearningRound, Stage, isRight } from './lib/round.js';
 import { Move } from './lib/ladder.js';
-import { RoundOrigin, ORIGIN_OF_LEVEL, ladderFor, rulesOf, dealRound, prepCount, kesfetCategories, DIFFICULTIES } from './lib/modes.js';
-import { HUB, HUB_HEADER } from './data/hub.js';
+import { RoundOrigin, ORIGIN_OF_LEVEL, ladderFor, rulesOf, dealRound, kesfetCategories } from './lib/modes.js';
+import { HUB, BANNER_GO, FAMILY_GROUP } from './data/hub.js';
 import { SCRIPT } from './data/script.js';
 import { Mastery, addXp, toNextLevel, stars as starsOf, pickConcepts, newlyEarned, today } from './lib/progress.js';
 import { seeded, fromClock } from './lib/rng.js';
@@ -21,7 +24,9 @@ import { pick as pickDaily } from './lib/daily.js';
 import { accentSet, INK_SET, darken, edge as edgeOf, mix as mixHex } from './lib/accent.js';
 import { normalise, isLetterOrDigit } from './lib/answers.js';
 import { slug, songFor, sequence, length, keyboardBase, karaokeLines, indexAt, render as renderSong, safeTheme, fromKeys, keyIndex, Sound, ButtonMelody } from './lib/music.js';
-import { DIRECTORY, SONGS, GROUPS, GROUP_COLORS, DIFFICULTY, MANIFESTO, VISION, NEWS, CHARACTERS, BOARD, FOUNDERS, TEAM, ADVISORS, PARTNERS, CONTACTS, LEGAL, DRAFT_NOTE } from './data/site.js';
+import { DIRECTORY as DIRECTORY_TR, SONGS, GROUPS, GROUP_COLORS, MANIFESTO, VISION, NEWS, CHARACTERS, BOARD, FOUNDERS, TEAM, ADVISORS, PARTNERS, CONTACTS, LEGAL, DRAFT_NOTE } from './data/site.js';
+import { LANGS, pickLang, translator, percent, upper } from './i18n/index.js';
+import { KEYBOARDS } from './i18n/keyboards.js';
 
 // The site's three lists are the app's own JSON files, unchanged (Assets/Content/site; ch. 10 AS-18).
 const [VIDEOS, LYRICS, LIBRARY] = await Promise.all(['videos', 'lyrics', 'library'].map(n => fetch(`data/site/${n}.json`).then(r => r.json()).catch(() => [])));
@@ -43,14 +48,27 @@ const store = {
 };
 if (params.has('reset')) store.wipe();
 // `ladder` is still saved after every card but no longer read for a round's start (dossier ch. 14 §3: Keşfet starts at
-// Yaz every time). `difficulty` is the child's Zorluk, null until the first game asks it (§4).
+// Yaz every time). `difficulty` is the child's Zorluk, null until the first game asks it (§4). `settings.lang` is null
+// until the Dil row is used: null follows the device (i18n/index.js pickLang).
 const freshProfile = () => ({ xp: 0, level: 1, mastery: {}, badges: [], ladder: 'Yaz', difficulty: null, seenIntro: false, keyboard: 'auto', days: [],
   child: null, melodim: [], seen: [], rounds: 0, best: 0, answered: 0, stars: 0,
-  settings: { motion: false, buttons: true, music: true, notify: false } });   // Ayarlar's four switches (ch. 03 §13)
+  settings: { motion: false, buttons: true, music: true, notify: false, lang: null } });   // Ayarlar's switches (ch. 03 §13)
 let profile = Object.assign(freshProfile(), store.load()?.profile);
+profile.settings = Object.assign(freshProfile().settings, profile.settings);
 let mastery = new Mastery(LEARNING, profile.mastery, DAY_SHIFT);
 const save = () => store.save({ profile });
-const deck = new QuestionDeck(QUESTIONS);
+
+// ───────────────────────── language (dossier ch. 14 §11): the strings, the content and the deck the game deals from
+let lang, t, L, deck;
+const langNow = () => pickLang({ query: params.get('dil'), saved: profile.settings.lang, languages: navigator.languages ?? [navigator.language], embed: EMBED });
+/** Switches everything at once: the tables, the content, the deck (mastery is keyed by question id, so it carries). */
+function setLang(next) {
+  lang = next; t = translator(lang); L = localise(lang);
+  deck = new QuestionDeck(L.QUESTIONS);
+  document.documentElement.lang = lang;
+  document.title = t('app.name');
+}
+setLang(langNow());
 
 // ───────────────────────── helpers
 const $ = (s, r = document) => r.querySelector(s);
@@ -63,7 +81,8 @@ const readable = h => darken(h);
 const edge = h => edgeOf(h);
 /** A screen's primary as CSS variables: the card's AccentSet in the game, ink elsewhere (Accent.cs Tone). */
 const toneVars = t => `--pface:${t.face};--plabel:${t.label};--pedge:${t.edge};--ptext:${t.text}`;
-const upperTr = s => s.toLocaleUpperCase('tr');
+const up = s => upper(lang, s);
+const pct = v => percent(lang, Math.min(1, v));
 const levelName = l => ['Cevir', 'Sec', 'Yaz'][l];
 const moodOf = l => ['cevir', 'sec', 'yaz'][l];
 
@@ -73,9 +92,10 @@ if (STILL) app.classList.add('still');
 const safeTop = () => parseFloat(getComputedStyle(app).getPropertyValue('--safe-top')) || 0;
 const shellBg = new Backdrop($('#bg'), { seed: 5, mood: 'kesfet', clearTop: safeTop(), reduced: REDUCED, tabs: true });
 shellBg.start();
+$('#dock').setAttribute('aria-label', t('dock.aria'));
 
 if (EMBED) {
-  const tick = () => { $('#clock').textContent = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }); };
+  const tick = () => { $('#clock').textContent = new Date().toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }); };
   tick(); setInterval(tick, 10_000);
 }
 
@@ -83,8 +103,8 @@ if (EMBED) {
 function toast(headline, reason = '', bad = false) {
   toastHost.innerHTML = `<div class="toast${bad ? ' bad' : ''}"><b>${esc(headline)}</b>${reason ? `<small>${esc(reason)}</small>` : ''}</div>`;
 }
-/** A tap that leads to a page the demo has not recreated yet (ch. 10 A-00; PROPOSED copy). */
-const notYet = () => toast('Yakında', 'Bu sayfa demoda yok');
+/** A tap that leads to a page the demo has not recreated yet (ch. 10 A-00). */
+const notYet = () => toast(t('soon.title'), t('soon.line'));
 
 // Sprite loops from the site (Assets/Content/site/sprites): Dore drums at 12 fps, Mimi speaks at 8.
 const SPRITES = { 'dore-drum': { n: 25, fps: 12 }, 'mimi-wave': { n: 48, fps: 8 } };
@@ -98,7 +118,7 @@ if (!REDUCED) {
 }
 
 // ───────────────────────── router (ch. 10 W-01, revised by ch. 11 NR-91): tab roots clear the stack, pages push, the
-// game is a layer. The dock is Keşfet · Öğren · logo · İzle · Çal (ch. 11 NR-02); Oyunlar and Daha fazla are gone.
+// game is a layer. The dock is Oyna · Öğren · logo · İzle · Çal (ch. 14 §10: Keşfet is named Oyna; its key stays).
 let route = { tab: 'kesfet', page: null };
 let stack = [];
 let inApp = false;   // set by a tap just before it changes the hash, so navigate() knows the page is pushed, not linked
@@ -108,8 +128,8 @@ function navigate() {
   const r = resolve(location.hash, { tab: route.tab, stacked: stack.length > 0, fromApp });
   if (r.kind === 'game') {
     // The game is a layer over the page it was opened from (A-02), so the hash goes back to that page.
-    history.replaceState(null, '', stack.at(-1) ?? TABS.find(t => t.key === route.tab).hash);
-    // ?yer=kesfet|ogren|cal names the way in; the older ?seviye= names it by its level (lib/modes.js ORIGIN_OF_LEVEL).
+    history.replaceState(null, '', stack.at(-1) ?? TABS.find(x => x.key === route.tab).hash);
+    // ?yer=kesfet|cal names the way in; the older ?seviye= names it by its level (lib/modes.js ORIGIN_OF_LEVEL).
     const yer = Object.values(RoundOrigin).includes(r.query.get('yer')) ? r.query.get('yer') : null;
     openGame({ concept: r.query.get('deste'), origin: yer, level: r.query.get('seviye'), intro: r.query.has('tanitim') ? true : undefined });
     return;
@@ -132,8 +152,8 @@ function back() {
   if (gate.open) return closeGate();
   if (overlay.kind) return closeOverlay();
   if (!gameEl.hidden) { if (G.levelUp) { G.levelUp = null; renderGame(); } else if (G.intro && profile.difficulty) closeIntro(); else exitGame(); return; }
-  if (stack.length) { stack.pop(); location.hash = stack.at(-1) ?? TABS.find(t => t.key === route.tab).hash; return; }
-  if (route.tab !== 'kesfet') location.hash = '#/';   // back on any other root, the logo's included, goes to Keşfet (OC-24)
+  if (stack.length) { stack.pop(); location.hash = stack.at(-1) ?? TABS.find(x => x.key === route.tab).hash; return; }
+  if (route.tab !== 'kesfet') location.hash = '#/';   // back on any other root, the logo's included, goes to Oyna (OC-24)
 }
 
 // ───────────────────────── shell
@@ -146,90 +166,115 @@ function render() {
   const view = route.page ? PAGES[route.page] : null;
   page.innerHTML = `<div class="page-in">${route.page ? (view ? view.html(route.arg, route.query) : missing(route.page)) : ROOTS[route.tab]()}</div>`;
   page.scrollTop = 0;
-  if (route.tab === 'kesfet' && !route.page) startCarousel(); else stopCarousel();
+  // The banner carousel lives on the Doremimi tab since ch. 14 §10, where the foundation card was.
+  if (route.tab === 'doremimi' && !route.page) startCarousel(); else stopCarousel();
   afterRender();
 }
 
 /** The category colour this page's backdrop takes, or null for the tab's own wash (lib/canvas.js says which and why). */
-const pageAccent = () => pageAccentOf(route, { SIGN_CATEGORIES, SIGN_CARDS, DIRECTORY, GROUPS, GROUP_COLORS, slug });
+const pageAccent = () => pageAccentOf(route, { SIGN_CATEGORIES: SIGN_CATEGORIES_TR, SIGN_CARDS: SIGN_CARDS_TR, DIRECTORY: DIRECTORY_TR, GROUPS, GROUP_COLORS, slug });
 
 const childOf = () => CHILDREN.find(c => c.id === profile.child) ?? GUEST;
+const tabTitle = tab => t(`tab.${tab.key}.title`);
 function renderTopbar() {
-  const tab = TABS.find(t => t.key === route.tab);
+  const tab = TABS.find(x => x.key === route.tab);
   const view = route.page ? PAGES[route.page] : null;
-  const title = view ? (typeof view.title === 'function' ? view.title(route.arg, route.query) : view.title) : tab.title;
+  const title = view ? (typeof view.title === 'function' ? view.title(route.arg, route.query) : t(view.title)) : tabTitle(tab);
   const ratio = profile.xp / toNextLevel(LEARNING, profile.level);
   const kid = childOf();
   // NR-05: [back][title][level chip][avatar]. No logo here any more (it is in the dock); the avatar, top right, opens
   // Profilim (OC-05), and so does the chip, as before.
   topbar.innerHTML = `
-    ${stack.length ? `<button class="chunky white round backbtn" data-do="back" title="Geri" aria-label="Geri"><span class="face">${icon('IconBack')}</span></button>` : ''}
+    ${stack.length ? `<button class="chunky white round backbtn" data-do="back" title="${esc(t('back'))}" aria-label="${esc(t('back'))}"><span class="face">${icon('IconBack')}</span></button>` : ''}
     <div class="title"><h1>${esc(title)}</h1></div>
-    <button class="tile levelbtn" data-go="#/profil" title="Profilim" aria-label="Seviye ${profile.level}">
-      <span class="lv"><b>Seviye ${profile.level}</b><span class="slim"><i style="width:${Math.round(Math.min(1, ratio) * 100)}%"></i></span></span>
+    <button class="tile levelbtn" data-go="#/profil" title="${esc(t('page.profil'))}" aria-label="${esc(t('level.n', { n: profile.level }))}">
+      <span class="lv"><b class="num">${esc(t('level.n', { n: profile.level }))}</b><span class="slim"><i style="width:${Math.round(Math.min(1, ratio) * 100)}%"></i></span></span>
     </button>
-    <button class="tile" data-go="#/profil" data-do="avatar" title="Profilim" aria-label="Profilim"><span class="avatar who"><img src="../assets/site/characters/${kid.image}" alt=""></span></button>`;
+    <button class="tile" data-go="#/profil" data-do="avatar" title="${esc(t('page.profil'))}" aria-label="${esc(t('page.profil'))}"><span class="avatar who"><img src="../assets/site/characters/${kid.image}" alt=""></span></button>`;
+  fitTitle();
 }
+/*
+ * The page title fits its room: 28 px, else 22, else two lines at 18. Beside the back button, the level chip and the
+ * avatar a title has about 176 px on a 390 px phone, and "Etkinlikler ve materyaller" needs 324 at 28 (French and English
+ * run longer still); cut with an ellipsis, the title of the page you are on read as "Etkinlikler ve…". Measured again
+ * when a font finishes loading and when the bar changes width: document.fonts.ready alone was not enough, because it
+ * can resolve before the first render has asked for Inter at all, and the English hub title stayed cut at 430 px.
+ */
+function fitTitle() {
+  const h1 = topbar.querySelector('h1');
+  if (!h1) return;
+  h1.classList.remove('fit1', 'fit2');
+  if (h1.scrollWidth > h1.clientWidth + 1) h1.classList.add('fit1');
+  if (h1.scrollWidth > h1.clientWidth + 1) { h1.classList.remove('fit1'); h1.classList.add('fit2'); }
+}
+document.fonts?.addEventListener('loadingdone', fitTitle);
+try { new ResizeObserver(fitTitle).observe(topbar); } catch { /* fitted on every render anyway */ }
 
 function renderDock() {
-  dock.innerHTML = TABS.map(t => t.logo
-    ? `<button class="tab logo${t.key === route.tab ? ' active' : ''}" data-go="${t.hash}" title="Doremimi" aria-label="Doremimi"><span class="plate"><img src="../assets/brand/logo.png" alt=""></span></button>`
-    : `<button class="tab${t.key === route.tab ? ' active' : ''}" data-go="${t.hash}"><span class="pill">${icon(t.icon)}</span><span>${t.label}</span></button>`).join('');
+  dock.innerHTML = TABS.map(x => x.logo
+    ? `<button class="tab logo${x.key === route.tab ? ' active' : ''}" data-go="${x.hash}" title="${esc(t('tab.doremimi.aria'))}" aria-label="${esc(t('tab.doremimi.aria'))}"><span class="plate"><img src="../assets/brand/logo.png" alt=""></span></button>`
+    : `<button class="tab${x.key === route.tab ? ' active' : ''}" data-go="${x.hash}"><span class="pill">${icon(x.icon)}</span><span>${esc(t(`tab.${x.key}`))}</span></button>`).join('');
 }
 
-/** A route the demo does not know: an honest card, not a fake screen (PROPOSED copy). */
+/** A route the demo does not know: an honest card, not a fake screen. */
 function missing(name) {
-  return `<div class="stack soon"><div class="card"><span class="ribbon"><h2>Yakında</h2></span>
-    <p class="p">Bu ekran sunumun bir sonraki sürümünde uygulamadaki gibi gelecek.</p><span class="caption">#/${esc(name)}</span></div></div>`;
+  return `<div class="stack soon"><div class="card"><span class="ribbon"><h2>${esc(t('soon.title'))}</h2></span>
+    <p class="p">${esc(t('soon.page'))}</p><span class="caption">#/${esc(name)}</span></div></div>`;
 }
 
 // ───────────────────────── shared pieces
 const photoOf = name => `../assets/site/instruments/${slug(name) === 'viyolonsel' ? 'cello' : slug(name)}.jpg`;
 /** MusicLibrary.Art: the song's slug, then its instrument's, then cello.jpg for the cello song. */
 const songArt = s => `../assets/site/instruments/${s.slug.startsWith('cello') ? 'cello' : s.slug === 'kontrabass' ? 'kontrabas' : s.slug}.jpg`;
-const entryOfSong = s => DIRECTORY.find(d => songFor(d.name, SONGS) === s);
+const entryOfSong = s => DIRECTORY_TR.find(d => songFor(d.name, SONGS) === s);
 const note = text => `<div class="card note"><p class="p strong">${esc(text)}</p></div>`;
+/*
+ * lang="tr" on what stays Turkish in every language (ch. 14 §11: lyrics, video titles, the foundation's site texts), so
+ * a screen reader reads it in Turkish, and tools/phone-e2e.mjs can tell it from a string someone forgot to translate.
+ */
+const TRL = () => (lang === 'tr' ? '' : ' lang="tr"');
 const ribbon = (text, extra = '') => `<span class="ribbon${extra}"><h2>${esc(text)}</h2></span>`;
-// The colour argument is ignored on purpose: since ch. 12 every row icon is ink on a sunken square (ShellViewModel.cs
-// MenuItem passes #EDEFF3 for all of them); colour belongs to the cards. A row that leaves the app ends in ↗, not ›.
-const menuRow = (ic, color, title, sub, attrs) => `<button class="mrow" ${attrs}><span class="sq">${icon(ic)}</span><span class="mt"><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${icon(/data-ext=/.test(attrs) ? 'IconExternal' : 'IconChevronRight', 'chev')}</button>`;
+// Since ch. 12 every row icon is ink on a sunken square (ShellViewModel.cs MenuItem passes #EDEFF3 for all of them);
+// colour belongs to the cards. A row that leaves the app ends in ↗, not ›.
+const menuRow = (ic, title, sub, attrs) => `<button class="mrow" ${attrs}><span class="sq">${icon(ic)}</span><span class="mt"><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${icon(/data-ext=/.test(attrs) ? 'IconExternal' : 'IconChevronRight', 'chev')}</button>`;
 /** A hub group: its title inside its white card, as the app draws MenuGroupViewModel. */
 const group = (title, rows) => `<div class="card menu"><h3 class="group-title">${esc(title)}</h3>${rows.join('')}</div>`;
 const menu = rows => `<div class="card menu">${rows.join('')}</div>`;
-const chips = (list, on, attr, extra = '') => `<div class="chips${extra}">${list.map(([v, t]) => `<button class="chip-btn${v === on ? ' on' : ''}" ${attr}="${esc(v)}">${esc(t)}</button>`).join('')}</div>`;
-const pct = v => `%${Math.round(Math.min(1, v) * 100)}`;
+const chips = (list, on, attr, extra = '') => `<div class="chips${extra}">${list.map(([v, x]) => `<button class="chip-btn${v === on ? ' on' : ''}" ${attr}="${esc(v)}">${esc(x)}</button>`).join('')}</div>`;
+const groupChips = (on, attr) => chips([['', t('filter.all')], ...GROUPS.map(g => [slug(g), L.groupName(g)])], on, attr, ' scroll');
 const videoCard = (v, wide = false) => `<button class="tile video${wide ? ' grid' : ''}" data-video="${esc(v.id)}"><div class="card flush">
   <div class="thumb"><img src="../assets/site/${esc(v.thumb)}" alt="" loading="lazy"><span class="play">${icon('IconPlay')}</span></div>
-  <div class="meta"><b>${esc(v.title)}</b>${wide ? '' : `<small>${esc(KIND_NAMES[v.kind] ?? '')}</small>`}</div></div></button>`;
-const KIND_NAMES = { riddle: 'Bilmece videoları', clip: 'Klipler', interview: 'Dore soruyor, müzisyen cevaplıyor', karaoke: 'Karaoke', intro: 'Jenerikler' };
+  <div class="meta"><b${TRL()}>${esc(v.title)}</b>${wide ? '' : `<small>${esc(t(`kind.${v.kind}`))}</small>`}</div></div></button>`;
+/** An instrument's name in the current language; the routes keep the Turkish slug. */
+const instName = trName => L.instName(trName);
 
-// ───────────────────────── Keşfet = Oyna (dossier ch. 14 §1): the banner, OYNA, the categories and Bugünün kartı,
-// nothing else. The owner: Keşfet "still doesn't feel like it includes the main game", so the whole tab is the game's.
+// ───────────────────────── Oyna (dossier ch. 14 §1 and §10): Şimdi Oyna, the categories and Bugünün kartı, nothing
+// else. The owner: the tab "still didn't feel like it includes the main game", so the whole tab is the game's, and it is
+// named Oyna; the banner carousel moved to the Doremimi tab.
 let banner = 0, carouselTimer = null;
-// Banner targets after the revision (NR-10): 3 opens İzle, 5 the hub's Kitaplar ve notalar page.
-const BANNER_GO = ['game', '#/dore-ve-mimi', '#/izle', '#/vakif', '#/kitaplar'];
 
 function bannerHtml(b, cls = '') {
-  return `<button class="tile banner ${cls}" data-banner="${BANNERS.indexOf(b)}" style="--accent:${readable(b.accent)}">
+  return `<button class="tile banner ${cls}" data-banner="${b.index}" style="--accent:${readable(b.accent)}">
     <div class="hero"><div class="txt"><b>${esc(b.title)}</b><small>${esc(b.subtitle)}</small></div>
       <img src="../assets/site/banners/${b.image}" alt=""></div></button>`;
 }
 
 /*
- * OYNA as a circle. The little card inside loops through the three ways the game can ask (it turns over; four answer
- * bars come and one lights; letters type into a line) without naming any of them: as names they read as three games
- * (ch. 14 §2). One loop is 4.5 s. Under reduced motion every animation stops and what is left is the card with its ♭,
- * which is why the ♭ face is the card's resting side and the other states only exist inside the keyframes.
+ * Şimdi Oyna as a circle. The little card inside loops through the three ways the game can ask (it turns over; four
+ * answer bars come and one lights; letters type into a line) without naming any of them: as names they read as three
+ * games (ch. 14 §2). One loop is 4.5 s. Under reduced motion every animation stops and what is left is the card with
+ * its ♭, which is why the ♭ face is the card's resting side and the other states only exist inside the keyframes. The
+ * typed word is the ♭'s name in the child's language, so the loop spells a real answer.
  */
 function oynaHtml() {
-  const letters = [...'BEMOL'].map((c, i) => `<i style="--i:${i}">${c}</i>`).join('');
+  const letters = [...up(t('oyna.typed'))].map((c, i) => `<i style="--i:${i}">${esc(c)}</i>`).join('');
   return `<div class="oyna-sec">
-    <button class="chunky oyna circle" data-do="play" data-origin="kesfet" aria-label="Oyna"><span class="face">
+    <button class="chunky oyna circle" data-do="play" data-origin="kesfet" aria-label="${esc(t('oyna.button'))}"><span class="face">
       <span class="mini" aria-hidden="true"><span class="flipper"><span class="side front music">♭</span><span class="side back">?</span></span>
         <span class="bars"><i></i><i></i><i></i><i></i></span><span class="typed">${letters}</span></span>
-      <b class="word">OYNA</b></span></button>
-    <p class="oyna-cap">Kartı gör, cevabı yaz!</p>
-    <button class="quiet link howto" data-do="howto">Nasıl oynanır?</button>
+      <b class="word">${esc(t('oyna.button'))}</b></span></button>
+    <p class="oyna-cap">${esc(t('oyna.caption'))}</p>
+    <button class="quiet link howto" data-do="howto">${esc(t('oyna.howto'))}</button>
   </div>`;
 }
 
@@ -239,28 +284,24 @@ function oynaHtml() {
  * Çalgılar split: to the child they are all categories of the one game.
  */
 function categoryCard(id) {
-  const info = CONCEPTS[id];
-  const t = accentSet(info.color);
+  const info = L.CONCEPTS[id];
+  const tone = accentSet(info.color);
   const cards = deck.forConcept(id).length;
   const m = Math.min(1, Math.max(0, mastery.conceptMastery(id, deck)));
   const played = deck.forConcept(id).some(q => mastery.of(q.id));
-  const art = info.family ? `<img src="../assets/cards/portrait-${FAMILIES[info.family].art}.png" alt="">` : `<span class="music">${esc(info.symbol)}</span>`;
-  return `<button class="kat" data-play="${id}" data-origin="kesfet" aria-label="${esc(info.name)}, ${cards} kart" style="--kf:${t.face};--kl:${t.label};--ke:${t.edge}">
-    <span class="kface"><span class="kart-art">${art}</span><b>${esc(info.name)}</b><small>${cards} kart${played ? ` · %${Math.round(m * 100)}` : ''}</small>
+  const art = info.family ? `<img src="../assets/cards/portrait-${L.FAMILIES[info.family].art}.png" alt="">` : `<span class="music">${esc(info.symbol)}</span>`;
+  return `<button class="kat" data-play="${id}" data-origin="kesfet" aria-label="${esc(`${info.name}, ${t('cards', { n: cards })}`)}" style="--kf:${tone.face};--kl:${tone.label};--ke:${tone.edge}">
+    <span class="kface"><span class="kart-art">${art}</span><b>${esc(info.name)}</b><small class="num">${esc(t('cards', { n: cards }))}${played ? ` · ${esc(pct(m))}` : ''}</small>
     ${played ? `<span class="ktrack"><i style="width:${Math.round(m * 100)}%"></i></span>` : ''}</span></button>`;
 }
 
-// No "Tekrar zamanı" row any more (ch. 14 §1): every round deals the cards that are due first (QuestionDeck.Deal), so
-// the review happens inside OYNA. The deck's Keşfet slide scrolls to `.kats-sec`.
+// No "Tekrar zamanı" row (ch. 14 §1): every round deals the cards that are due first (QuestionDeck.Deal), so the review
+// happens inside Şimdi Oyna. The deck's Oyna slide scrolls to `.kats-sec`.
 function home() {
   return `<div class="stack home">
-    <div class="carousel">
-      <div class="banner-slot" id="bslot">${bannerHtml(BANNERS[banner])}</div>
-      <div class="dots">${BANNERS.map((b, i) => `<span class="dot${i === banner ? ' on' : ''}"></span>`).join('')}</div>
-    </div>
     ${oynaHtml()}
-    <div class="kats-sec"><h2 class="h2 khead">Kategoriler</h2>
-      <div class="kats">${kesfetCategories(deck, CONCEPTS).map(categoryCard).join('')}</div></div>
+    <div class="kats-sec"><h2 class="h2 khead">${esc(t('kesfet.categories'))}</h2>
+      <div class="kats">${kesfetCategories(deck, L.CONCEPTS).map(categoryCard).join('')}</div></div>
     ${todayHtml()}
   </div>`;
 }
@@ -270,7 +311,7 @@ function home() {
  * three pools as the app: the site's instruments, the instrument questions and the signs that are not samples.
  * ?gun=+N shifts the day like the rest of the demo, so the presenter can show tomorrow's card.
  */
-const DAILY_POOLS = () => [DIRECTORY, QUESTIONS.filter(q => q.kind !== 'sign'), SIGN_CARDS.filter(c => !c.isSample)];
+const DAILY_POOLS = () => [L.DIRECTORY, L.QUESTIONS.filter(q => q.kind !== 'sign'), L.SIGN_CARDS.filter(c => !c.isSample)];
 const todayShown = { key: null, answer: false };
 function todayCard() {
   const date = new Date(); date.setDate(date.getDate() + DAY_SHIFT);
@@ -280,30 +321,29 @@ function todayCard() {
   const item = pools[p.kind][p.item];
   const key = `${p.kind}:${p.item}`;
   if (todayShown.key !== key) { todayShown.key = key; todayShown.answer = false; }
-  if (p.kind === 0) return { key, kind: `Günün çalgısı · ${item.group}`, title: item.name, body: item.summary, color: GROUP_COLORS[item.group], photo: photoOf(item.name), go: `#/calgi/${slug(item.name)}` };
+  if (p.kind === 0) return { key, kind: t('today.instrument', { group: L.groupName(item.group) }), title: item.label, body: item.about, color: GROUP_COLORS[item.group], photo: photoOf(item.name), go: `#/calgi/${slug(item.name)}` };
   if (p.kind === 1) {
     const instKey = item.conceptIds.find(id => id.startsWith('instrument:'))?.slice(11);
-    const inst = INSTRUMENTS[instKey];
-    const entry = inst && DIRECTORY.find(d => quizKeyOf(d.name) === instKey);
+    const inst = L.INSTRUMENTS[instKey];
+    const entry = inst && DIRECTORY_TR.find(d => quizKeyOf(d.name) === instKey);
     const answer = item.explanation?.tip ? `${item.answer.replace(/[. ]+$/, '')}. ${item.explanation.tip}` : item.answer;
-    return { key, kind: `Günün sorusu · ${inst?.name ?? 'Çalgılar'}`, title: item.prompt, body: 'Cevabı görmek için dokun.', answer,
+    return { key, kind: t('today.question', { name: inst?.name ?? t('today.instruments') }), title: item.prompt, body: t('today.tap'), answer,
       color: entry ? GROUP_COLORS[entry.group] : '#6B6E85', photo: entry ? photoOf(entry.name) : null, go: entry ? `#/calgi/${slug(entry.name)}` : null };
   }
-  const cat = SIGN_CATEGORIES.find(c => c.key === item.category);
-  return { key, kind: `Günün işareti · ${cat.name}`, title: item.name, body: item.definition, color: cat.color, symbol: item.symbol, go: `#/isaret/${item.id}` };
+  const cat = L.SIGN_CATEGORIES.find(c => c.key === item.category);
+  return { key, kind: t('today.sign', { name: cat.name }), title: item.name, body: item.definition, color: cat.color, symbol: item.symbol, go: `#/isaret/${item.id}` };
 }
 function todayHtml() {
   const c = todayCard();
   if (!c) return '';
-  const t = accentSet(c.color);
+  const tone = accentSet(c.color);
   const art = c.photo ? `<img src="${c.photo}" alt="">` : c.symbol ? `<span class="music">${esc(c.symbol)}</span>` : icon('IconNote');
   const shown = c.answer && todayShown.answer;
-  // A plain white card (ch. 13 §4): the colour is only the art window and a 3 px bar down its left edge. The 4 px frame
-  // over a coloured edge went: next to the yellow OYNA and the banner it was a third loud block. The eyebrow names it,
-  // so there is no separate heading.
+  // A plain white card (ch. 13 §4): the colour is only the art window and a 3 px bar down its left edge. The eyebrow
+  // names it, so there is no separate heading.
   return `<button class="tile today" data-today="1" style="--acc:${c.color}"><div class="tface">
-    <span class="tart" style="background:${t.face};color:${t.label}">${art}</span>
-    <span class="ttxt"><span class="eyebrow">BUGÜNÜN KARTI</span><small>${esc(c.kind)}</small><b>${esc(c.title)}</b>${shown ? `<span class="p reply">${esc(c.answer)}</span>` : `<span class="p">${esc(c.body)}</span>`}</span>
+    <span class="tart" style="background:${tone.face};color:${tone.label}">${art}</span>
+    <span class="ttxt"><span class="eyebrow">${esc(t('today.eyebrow'))}</span><small>${esc(c.kind)}</small><b>${esc(c.title)}</b>${shown ? `<span class="p reply">${esc(c.answer)}</span>` : `<span class="p">${esc(c.body)}</span>`}</span>
   </div></button>`;
 }
 function tapToday() {
@@ -317,9 +357,9 @@ function tapToday() {
 function setBanner(i) {
   const slot = $('#bslot');
   if (!slot || i === banner) return;
-  banner = (i + BANNERS.length) % BANNERS.length;
+  banner = (i + L.BANNERS.length) % L.BANNERS.length;
   const old = slot.firstElementChild;
-  slot.insertAdjacentHTML('beforeend', bannerHtml(BANNERS[banner]));
+  slot.insertAdjacentHTML('beforeend', bannerHtml(L.BANNERS[banner]));
   const neu = slot.lastElementChild;
   if (REDUCED) { old.remove(); } else {
     neu.style.transform = 'translateX(110%)';
@@ -330,148 +370,145 @@ function setBanner(i) {
 }
 function startCarousel() { stopCarousel(); if (!STILL) carouselTimer = setInterval(() => setBanner(banner + 1), 5000); }
 function stopCarousel() { clearInterval(carouselTimer); carouselTimer = null; }
+const carouselHtml = () => `<div class="carousel">
+    <div class="banner-slot" id="bslot">${bannerHtml(L.BANNERS[banner])}</div>
+    <div class="dots">${L.BANNERS.map((b, i) => `<span class="dot${i === banner ? ' on' : ''}"></span>`).join('')}</div>
+  </div>`;
 
-// ───────────────────────── Öğren (dossier ch. 14 §5): six tabs, İşaretler · Çalgılar · Aileler · Bilmeceler ·
-// Değerler · Notalar. Every way from here into the game goes through the Hazırlan sheet and plays the cards turned over.
+// ───────────────────────── Öğren (dossier ch. 14 §10): information only, four tabs, İşaretler · Çalgılar · Aileler ·
+// Değerler. No page reached from here starts a round: the cards turned over to read now come only as the help inside
+// an Oyna round (the ladder), and the riddles live in İzle, the scores in Çal.
 const flipped = new Set();
 function learn() {
-  const seg = OGREN_TABS.some(t => t.key === route.segment) ? route.segment : 'isaretler';
-  const tabs = `<div class="otabs" role="tablist">${OGREN_TABS.map(t => `<button class="otab${seg === t.key ? ' on' : ''}" role="tab" data-go="#/ogren/${t.key}" aria-selected="${seg === t.key}">${t.label}</button>`).join('')}</div>`;
+  const seg = OGREN_TABS.some(x => x.key === route.segment) ? route.segment : 'isaretler';
+  const tabs = `<div class="otabs" role="tablist">${OGREN_TABS.map(x => `<button class="otab${seg === x.key ? ' on' : ''}" role="tab" data-go="#/ogren/${x.key}" aria-selected="${seg === x.key}">${esc(t(`ogren.${x.key}`))}</button>`).join('')}</div>`;
   return `<div class="stack learn">${tabs}${LEARN_TABS[seg]()}</div>`;
 }
 const LEARN_TABS = {
-  isaretler: () => `${note('Her müzik işaretinin bir rengi var. Bir renge dokun, kart dönsün: anlamını oku, sonra kartları aç.')}
-    <div class="signs">${SIGN_CATEGORIES.map(c => signTile(c)).join('')}</div>`,
+  isaretler: () => `${note(t('ogren.isaretler.note'))}
+    <div class="signs">${L.SIGN_CATEGORIES.map(c => signTile(c)).join('')}</div>`,
   // A grid of photos (ch. 14 §5): the 41-row list was the screen testers called hardest to use. The bar under each
   // name is the instrument's group colour, the only colour on the tile, so the photo stays the thing that is read.
   calgilar: () => {
     const filter = route.query?.get('aile') ?? '';
-    const list = DIRECTORY.filter(d => !filter || slug(d.group) === filter);
-    return `${chips([['', 'Tümü'], ...GROUPS.map(g => [slug(g), g])], filter, 'data-aile', ' scroll')}
+    const list = L.DIRECTORY.filter(d => !filter || slug(d.group) === filter);
+    return `${groupChips(filter, 'data-aile')}
       <div class="igrid">${list.map(d => `<button class="itile" data-push="#/calgi/${slug(d.name)}"><span class="iph"><img src="${photoOf(d.name)}" alt="" loading="lazy"></span>
-        <span class="imeta"><b>${esc(d.name)}</b><small>${esc(d.group)}</small></span><span class="ibar" style="background:${GROUP_COLORS[d.group]}"></span></button>`).join('')}</div>`;
+        <span class="imeta"><b>${esc(d.label)}</b><small>${esc(L.groupName(d.group))}</small></span><span class="ibar" style="background:${GROUP_COLORS[d.group]}"></span></button>`).join('')}</div>`;
   },
-  aileler: () => `${note('Her çalgı ailesinin kendi kartları var. Bir aileye dokun, kartlarını çevirip oku.')}
-    <div class="fams">${Object.keys(FAMILIES).map(k => familyCard(k)).join('')}</div>`,
-  bilmeceler: () => `${note('Dore soruyor: bu hangi çalgı? Videoyu izle, çalgıyı sesinden bul.')}
-    <div class="vgrid">${VIDEOS.filter(v => v.kind === 'riddle').map(v => videoCard(v, true)).join('')}</div>`,
+  aileler: () => `${note(t('ogren.aileler.note'))}
+    <div class="fams">${Object.keys(L.FAMILIES).map(k => familyCard(k)).join('')}</div>`,
   degerler: () => valuesTab(),
-  notalar: () => {
-    const lib = t => LIBRARY.filter(l => t.includes(l.title)).map(l => menuRow('IconBook', l.color, l.title, l.subtitle, 'data-ext="doremimi.org"'));
-    return `${group('Kitaplar ve notalar', lib(['İlkokul kitapları', 'Ortaokul kitapları', 'Notalar']))}
-      ${group('Metodlar', lib(['Metodlar']))}
-      ${group('Şarkı sözleri', LYRICS.map(l => menuRow('IconMic', '', l.instrument, l.lines[0], `data-push="#/sozler/${slug(l.instrument)}"`)))}`;
-  },
 };
 
-/** An Aileler card: the family's portrait on its colour, its name, its first sentence and its true card count. */
+/*
+ * An Aileler card: the family's portrait on its colour, its name, its first sentence and how many of its instruments
+ * the directory holds. A tap shows those instruments (Çalgılar under the family's filter): Öğren is information only
+ * (ch. 14 §10), so the card no longer opens the cards to turn over, and its count is of instruments, not of game cards.
+ */
 function familyCard(key) {
-  const f = FAMILIES[key], t = accentSet(f.color), id = 'family:' + key;
-  return `<button class="fam" data-prep="${id}" style="--kf:${t.face};--kl:${t.label};--ke:${t.edge}"><span class="fface">
+  const f = L.FAMILIES[key], tone = accentSet(f.color), g = FAMILY_GROUP[key];
+  const n = L.DIRECTORY.filter(d => d.group === g).length;
+  return `<button class="fam" data-fam="${key}" data-go="#/ogren/calgilar?aile=${slug(g)}" style="--kf:${tone.face};--kl:${tone.label};--ke:${tone.edge}"><span class="fface">
     <span class="fart"><img src="../assets/cards/portrait-${f.art}.png" alt=""></span>
-    <span class="ftxt"><b>${esc(f.name)}</b><small>${esc(CONCEPTS[id].fact)}</small><em>${prepCount(deck, id)} kart</em></span></span></button>`;
+    <span class="ftxt"><b>${esc(f.name)}</b><small>${esc(L.CONCEPTS['family:' + key].fact)}</small><em class="num">${esc(t('instruments', { n }))}</em></span></span></button>`;
 }
 
 /*
  * Değerler (ch. 14 §5): the foundation's Dore Mimi Müzikle Değerler Eğitimi. What it is comes from the site's own
- * vision text; the parts the app already has open them, and the part it does not have yet says so ("Hazırlanıyor"),
- * rather than a page that pretends.
+ * vision text (Turkish in every language, as the foundation's site texts are); the parts the app already has open
+ * them, and the part it does not have yet says so ("Hazırlanıyor"), rather than a page that pretends. The games part
+ * goes to the Oyna tab: Öğren has no play button (ch. 14 §10).
  */
 function valuesTab() {
   const part = (ic, title, line, attrs) => `<button class="vpart${attrs ? '' : ' wait'}" ${attrs ?? 'disabled'}><span class="sq">${icon(ic)}</span>
-    <span class="mt"><b>${esc(title)}</b><small>${esc(line)}</small></span>${attrs ? icon('IconChevronRight', 'chev') : '<span class="badge soonb">HAZIRLANIYOR</span>'}</button>`;
-  return `<div class="card values"><span class="eyebrow">Dore Mimi Müzikle Değerler Eğitimi</span><p class="p ink">${esc(VISION)}</p></div>
-    ${ribbon('Parçaları', ' small')}
+    <span class="mt"><b>${esc(title)}</b><small>${esc(line)}</small></span>${attrs ? icon('IconChevronRight', 'chev') : `<span class="badge soonb">${esc(t('preparing'))}</span>`}</button>`;
+  return `<div class="card values"><span class="eyebrow">${esc(t('values.eyebrow'))}</span><p class="p ink"${TRL()}>${esc(VISION)}</p></div>
+    ${ribbon(t('values.parts'), ' small')}
     <div class="card menu">${[
-      part('IconNote', 'Şarkılar', 'Her çalgının şarkısı, karaoke sözleriyle', 'data-go="#/cal"'),
-      part('IconCards', 'Oyunlar', 'Müzik Kart Oyunu', 'data-do="play" data-origin="kesfet"'),
-      part('IconBook', 'Etkinlik ve dikkat kitapları', 'Uygulamaya ekleniyor', null),
+      part('IconNote', t('values.songs'), t('values.songs.line'), 'data-go="#/cal"'),
+      part('IconCards', t('values.games'), t('values.games.line'), 'data-go="#/"'),
+      part('IconBook', t('values.books'), t('values.books.line'), null),
     ].join('')}</div>`;
 }
 const SIGN_GLYPH = { bemol: '♭', diyez: '♯', fa: '𝄢', sol: '𝄞', naturel: '♮', porte: '𝄚', cizgi: '𝄂' };
 function signTile(c) {
-  const color = c.color;
   if (flipped.has(c.key)) {
-    return `<button class="sign-tile back" data-flip="${c.key}" style="--c:${color}"><span class="m">${esc(c.meaning)}</span><span class="chunky indigo small open" data-push="#/isaret-kategori/${c.key}"><span class="face">Aç</span></span></button>`;
+    return `<button class="sign-tile back" data-flip="${c.key}" style="--c:${c.color}"><span class="m">${esc(c.meaning)}</span><span class="chunky indigo small open" data-push="#/isaret-kategori/${c.key}"><span class="face">${esc(t('open'))}</span></span></button>`;
   }
-  return `<button class="sign-tile" data-flip="${c.key}" style="--c:${color};--e:${edge(color)}"><span class="g music">${SIGN_GLYPH[c.key]}</span><b>${esc(c.name)}</b></button>`;
+  return `<button class="sign-tile" data-flip="${c.key}" style="--c:${c.color};--e:${edge(c.color)}"><span class="g music">${SIGN_GLYPH[c.key]}</span><b>${esc(c.name)}</b></button>`;
 }
 
-const CATEGORY_INTRO = 'Bu işaretin kartları. Birine dokun, tanımını ve çocuk anlatımını oku.';   // PROPOSED
 function signCategory(key) {
-  const c = SIGN_CATEGORIES.find(x => x.key === key);
+  const c = L.SIGN_CATEGORIES.find(x => x.key === key);
   if (!c) return missing('isaret-kategori/' + key);
-  const cards = SIGN_CARDS.filter(x => x.category === key);
+  const cards = L.SIGN_CARDS.filter(x => x.category === key);
   return `<div class="stack">
     <div class="sign-hero" style="--c:${c.color};--e:${edge(c.color)}"><span class="g music">${SIGN_GLYPH[key]}</span><div><b>${esc(c.name)}</b><small>${esc(c.meaning)}</small></div></div>
-    ${note(CATEGORY_INTRO)}
+    ${note(t('sign.category.note'))}
     <div class="card list">${cards.map(k => `<button class="lrow" data-push="#/isaret/${k.id}"><span class="sq letter music" style="background:${c.color}">${esc(k.symbol)}</span><span class="mt"><b>${esc(k.name)}</b><small>${esc(k.definition)}</small></span>${icon('IconChevronRight', 'chev')}</button>`).join('')}</div>
-    <button class="chunky blue large" data-prep="signcat:${key}"><span class="face">${icon('IconCards')}Kartları çalış</span></button></div>`;
+  </div>`;
 }
 
 let signTab = 1;
 function signCard(id) {
   const q = deck.find('sign:' + id);
   if (!q) return missing('isaret/' + id);
-  const c = SIGN_CATEGORIES.find(x => x.key === SIGN_CARDS.find(k => k.id === id).category);
+  const c = L.SIGN_CATEGORIES.find(x => x.key === L.SIGN_CARDS.find(k => k.id === id).category);
   return `<div class="stack">
     <div class="face-card big" style="--accent:${q.accent};--accent-deep:${readable(q.accent)}"><span class="chip">${esc(q.answer)}</span><div class="symbol">${esc(q.symbol)}</div></div>
-    <div class="card ans" style="--accent-deep:${readable(q.accent)}"><span class="s">${esc(q.symbol)}</span><div><small>Bu işaretin adı:</small><b>${esc(q.answer)}</b><small>${esc(c.name)}</small></div></div>
-    ${explainHtml(q, signTab, 'data-sekme')}
-    <button class="chunky blue large" data-prep="signcat:${c.key}"><span class="face">${icon('IconCards')}Kendini dene</span></button></div>`;
+    <div class="card ans" style="--accent-deep:${readable(q.accent)}"><span class="s">${esc(q.symbol)}</span><div><small>${esc(t('sign.name'))}</small><b>${esc(q.answer)}</b><small>${esc(c.name)}</small></div></div>
+    ${explainHtml(q, signTab, 'data-sekme')}</div>`;
 }
 
 /** The sign's Tanım / Çocuk anlatımı block, shared by the sign card page and the game's information card. */
 function explainHtml(q, tab, attr) {
   const ex = q.explanation;
-  const concept = CONCEPTS[q.conceptIds[0]]?.name ?? '';
-  const tabs = `<div class="tabs2"><button class="chunky tabbtn${tab === 0 ? ' active' : ''}" ${attr}="0"><span class="face">Tanım</span></button>
-    <button class="chunky tabbtn${tab === 1 ? ' active' : ''}" ${attr}="1"><span class="face">Çocuk anlatımı</span></button></div>`;
+  const concept = L.CONCEPTS[q.conceptIds[0]]?.name ?? '';
+  const tabs = `<div class="tabs2"><button class="chunky tabbtn${tab === 0 ? ' active' : ''}" ${attr}="0"><span class="face">${esc(t('explain.definition'))}</span></button>
+    <button class="chunky tabbtn${tab === 1 ? ' active' : ''}" ${attr}="1"><span class="face">${esc(t('explain.kids'))}</span></button></div>`;
   if (tab === 0) {
     return `${tabs}<div class="card def page-in" style="--accent-deep:${readable(q.accent)}"><div class="row"><span class="avatar av">${esc(q.symbol)}</span><div><div class="h2">${esc(q.answer)}</div>
       <div class="caption" style="color:${readable(q.accent)}">${esc(concept)}</div></div></div><p class="p">${esc(ex.definition)}</p></div>`;
   }
   let visual = `<div class="card"><div class="big-sym" style="color:${q.accent}">${esc(q.symbol)}</div></div>`;
-  if (ex.kidsVisual?.startsWith('piano')) visual = `<div class="card piano-card"><span class="caption">Bir beyaz tuşa dokun ve izle!</span>${pianoHtml(ex.kidsVisual)}</div>`;
+  if (ex.kidsVisual?.startsWith('piano')) visual = `<div class="card piano-card"><span class="caption">${esc(t('piano.tap'))}</span>${pianoHtml(ex.kidsVisual)}</div>`;
   if (ex.kidsVisual?.startsWith('clef-face')) visual = clefHtml(q, ex.kidsVisual === 'clef-face-fa');
   return `${tabs}<div class="page-in" style="display:flex;flex-direction:column;gap:12px;--accent:${q.accent};--accent-deep:${readable(q.accent)};--accent-read:${readable(q.accent)}">
     <div class="kids"><img class="mimi" data-sprite="mimi-wave" src="${frame('mimi-wave', 0)}" alt="Mimi"><div class="say">${esc(ex.kids ?? ex.definition)}</div></div>${visual}</div>`;
 }
 
 /** InstrumentPageViewModel.InstrumentFor: the quiz deck's instrument with the same name (Klarinet is "Klarnet" there). */
-const quizKeyOf = name => Object.keys(INSTRUMENTS).find(k => slug(INSTRUMENTS[k].name) === slug(name) || (slug(name) === 'klarinet' && k === 'clarinet'));
+const quizKeyOf = name => Object.keys(INSTRUMENTS_TR).find(k => slug(INSTRUMENTS_TR[k].name) === slug(name) || (slug(name) === 'klarinet' && k === 'clarinet'));
 const videosFor = d => VIDEOS.filter(v => v.page === d.riddle || slug(v.page ?? '').endsWith(slug(d.name)) || slug(v.title).startsWith(slug(d.name)));
-const instrumentFlips = new Set();
+/*
+ * An instrument's page, information only (ch. 14 §10): no "Bu çalgıyla oyna" and no "Kendini dene" cards to turn over.
+ * Those were the game's Çevir cards under another name, and the owner wants those only as the help inside an Oyna
+ * round. The song keeps its row: the song page in Çal has its own round.
+ */
 function instrumentPage(key) {
-  const d = DIRECTORY.find(x => slug(x.name) === key);
+  const d = L.DIRECTORY.find(x => slug(x.name) === key);
   if (!d) return missing('calgi/' + key);
-  const qk = quizKeyOf(d.name);
-  const qs = qk ? deck.all.filter(q => q.conceptIds.includes('instrument:' + qk)) : [];
   const vids = videosFor(d);
   const s = songFor(d.name, SONGS);
   const accent = GROUP_COLORS[d.group];
   return `<div class="stack">
     <div class="inst-hero" style="--accent:${mixHex(accent, '#14107A', 0.35)}">
-      <div class="ph"><img src="${photoOf(d.name)}" alt=""></div><div class="mt"><b>${esc(d.name)}</b><small>${esc(FAMILY_OF_GROUP[d.group])}</small></div></div>
-    <div class="card"><p class="p strong">${esc(d.summary)}</p></div>
-    ${d.riddle ? `<button class="chunky purple" data-do="riddle"><span class="face">${icon('IconPlay')}Video bilmeceyi izle</span></button>` : ''}
-    <button class="chunky white" data-ext="doremimi.org"><span class="face">${icon('IconBook')}Ayrıntılı çalgı bilgisi</span></button>
-    ${vids.length ? `${ribbon('Videolar')}<div class="vgrid">${vids.map(v => videoCard(v, true)).join('')}</div>` : ''}
-    ${s ? `<button class="tile" data-song-in-cal="${s.slug}"><div class="card due-row song-card"><span class="sq">${icon('IconNote')}</span><span class="mt"><b>Şarkısını çal</b><small>${esc(s.title)}</small></span><span class="go">${icon('IconPlay')}</span></div></button>` : ''}
-    ${qs.length ? `${ribbon('Kendini dene')}${qs.map(q => { const open = instrumentFlips.has(q.id); const id = q.id.slice(2); return `<button class="tile" data-iflip="${q.id}"><div class="card self${open ? ' open' : ''}">${open
-      ? `<span class="eyebrow">CEVAP</span><b class="ans-t">${esc(q.answer)}</b>`
-      : `<span class="caption">${esc(DIFFICULTY[id] ?? '')}</span><b class="h3">${esc(q.prompt)}</b><span class="caption" style="color:var(--text-xp)">Cevap için kartı çevir</span>`}</div></button>`; }).join('')}
-      <button class="chunky yellow" data-play="instrument:${qk}" data-origin="cal"><span class="face">${icon('IconCards')}Bu çalgıyla oyna</span></button>` : ''}
+      <div class="ph"><img src="${photoOf(d.name)}" alt=""></div><div class="mt"><b>${esc(d.label)}</b><small>${esc(t(`family.${slug(d.group)}`))}</small></div></div>
+    <div class="card"><p class="p strong">${esc(d.about)}</p></div>
+    ${d.riddle ? `<button class="chunky purple" data-do="riddle"><span class="face">${icon('IconPlay')}${esc(t('instrument.riddle'))}</span></button>` : ''}
+    <button class="chunky white" data-ext="doremimi.org"><span class="face">${icon('IconBook')}${esc(t('instrument.more'))}</span></button>
+    ${vids.length ? `${ribbon(t('instrument.videos'))}<div class="vgrid">${vids.map(v => videoCard(v, true)).join('')}</div>` : ''}
+    ${s ? `<button class="tile" data-song-in-cal="${s.slug}"><div class="card due-row song-card"><span class="sq">${icon('IconNote')}</span><span class="mt"><b>${esc(t('instrument.song'))}</b><small${TRL()}>${esc(s.title)}</small></span><span class="go">${icon('IconPlay')}</span></div></button>` : ''}
   </div>`;
 }
-const FAMILY_OF_GROUP = { 'Yaylı': 'Yaylı çalgılar', 'Telli': 'Telli çalgılar', 'Tuşlu': 'Tuşlu çalgılar', 'Nefesli': 'Nefesli çalgılar', 'Bakır nefesli': 'Bakır nefesli çalgılar', 'Vurmalı': 'Vurmalı çalgılar', 'Diğer': 'Diğer' };
 
-// ───────────────────────── İzle (NR-40): Öğren's Videolar segment promoted to a tab
+// ───────────────────────── İzle (NR-40): every video, the riddles first (they left Öğren in ch. 14 §10)
+const WATCH_KINDS = ['riddle', 'clip', 'interview', 'karaoke', 'intro'];
 function watch() {
-  const groups = ['riddle', 'clip', 'interview', 'karaoke', 'intro'];
-  return `<div class="stack">${note("Doremimi'nin bilmece videoları, klipleri, karaokeleri ve jenerikleri.")}
-    ${groups.map(k => { const list = VIDEOS.filter(v => v.kind === k); return `${ribbon(KIND_NAMES[k])}<div class="vgrid">${list.map(v => videoCard(v, true)).join('')}</div>`; }).join('')}
-    ${menu([menuRow('IconPlay', 'var(--orange)', 'YouTube kanalı', 'Tüm klipler ve bilmeceler', 'data-ext="youtube.com"')])}</div>`;
+  return `<div class="stack">${note(t('izle.note'))}
+    ${WATCH_KINDS.map(k => { const list = VIDEOS.filter(v => v.kind === k); return `${ribbon(t(`kind.${k}`))}<div class="vgrid">${list.map(v => videoCard(v, true)).join('')}</div>`; }).join('')}
+    ${menu([menuRow('IconPlay', t('izle.youtube'), t('izle.youtube.line'), 'data-ext="youtube.com"')])}</div>`;
 }
 
 // ───────────────────────── Çal (NR-50): piano, Melodim, the 41 songs, the lyrics
@@ -487,20 +524,21 @@ function keyboardHtml2(base, id) {
   return `<div class="keys" id="${id}" data-base="${base}"><div class="whites">${whites.join('')}</div>${blacks.join('')}</div>`;
 }
 let calFilter = '';
+const songName = s => s.slug === 'ana-tema' ? t('song.allInstruments') : instName(s.instrument);
 function playRoot() {
   const melodim = profile.melodim ?? [];
-  const songs = SONGS.filter(s => s.slug !== 'ana-tema').sort((a, b) => a.instrument.localeCompare(b.instrument, 'tr'))
+  const songs = SONGS.filter(s => s.slug !== 'ana-tema').sort((a, b) => songName(a).localeCompare(songName(b), lang))
     .filter(s => !calFilter || slug(entryOfSong(s)?.group ?? 'Diğer') === calFilter);
   return `<div class="stack">
-    ${note('Piyanoda serbest çal ya da bir çalgının şarkısını dinle. Her şarkı uygulamanın piyanosuyla çalar.')}
-    ${ribbon('Serbest çal')}
-    <div class="card kb-card">${keyboardHtml2(60, 'free-keys')}<span class="caption c">Tuşlara dokun, sen de çal. Çaldıkların Melodim'e eklenir.</span></div>
-    <button class="tile" ${melodim.length ? 'data-push="#/melodim"' : ''} id="melodim-card"><div class="card due-row"><span class="sq">${icon('IconNote')}</span><span class="mt"><b>Melodim</b><small>${melodim.length ? `${melodim.length} nota` : 'Butonlara dokun, melodin burada birikir'}</small></span>${melodim.length ? icon('IconChevronRight', 'chev') : ''}</div></button>
-    ${ribbon('Şarkılar')}
-    ${chips([['', 'Tümü'], ...GROUPS.map(g => [slug(g), g])], calFilter, 'data-calf', ' scroll')}
-    <div class="songs">${songs.map(s => `<button class="tile" data-push="#/sarki/${s.slug}"><div class="song-tile"><span class="ph"><img src="${songArt(s)}" alt="" loading="lazy"></span><b>${esc(s.instrument)}</b></div></button>`).join('')}</div>
-    ${ribbon('Şarkı sözleri')}
-    <div class="hscroll lyr">${LYRICS.map(l => `<button class="tile" data-push="#/sozler/${slug(l.instrument)}"><div class="card lyric"><b>${esc(l.instrument)}</b><small>${esc(l.lines[0])}</small></div></button>`).join('')}</div>
+    ${note(t('cal.note'))}
+    ${ribbon(t('cal.free'))}
+    <div class="card kb-card">${keyboardHtml2(60, 'free-keys')}<span class="caption c">${esc(t('cal.keys'))}</span></div>
+    <button class="tile" ${melodim.length ? 'data-push="#/melodim"' : ''} id="melodim-card"><div class="card due-row"><span class="sq">${icon('IconNote')}</span><span class="mt"><b>${esc(t('page.melodim'))}</b><small class="num">${esc(melodim.length ? t('notes', { n: melodim.length }) : t('melodim.empty'))}</small></span>${melodim.length ? icon('IconChevronRight', 'chev') : ''}</div></button>
+    ${ribbon(t('cal.songs'))}
+    ${groupChips(calFilter, 'data-calf')}
+    <div class="songs">${songs.map(s => `<button class="tile" data-push="#/sarki/${s.slug}"><div class="song-tile"><span class="ph"><img src="${songArt(s)}" alt="" loading="lazy"></span><b>${esc(songName(s))}</b></div></button>`).join('')}</div>
+    ${ribbon(t('cal.lyrics'))}
+    <div class="hscroll lyr">${LYRICS.map(l => `<button class="tile" data-push="#/sozler/${slug(l.instrument)}"><div class="card lyric"><b>${esc(instName(l.instrument))}</b><small${TRL()}>${esc(l.lines[0])}</small></div></button>`).join('')}</div>
   </div>`;
 }
 
@@ -520,14 +558,14 @@ function songPage(slugName, melodim = false) {
   P.concept = qk ? 'instrument:' + qk : null;
   return `<div class="stack">
     <div class="song-head"><span class="ph">${s ? `<img src="${songArt(s)}" alt="">` : icon('IconNote')}</span>
-      <div class="mt"><span class="eyebrow">${melodim ? 'MELODİM' : 'NOTALAR'}</span><b>${esc(s ? s.instrument : 'Melodim')}</b><small>${esc(s ? s.title : 'Senin çaldığın notalar')}</small></div>
+      <div class="mt"><span class="eyebrow">${esc(melodim ? t('page.melodim') : t('song.eyebrow'))}</span><b>${esc(s ? songName(s) : t('page.melodim'))}</b><small${s ? TRL() : ''}>${esc(s ? s.title : t('melodim.line'))}</small></div>
       <span class="eq" id="eq">${'<i></i>'.repeat(7)}</span></div>
-    <div class="card karaoke" id="karaoke"><div class="now">♪ ♪ ♪</div><div class="next"></div></div>
-    <div class="card kb-card">${keyboardHtml2(60, 'song-keys')}<span class="prog"><i id="prog"></i></span><span class="caption c">Tuşlara dokun, sen de çal. Çaldıkların Melodim'e eklenir.</span></div>
-    <div class="two-btn"><button class="chunky primary large" data-song="toggle" id="song-toggle"><span class="face">${icon('IconPlay')}<span>Çal</span></span></button>
-      <button class="chunky white large sq-btn" data-song="stop" aria-label="Durdur"><span class="face"><i class="stopsq"></i></span></button></div>
-    ${lyric ? `<button class="chunky white" data-push="#/sozler/${slug(lyric.instrument)}"><span class="face">${icon('IconMic')}Sözleri</span></button>` : ''}
-    <button class="chunky yellow" data-play="${P.concept ?? 'karisik'}" data-origin="cal"><span class="face">${icon('IconCards')}${P.concept ? 'Bu çalgıyla oyna' : 'Karışık oyna'}</span></button>
+    <div class="card karaoke" id="karaoke"${TRL()}><div class="now">♪ ♪ ♪</div><div class="next"></div></div>
+    <div class="card kb-card">${keyboardHtml2(60, 'song-keys')}<span class="prog"><i id="prog"></i></span><span class="caption c">${esc(t('cal.keys'))}</span></div>
+    <div class="two-btn"><button class="chunky primary large" data-song="toggle" id="song-toggle"><span class="face">${icon('IconPlay')}<span>${esc(t('song.play'))}</span></span></button>
+      <button class="chunky white large sq-btn" data-song="stop" aria-label="${esc(t('song.stop'))}"><span class="face"><i class="stopsq"></i></span></button></div>
+    ${lyric ? `<button class="chunky white" data-push="#/sozler/${slug(lyric.instrument)}"><span class="face">${icon('IconMic')}${esc(t('song.lyrics'))}</span></button>` : ''}
+    <button class="chunky yellow" data-play="${P.concept ?? 'karisik'}" data-origin="cal"><span class="face">${icon('IconCards')}${esc(P.concept ? t('song.game') : t('song.mixed'))}</span></button>
   </div>`;
 }
 async function setupSong(slugName, melodim = false) {
@@ -535,7 +573,7 @@ async function setupSong(slugName, melodim = false) {
   const token = P.token = {};
   let events;
   if (melodim) events = fromKeys(profile.melodim ?? []);
-  else { try { events = sequence(await loadSong(slugName)); } catch { toast('Şarkı yüklenemedi', '', true); return; } }
+  else { try { events = sequence(await loadSong(slugName)); } catch { toast(t('song.failed'), '', true); return; } }
   if (P.token !== token) return;
   P.events = events; P.render = null; P.slug = slugName; P.from = 0; P.idx = -1;
   P.lines = karaokeLines(events);
@@ -576,14 +614,14 @@ function playSong() {
 }
 function tick() {
   if (!P.playing) return;
-  const t = P.from + (sound.now() - P.t0);
-  if (t >= length(P.events) + 0.4) { stopSong(); return; }
-  const i = indexAt(P.events, t);
+  const time = P.from + (sound.now() - P.t0);
+  if (time >= length(P.events) + 0.4) { stopSong(); return; }
+  const i = indexAt(P.events, time);
   const n = i >= 0 ? P.events[i] : null;
-  const sounding = n && n.midi >= 0 && t < n.start + n.duration;
+  const sounding = n && n.midi >= 0 && time < n.start + n.duration;
   lightKey(n?.midi ?? -1, sounding);
   if (i !== P.idx) { P.idx = i; showLine(i); }
-  const prog = $('#prog'); if (prog) prog.style.width = `${Math.min(100, t / length(P.events) * 100)}%`;
+  const prog = $('#prog'); if (prog) prog.style.width = `${Math.min(100, time / length(P.events) * 100)}%`;
   P.raf = requestAnimationFrame(tick);
 }
 function pauseSong() {
@@ -598,7 +636,7 @@ function stopSong() {
 }
 function setToggle() {
   const b = $('#song-toggle'); if (!b) return;
-  b.querySelector('.face').innerHTML = `${icon(P.playing ? 'IconPause' : 'IconPlay')}<span>${P.playing ? 'Duraklat' : 'Çal'}</span>`;
+  b.querySelector('.face').innerHTML = `${icon(P.playing ? 'IconPause' : 'IconPlay')}<span>${esc(P.playing ? t('song.pause') : t('song.play'))}</span>`;
   $('#eq')?.classList.toggle('on', P.playing);
 }
 /** Leaving a page stops its song (ch. 06 §9.8): a song must not play on under another page. */
@@ -607,8 +645,8 @@ function leavePage() { if (P.playing || P.events) { stopSong(); P.events = null;
 function lyricsPage(key) {
   const l = LYRICS.find(x => slug(x.instrument) === key);
   if (!l) return missing('sozler/' + key);
-  return `<div class="stack"><div class="card lyric-page"><span class="eyebrow">ŞARKI SÖZLERİ</span><b class="h2">${esc(l.title)}</b>
-    ${l.lines.map(x => `<p>${esc(x)}</p>`).join('')}</div></div>`;
+  return `<div class="stack"><div class="card lyric-page"><span class="eyebrow">${esc(t('lyrics.eyebrow'))}</span><b class="h2"${TRL()}>${esc(l.title)}</b>
+    ${l.lines.map(x => `<p${TRL()}>${esc(x)}</p>`).join('')}</div></div>`;
 }
 
 /** A key tap on any keyboard: its note, lit 220 ms, and one more note in Melodim (MelodyMemory, 16 at most). */
@@ -620,174 +658,187 @@ function tapKey(el) {
   profile.melodim = [...(profile.melodim ?? []), k].slice(-16);
   save();
   const card = $('#melodim-card');
-  if (card) { card.dataset.push = '#/melodim'; card.querySelector('small').textContent = `${profile.melodim.length} nota`; }
+  if (card) { card.dataset.push = '#/melodim'; card.querySelector('small').textContent = t('notes', { n: profile.melodim.length }); }
 }
 
-// ───────────────────────── the logo's hub, Doremimi (dossier ch. 14 §6; the rows are data/hub.js)
+// ───────────────────────── the logo's tab, Dore Mimi Vakfı (dossier ch. 14 §6, §10; the rows are data/hub.js)
 const whereAttr = w => w.push ? `data-push="${w.push}"` : w.go ? `data-go="${w.go}"` : `data-ext="${w.ext}"`;
-const firstSentenceOf = t => t.slice(0, t.indexOf('. ') + 1) || t;
+/*
+ * The banner carousel opens the tab, where the foundation's card with its one-line vision was (ch. 14 §10): the
+ * foundation is the tab's title, so the card said it twice. Faaliyetler's three cards, then the grouped lists.
+ */
 function hub() {
-  const rows = g => g.rows.map(([ic, title, line, w]) => menuRow(ic, '', title, line, whereAttr(w)));
-  const cards = g => `<h3 class="group-title on-canvas">${esc(g.title)}</h3><div class="acts3">${g.rows.map(([ic, title, line, w]) => `<button class="tile act-card" ${whereAttr(w)}><div class="card">
-    <span class="sq">${icon(ic)}</span><span class="mt"><b>${esc(title)}</b><small>${esc(line)}</small></span>${icon('IconChevronRight', 'chev')}</div></button>`).join('')}</div>`;
+  const rows = g => g.rows.map(([ic, k, w]) => menuRow(ic, t(`hub.${k}`), t(`hub.${k}.line`), whereAttr(w)));
+  const cards = g => `<h3 class="group-title on-canvas">${esc(t(`hub.group.${g.key}`))}</h3><div class="acts3">${g.rows.map(([ic, k, w]) => `<button class="tile act-card" ${whereAttr(w)}><div class="card">
+    <span class="sq">${icon(ic)}</span><span class="mt"><b>${esc(t(`hub.${k}`))}</b><small>${esc(t(`hub.${k}.line`))}</small></span>${icon('IconChevronRight', 'chev')}</div></button>`).join('')}</div>`;
   return `<div class="stack hub">
-    <button class="tile" ${whereAttr(HUB_HEADER)}><div class="card hub-hero"><div><b>${esc(HUB_HEADER.title)}</b><small>${esc(firstSentenceOf(VISION))}</small></div><img src="../assets/site/characters/group.png" alt="Dore ve Mimi"></div></button>
-    ${HUB.map(g => g.cards ? cards(g) : group(g.title, rows(g))).join('')}
+    ${carouselHtml()}
+    ${HUB.map(g => g.cards ? cards(g) : group(t(`hub.group.${g.key}`), rows(g))).join('')}
   </div>`;
 }
 
 function whatIs() {
-  const rows = [['IconHome', 'var(--magenta)', 'Keşfet', 'OYNA, kategoriler, bugünün kartı ve duyurular', 'data-go="#/"'],
-    ['IconBook', 'var(--cyan)', 'Öğren', 'İşaretler, çalgılar, aileler, bilmeceler, değerler ve notalar', 'data-go="#/ogren/isaretler"'],
-    ['IconEye', 'var(--orchid)', 'İzle', 'Bilmece videoları, klipler ve röportajlar', 'data-go="#/izle"'],
-    ['IconNote', 'var(--blue)', 'Çal', 'Piyano, 41 şarkı ve Melodim', 'data-go="#/cal"'],
-    ['IconCards', 'var(--yellow-deep)', 'Müzik Kart Oyunu', 'Kartı gör, cevabı yaz!', 'data-do="play" data-origin="kesfet"']];
+  const rows = [['IconCards', 'tab.kesfet', 'whatis.oyna', 'data-go="#/"'],
+    ['IconBook', 'tab.ogren', 'whatis.ogren', 'data-go="#/ogren/isaretler"'],
+    ['IconEye', 'tab.izle', 'whatis.izle', 'data-go="#/izle"'],
+    ['IconNote', 'tab.cal', 'whatis.cal', 'data-go="#/cal"']];
   return `<div class="stack">
-    <div class="toy nedir"><div class="in"><div class="head"><img src="../assets/brand/logo.png" alt=""><div><div class="eyebrow">DOREMİMİ NEDİR?</div><b>Dore ve Mimi ile müziği oynayarak öğren!</b></div></div>
-      <p class="lead">Nota işaretlerini ve çalgıları tanı, cevabını kendin yaz, şarkı ve bilmece videolarıyla dinle.</p></div></div>
-    ${ribbon('Uygulamada neler var?')}${menu(rows.map(r => menuRow(...r)))}
-    ${ribbon('Çünkü…')}<div class="card"><ul class="mani">${MANIFESTO.map(l => `<li>${esc(l)}</li>`).join('')}</ul></div></div>`;
+    <div class="toy nedir"><div class="in"><div class="head"><img src="../assets/brand/logo.png" alt=""><div><div class="eyebrow">${esc(t('whatis.eyebrow'))}</div><b>${esc(t('whatis.title'))}</b></div></div>
+      <p class="lead">${esc(t('whatis.lead'))}</p></div></div>
+    ${ribbon(t('whatis.inside'))}${menu(rows.map(([ic, k, line, a]) => menuRow(ic, t(k), t(line), a)))}
+    ${ribbon(t('whatis.because'))}<div class="card"${TRL()}><ul class="mani">${MANIFESTO.map(l => `<li>${esc(l)}</li>`).join('')}</ul></div></div>`;
 }
 
 function booksPage() {
-  return `<div class="stack">${note('Kitaplar, metodlar, notalar ve şarkı sözleri. Her biri Doremimi kütüphanesinde.')}
-    ${menu(LIBRARY.map(l => menuRow('IconBook', l.color, l.title, l.subtitle, 'data-ext="doremimi.org"')))}</div>`;
+  return `<div class="stack">${note(t('books.note'))}
+    ${menu(LIBRARY.map(l => menuRow('IconBook', l.title, l.subtitle, `data-ext="doremimi.org"${TRL()}`)))}</div>`;
 }
 function characters() {
-  return `<div class="stack">${note('Mimi ve en yakın arkadaşı Dore, müziğin dünyasında birlikte maceraya çıkıyor.')}
+  return `<div class="stack">${note(t('chars.note'))}
     ${CHARACTERS.map(c => `<div class="card char" style="--c:${c.color}"><img src="../assets/site/characters/${c.image}" alt="${esc(c.name)}"><div>
-      <b class="h2">${esc(c.greeting)}</b><p class="p">${esc(c.bio)}</p>
-      <dl><dt>Çalgıları</dt><dd>${esc(c.instruments)}</dd><dt>Kişiliği</dt><dd>${esc(c.trait)}</dd></dl></div></div>`).join('')}</div>`;
+      <b class="h2"${TRL()}>${esc(c.greeting)}</b><p class="p"${TRL()}>${esc(c.bio)}</p>
+      <dl><dt>${esc(t('chars.instruments'))}</dt><dd${TRL()}>${esc(c.instruments)}</dd><dt>${esc(t('chars.trait'))}</dt><dd${TRL()}>${esc(c.trait)}</dd></dl></div></div>`).join('')}</div>`;
 }
-const pills = list => `<div class="pills">${list.map(x => `<span>${esc(x)}</span>`).join('')}</div>`;
-const people = list => `<div class="card list">${list.map(([n, r]) => `<div class="lrow static"><span class="sq letter" style="background:var(--indigo)">${esc(n[0])}</span><span class="mt"><b>${esc(n)}</b><small>${esc(r)}</small></span></div>`).join('')}</div>`;
+const pills = list => `<div class="pills"${TRL()}>${list.map(x => `<span>${esc(x)}</span>`).join('')}</div>`;
+const people = list => `<div class="card list"${TRL()}>${list.map(([n, r]) => `<div class="lrow static"><span class="sq letter" style="background:var(--indigo)">${esc(n[0])}</span><span class="mt"><b>${esc(n)}</b><small>${esc(r)}</small></span></div>`).join('')}</div>`;
+/** The foundation's own texts stay Turkish in every language (ch. 14 §11); a line says so where they start. */
+const trOnly = () => lang === 'tr' ? '' : `<span class="caption on-canvas tr-only">${esc(t('trOnly'))}</span>`;
 function foundation() {
-  return `<div class="stack">
-    <div class="card"><span class="eyebrow" style="color:var(--text-gold)">DUYURU</span><b class="h2">${esc(NEWS)}</b></div>
-    <div class="card"><span class="eyebrow">GELECEK VİZYONU</span><p class="p ink">${esc(VISION)}</p></div>
-    ${ribbon('Yönetim Kurulu')}${people(BOARD)}
-    ${ribbon('Kurucu Üyeler')}${pills(FOUNDERS)}</div>`;
+  return `<div class="stack">${trOnly()}
+    <div class="card"><span class="eyebrow">${esc(t('vakif.news'))}</span><b class="h2"${TRL()}>${esc(NEWS)}</b></div>
+    <div class="card"><span class="eyebrow">${esc(t('vakif.vision'))}</span><p class="p ink"${TRL()}>${esc(VISION)}</p></div>
+    ${ribbon(t('vakif.board'))}${people(BOARD)}
+    ${ribbon(t('vakif.founders'))}${pills(FOUNDERS)}</div>`;
 }
-const teamPage = () => `<div class="stack">${note("Şarkılardan animasyonlara, kitaplardan çevirilere: Doremimi'yi birlikte üretiyoruz.")}${people(TEAM)}${ribbon('Danışmanlar')}${pills(ADVISORS)}</div>`;
-const scholarships = () => `<div class="stack">${note('Dore Mimi Müzikle Değerler Eğitimi projesini destekleyen iki burs programı hazırlanıyor.')}
-  ${[['Si Bemol Bursu', 'Müzik yeteneği olan çocuk ve gençlerin eğitim yolculuğunu desteklemek için.'], ['Mi Bemol Bursu', 'Müzikle değerler eğitimi projelerine katılan öğrenciler için.']].map(([t, x]) => `<div class="card"><span class="badge soonb">YAKINDA</span><b class="h2">${t}</b><p class="p">${x}</p></div>`).join('')}
-  <button class="chunky blue" data-ext="e-posta"><span class="face">${icon('IconBell')}Başvurular açılınca haber ver</span></button></div>`;
-const field = (ph, tall = false) => tall ? `<textarea class="field" placeholder="${ph}" rows="4"></textarea>` : `<input class="field" placeholder="${ph}">`;
-const volunteer = () => `<div class="stack">${note('D. M. Gönüllüleri; konserlerde, atölyelerde ve yayınlarda çocuklarla müziği buluşturuyor. Başvurunu ilet, seninle iletişime geçelim.')}
-  <div class="card form"><div class="two-btn eq2">${field('Adın')}${field('Soyadın')}</div>${field('E-posta')}${field('Telefon')}${field('Motivasyon mektubun: neden gönüllü olmak istiyorsun?', true)}
-  <button class="chunky blue" data-ext="e-posta"><span class="face">Başvurumu gönder</span></button></div></div>`;
+const teamPage = () => `<div class="stack">${note(t('ekip.note'))}${people(TEAM)}${ribbon(t('ekip.advisors'))}${pills(ADVISORS)}</div>`;
+const scholarships = () => `<div class="stack">${note(t('burs.note'))}
+  ${[['burs.si', 'burs.si.line'], ['burs.mi', 'burs.mi.line']].map(([k, x]) => `<div class="card"><span class="badge soonb">${esc(t('preparing'))}</span><b class="h2">${esc(t(k))}</b><p class="p">${esc(t(x))}</p></div>`).join('')}
+  <button class="chunky blue" data-ext="e-posta"><span class="face">${icon('IconBell')}${esc(t('burs.notify'))}</span></button></div>`;
+const field = (ph, tall = false) => tall ? `<textarea class="field" placeholder="${esc(ph)}" rows="4"></textarea>` : `<input class="field" placeholder="${esc(ph)}">`;
+const volunteer = () => `<div class="stack">${note(t('gonullu.note'))}
+  <div class="card form"><div class="two-btn eq2">${field(t('form.name'))}${field(t('form.surname'))}</div>${field(t('form.email'))}${field(t('form.phone'))}${field(t('gonullu.letter'), true)}
+  <button class="chunky blue" data-ext="e-posta"><span class="face">${esc(t('gonullu.send'))}</span></button></div></div>`;
 function contact() {
   return `<div class="stack">
-    <div class="card list">${CONTACTS.map(([t, p, mail]) => `<div class="lrow static"><span class="sq" style="background:var(--navy)">${icon('IconPhone')}</span><span class="mt"><small>${esc(t)}</small><b>${esc(p)}</b>${mail ? `<small>${esc(mail)}</small>` : ''}</span>
-      <button class="chunky white small" data-ext="e-posta"><span class="face">${icon('IconMail')}</span></button></div>`).join('')}</div>
-    ${ribbon('Bize yaz')}<div class="card form">${field('E-posta')}${field('Mesajın', true)}<button class="chunky indigo" data-ext="e-posta"><span class="face">Gönder</span></button></div></div>`;
+    <div class="card list">${CONTACTS.map(([title, p, mail]) => `<div class="lrow static"${TRL()}><span class="sq" style="background:var(--navy)">${icon('IconPhone')}</span><span class="mt"><small>${esc(title)}</small><b>${esc(p)}</b>${mail ? `<small>${esc(mail)}</small>` : ''}</span>
+      <button class="chunky white small" data-ext="e-posta" aria-label="${esc(t('form.email'))}"><span class="face">${icon('IconMail')}</span></button></div>`).join('')}</div>
+    ${ribbon(t('iletisim.write'))}<div class="card form">${field(t('form.email'))}${field(t('iletisim.message'), true)}<button class="chunky indigo" data-ext="e-posta"><span class="face">${esc(t('iletisim.send'))}</span></button></div></div>`;
 }
 // The hub's pages of ch. 14 §6. Where the foundation has nothing to show yet the page says it is being prepared
 // ("Hazırlanıyor"), never a made-up date or amount.
-const newsletter = () => `<div class="stack"><div class="card news"><b class="h3">Bültene abone ol</b><p class="p">Yeni klipler, oyunlar ve konserlerden ilk sen haberdar ol.</p>
-  <div class="sub">${field('E-posta adresin')}<button class="chunky yellow" data-ext="e-posta"><span class="face">Abone ol</span></button></div></div></div>`;
-const waiting = (title, text) => `<div class="card wait-card"><span class="badge soonb">HAZIRLANIYOR</span><b class="h3">${esc(title)}</b><p class="p">${esc(text)}</p></div>`;
-const support = () => `<div class="stack">${waiting('Destek ol', 'Bağış ve destek seçenekleri hazırlanıyor.')}
-  <button class="chunky white" data-push="#/iletisim"><span class="face">${icon('IconPhone')}Bize ulaş</span></button></div>`;
-const partners = () => `<div class="stack">${note('Dore Mimi projelerine destek veren kurumlar.')}${pills(PARTNERS)}</div>`;
-const events = () => `<div class="stack">${note('Konserler, bilmece videoları ve eğitici materyaller.')}
-  ${waiting('Konser takvimi', 'Konser takvimi hazırlanıyor.')}
-  ${menu([menuRow('IconPlay', '', 'Bilmece videoları', 'Dore soruyor: bu hangi çalgı?', 'data-go="#/ogren/bilmeceler"'),
-    menuRow('IconBook', '', 'Eğitici materyaller', 'Kitaplar, metodlar ve notalar', 'data-go="#/ogren/notalar"')])}</div>`;
-const legalList = () => `<div class="stack">${menu([['IconLock', 'gizlilik'], ['IconBook', 'kosullar'], ['IconInfo', 'kvkk']].map(([ic, k]) => menuRow(ic, '', LEGAL[k].title, 'Taslak', `data-push="#/metin/${k}"`)))}</div>`;
+const newsletter = () => `<div class="stack"><div class="card news"><b class="h3">${esc(t('hub.bulten'))}</b><p class="p">${esc(t('bulten.line'))}</p>
+  <div class="sub">${field(t('bulten.email'))}<button class="chunky yellow" data-ext="e-posta"><span class="face">${esc(t('bulten.subscribe'))}</span></button></div></div></div>`;
+const waiting = (title, text) => `<div class="card wait-card"><span class="badge soonb">${esc(t('preparing'))}</span><b class="h3">${esc(title)}</b><p class="p">${esc(text)}</p></div>`;
+const support = () => `<div class="stack">${waiting(t('hub.destek'), t('destek.wait'))}
+  <button class="chunky white" data-push="#/iletisim"><span class="face">${icon('IconPhone')}${esc(t('destek.contact'))}</span></button></div>`;
+const partners = () => `<div class="stack">${note(t('destekciler.note'))}${pills(PARTNERS)}</div>`;
+// The riddles and the scores moved out of Öğren (ch. 14 §10): İzle lists every riddle, the books page the materials.
+const events = () => `<div class="stack">${note(t('etkinlik.note'))}
+  ${waiting(t('etkinlik.concerts'), t('etkinlik.concerts.wait'))}
+  ${menu([menuRow('IconPlay', t('kind.riddle'), t('etkinlik.riddles.line'), 'data-go="#/izle"'),
+    menuRow('IconBook', t('etkinlik.materials'), t('etkinlik.materials.line'), 'data-push="#/kitaplar"')])}</div>`;
+const legalList = () => `<div class="stack">${menu([['IconLock', 'gizlilik'], ['IconBook', 'kosullar'], ['IconInfo', 'kvkk']].map(([ic, k]) => menuRow(ic, t(`legal.${k}`), t('legal.draft'), `data-push="#/metin/${k}"`)))}</div>`;
+/** The legal drafts are the foundation's lawyers' to word and stay Turkish; the help page is the app's own and is not. */
 function legalPage(key) {
-  const t = LEGAL[key];
-  if (!t) return missing('metin/' + key);
-  return `<div class="stack">${t.draft ? `<div class="card note"><p class="p strong" style="color:var(--text-gold)">${esc(DRAFT_NOTE)}</p></div>` : ''}
-    ${t.sections.map(([h, b]) => `<div class="card"><b class="h3">${esc(h)}</b><p class="p">${esc(b)}</p></div>`).join('')}</div>`;
+  if (key === 'yardim') return `<div class="stack">${L.FAQ.map(([h, b]) => `<div class="card"><b class="h3">${esc(h)}</b><p class="p">${esc(b)}</p></div>`).join('')}</div>`;
+  const doc = LEGAL[key];
+  if (!doc) return missing('metin/' + key);
+  return `<div class="stack">${trOnly()}${doc.draft ? `<div class="card note"${TRL()}><p class="p strong" style="color:var(--text-gold)">${esc(DRAFT_NOTE)}</p></div>` : ''}
+    ${doc.sections.map(([h, b]) => `<div class="card"${TRL()}><b class="h3">${esc(h)}</b><p class="p">${esc(b)}</p></div>`).join('')}</div>`;
 }
-const about = () => `<div class="stack"><div class="card about"><img src="../assets/brand/logo.png" alt=""><b class="h1">doremimi</b><span class="caption">Sürüm 0.1.73</span></div>
-  <div class="card"><b class="h3">Lisanslar</b><p class="p">Yazı tipleri: Inter, Baloo 2, Nunito ve Noto Music (SIL Open Font License). Oyun görselleri Doremimi için özgün olarak üretilmiştir. İçerik © Dore Mimi Yetenek ve Eğitim Vakfı.</p></div></div>`;
+const about = () => `<div class="stack"><div class="card about"><img src="../assets/brand/logo.png" alt=""><b class="h1">doremimi</b><span class="caption num">${esc(t('about.version', { v: '0.1.73' }))}</span></div>
+  <div class="card"><b class="h3">${esc(t('about.licences'))}</b><p class="p">${esc(t('about.licences.text'))}</p></div></div>`;
 // The app's Tasarım sistemi page (ch. 03 §18.8) is a long component gallery; the demo shows its palette and buttons only.
-const design = () => `<div class="stack">${note('Renkler, yazı tipleri ve bileşenler.')}
+const design = () => `<div class="stack">${note(t('design.note'))}
   <div class="card"><div class="swatches">${[['Navy', '#0A0A3C'], ['Indigo', '#14107A'], ['Steel', '#1C6FAA'], ['Blue', '#2B9BFF'], ['Cyan', '#3FDAFF'], ['Yellow', '#FFCC00'], ['Orange', '#FF4D00'], ['Orchid', '#E85BE6'], ['Magenta', '#E0109E'], ['Mint', '#38E08C']].map(([n, c]) => `<span><i style="background:${c}"></i>${n}<small>${c}</small></span>`).join('')}</div></div>
-  <div class="card" style="display:flex;flex-direction:column;gap:12px"><p class="p">Süt beyazı yüz, mürekkep yazı. Ekranın tek ana eylemi mürekkep ya da o ekranın kartının rengi; OYNA sarı.</p>
-    <button class="chunky primary"><span class="face">Ana eylem</span></button><button class="chunky white"><span class="face">İkincil</span></button><button class="chunky giant oyna"><span class="face">OYNA</span></button></div></div>`;
+  <div class="card" style="display:flex;flex-direction:column;gap:12px"><p class="p">${esc(t('design.line'))}</p>
+    <button class="chunky primary"><span class="face">${esc(t('design.primary'))}</span></button><button class="chunky white"><span class="face">${esc(t('design.secondary'))}</span></button><button class="chunky giant oyna"><span class="face">${esc(t('oyna.button'))}</span></button></div></div>`;
 
 // ───────────────────────── Profilim (NR-60): the child header, progress, and the family's rows
-const GUEST = { id: null, name: 'Misafir', age: '', image: 'mimi.png' };
+const GUEST = { id: null, nameKey: 'guest', age: '', image: 'mimi.png' };
 // The two children of the app's snapshot preset (54-who-is-playing.png); their names are the owner's call (ch. 10 O-18).
-const CHILDREN = [{ id: 'ada', name: 'Ada', age: '6-7 yaş', image: 'mimi.png' }, { id: 'can', name: 'Can', age: '8-9 yaş', image: 'dore.png' }];
+const CHILDREN = [{ id: 'ada', name: 'Ada', age: '6-7', image: 'mimi.png' }, { id: 'can', name: 'Can', age: '8-9', image: 'dore.png' }];
+const kidName = k => k.nameKey ? t(k.nameKey) : k.name;
+const kidAge = k => k.age ? t('age', { range: k.age }) : '';
 function profilePage() {
   const kid = childOf();
   const goal = toNextLevel(LEARNING, profile.level);
   const totalStars = profile.stars ?? 0;
-  const instr = DIRECTORY.length, riddles = DIRECTORY.filter(d => d.riddle).length;
+  const instr = DIRECTORY_TR.length, riddles = DIRECTORY_TR.filter(d => d.riddle).length;
   const general = deck.concepts.length ? deck.concepts.reduce((a, c) => a + mastery.conceptMastery(c, deck), 0) / deck.concepts.length : 0;
+  const seen = (profile.seen ?? []).length;
   // Slim rows on white (ch. 13): the old slate panels put white labels on grey at about 1.4:1.
-  const bar = (label, v, text) => `<div class="prow"><span>${label}</span><em>${text}</em><span class="slim"><i style="width:${Math.round(Math.min(1, v) * 100)}%"></i></span></div>`;
-  const earned = BADGES.filter(b => profile.badges.includes(b.id));
+  const bar = (label, v, text) => `<div class="prow"><span>${esc(label)}</span><em class="num">${esc(text)}</em><span class="slim"><i style="width:${Math.round(Math.min(1, v) * 100)}%"></i></span></div>`;
+  const earned = L.BADGES.filter(b => profile.badges.includes(b.id));
   return `<div class="stack">
-    <div class="card child-head"><div class="who-line"><span class="avatar big"><img src="../assets/site/characters/${kid.image}" alt=""></span><div class="mt"><b class="h2">${esc(kid.name)}</b>${kid.age ? `<small>${esc(kid.age)}</small>` : ''}</div></div>
-      <button class="chunky white" data-do="switcher"><span class="face">${icon('IconSmile')}Kim oynuyor?</span></button></div>
+    <div class="card child-head"><div class="who-line"><span class="avatar big"><img src="../assets/site/characters/${kid.image}" alt=""></span><div class="mt"><b class="h2">${esc(kidName(kid))}</b>${kid.age ? `<small>${esc(kidAge(kid))}</small>` : ''}</div></div>
+      <button class="chunky white" data-do="switcher"><span class="face">${icon('IconSmile')}${esc(t('who.title'))}</span></button></div>
     <div class="card prof-level">
-      <div class="top"><span class="lvbox"><small>SEVİYE</small><b>${profile.level}</b></span><div class="mt"><b>Müzik Kâşifi</b><span class="slim"><i style="width:${Math.round(Math.min(1, profile.xp / goal) * 100)}%"></i></span><small>${profile.xp} / ${goal} XP</small></div></div>
-      <div class="three"><span><b>${profile.badges.length}</b>rozet</span><span><b>${profile.rounds ?? 0}</b>oynanan tur</span><span><b>${totalStars}</b>yıldız</span></div></div>
-    ${ribbon('İlerleme')}<div class="card plist">${bar('Genel', general, pct(general))}${bar('Çalgılar', (profile.seen ?? []).length / instr, `${pct((profile.seen ?? []).length / instr)} (${(profile.seen ?? []).length}/${instr})`)}${bar('Bilmeceler', 0, `%0 (0/${riddles})`)}</div>
-    ${ribbon('İstatistikler')}<div class="card plist stats">${[['Oynanan tur', profile.rounds ?? 0], ['En iyi tur', profile.best ?? 0], ['Cevaplanan soru', profile.answered ?? 0]].map(([l, v]) => `<div class="srow"><span>${l}</span><b>${v}</b></div>`).join('')}</div>
-    ${earned.length ? `${ribbon('Rozetler')}<div class="card badges">${earned.map(b => `<span class="bdg">${medalHtml(b)}<small>${esc(b.name)}</small></span>`).join('')}</div>` : ''}
-    <div class="card note"><p class="p strong c">Çalgıları keşfet, bilmece izle, soruları cevapla ve Müzik Kart Oyunu'nu oyna: her şey XP kazandırır.</p></div>
-    ${group('Aile ve ayarlar', [
-      menuRow('IconGrid', 'var(--slate)', 'Ayarlar', 'Hareket, sesler, bildirimler ve metinler', 'data-push="#/ayarlar"'),
-      menuRow('IconLock', 'var(--indigo)', 'Hesabım', 'Ebeveyn bilgileri, şifre, çocuklar', 'data-do="hesabim"'),
-      menuRow('IconStar', 'var(--steel)', 'Ebeveyn paneli', 'Çocukların seviyesi ve pratiği', 'data-do="panel"')])}
+      <div class="top"><span class="lvbox"><small>${esc(up(t('level')))}</small><b class="num">${profile.level}</b></span><div class="mt"><b>${esc(t('profile.rank'))}</b><span class="slim"><i style="width:${Math.round(Math.min(1, profile.xp / goal) * 100)}%"></i></span><small class="num">${esc(t('xp.of', { xp: profile.xp, goal }))}</small></div></div>
+      <div class="three"><span><b class="num">${profile.badges.length}</b>${esc(t('profile.badges', { n: profile.badges.length }))}</span><span><b class="num">${profile.rounds ?? 0}</b>${esc(t('profile.rounds', { n: profile.rounds ?? 0 }))}</span><span><b class="num">${totalStars}</b>${esc(t('profile.stars', { n: totalStars }))}</span></div></div>
+    ${ribbon(t('profile.progress'))}<div class="card plist">${bar(t('profile.general'), general, pct(general))}${bar(t('profile.instruments'), seen / instr, `${pct(seen / instr)} (${seen}/${instr})`)}${bar(t('profile.riddles'), 0, `${pct(0)} (0/${riddles})`)}</div>
+    ${ribbon(t('profile.stats'))}<div class="card plist stats">${[['stats.rounds', profile.rounds ?? 0], ['stats.best', profile.best ?? 0], ['stats.answered', profile.answered ?? 0]].map(([k, v]) => `<div class="srow"><span>${esc(t(k))}</span><b class="num">${v}</b></div>`).join('')}</div>
+    ${earned.length ? `${ribbon(t('profile.badgeList'))}<div class="card badges">${earned.map(b => `<span class="bdg">${medalHtml(b)}<small>${esc(b.name)}</small></span>`).join('')}</div>` : ''}
+    <div class="card note"><p class="p strong c">${esc(t('profile.xpNote'))}</p></div>
+    ${group(t('profile.family'), [
+      menuRow('IconGrid', t('page.ayarlar'), t('profile.settings.line'), 'data-push="#/ayarlar"'),
+      menuRow('IconLock', t('page.hesabim'), t('profile.account.line'), 'data-do="hesabim"'),
+      menuRow('IconStar', t('page.ebeveyn-paneli'), t('profile.panel.line'), 'data-do="panel"')])}
   </div>`;
 }
-const SETTINGS = [['motion', 'Azaltılmış hareket', 'Kartlar ve arka plan sabit durur'], ['buttons', 'Buton sesleri', 'Her dokunuşta bir piyano notası çalar'], ['music', 'Müzik', 'Açılışta Doremimi teması bir kez çalar'], ['notify', 'Bildirimler', 'Yakında: günlük oyun hatırlatması']];
+const SETTINGS = ['motion', 'buttons', 'music', 'notify'];
+/** A segmented choice on a white card: Zorluk and Dil draw the same way. */
+const segmented = (key, options, on, attr) => `<div class="card zorluk"><span class="mt"><b>${esc(t(`settings.${key}`))}</b><small>${esc(t(`settings.${key}.line`))}</small></span>
+    <div class="ztrack" role="radiogroup" aria-label="${esc(t(`settings.${key}`))}">${options.map(([v, x]) => `<button class="zopt${on === v ? ' on' : ''}" role="radio" aria-checked="${on === v}" ${attr}="${v}">${esc(x)}</button>`).join('')}</div></div>`;
 function settingsPage() {
   const s = profile.settings;
-  // Zorluk (dossier ch. 14 §4): the level the first game asked, changeable here. It sets the ceiling of what is dealt.
-  const zorluk = `<div class="card zorluk"><span class="mt"><b>Zorluk</b><small>Oyunda hangi seviyeden sorular gelsin?</small></span>
-    <div class="ztrack" role="radiogroup" aria-label="Zorluk">${DIFFICULTIES.map(d => `<button class="zopt${profile.difficulty === d.key ? ' on' : ''}" role="radio" aria-checked="${profile.difficulty === d.key}" data-zorluk="${d.key}">${d.name}</button>`).join('')}</div></div>`;
-  return `<div class="stack">${ribbon('Oyun', ' small')}${zorluk}
-    ${SETTINGS.map(([k, t, x]) => `<button class="tile" data-set="${k}"><div class="card toggle"><span class="mt"><b>${t}</b><small>${x}</small></span><span class="sw${s[k] ? ' on' : ''}"><i></i></span></div></button>`).join('')}
-    ${ribbon('Metinler', ' small')}<div class="card menu plain">${[['Gizlilik politikası', '#/metin/gizlilik'], ['Kullanım koşulları', '#/metin/kosullar'], ['KVKK aydınlatma metni', '#/metin/kvkk'], ['Yardım ve SSS', '#/yardim'], ['Hakkında', '#/hakkinda']].map(([t, h]) => `<button class="mrow" data-push="${h}"><span class="mt"><b>${t}</b></span></button>`).join('')}</div></div>`;
+  // Zorluk (ch. 14 §4): the level the first game asked, changeable here; it sets the ceiling of what is dealt. Dil
+  // (ch. 14 §11): each language under its own name, so a child who cannot read the current one still finds theirs.
+  return `<div class="stack">${ribbon(t('settings.game'), ' small')}${segmented('zorluk', L.DIFFICULTIES.map(d => [d.key, d.name]), profile.difficulty, 'data-zorluk')}
+    ${segmented('dil', LANGS.map(l => [l.key, l.name]), lang, 'data-dil')}
+    ${SETTINGS.map(k => `<button class="tile" data-set="${k}"><div class="card toggle"><span class="mt"><b>${esc(t(`settings.${k}`))}</b><small>${esc(t(`settings.${k}.line`))}</small></span><span class="sw${s[k] ? ' on' : ''}"><i></i></span></div></button>`).join('')}
+    ${ribbon(t('settings.texts'), ' small')}<div class="card menu plain">${[['legal.gizlilik', '#/metin/gizlilik'], ['legal.kosullar', '#/metin/kosullar'], ['legal.kvkk', '#/metin/kvkk'], ['page.yardim', '#/yardim'], ['page.hakkinda', '#/hakkinda']].map(([k, h]) => `<button class="mrow" data-push="${h}"><span class="mt"><b>${esc(t(k))}</b></span></button>`).join('')}</div></div>`;
 }
-const account = () => `<div class="stack"><div class="card who-card"><b class="h3">Misafir</b><small class="caption">Hesap oluşturulmadı</small></div>
-  <button class="chunky green" data-do="soon"><span class="face">Hesap oluştur</span></button>
-  ${ribbon('Çocuklar', ' small')}<button class="chunky blue" data-do="soon"><span class="face">Profil ekle</span></button>
-  ${ribbon('Ebeveyn kilidi', ' small')}<button class="chunky white" data-do="soon"><span class="face">Ebeveyn PIN'ini değiştir</span></button>
-  <button class="chunky indigo" data-do="soon"><span class="face">Çıkış yap</span></button><span class="caption on-canvas">Çıkış yapınca profiller ve ilerleme bu cihazda kalır.</span>
-  <button class="chunky orange" data-do="wipe"><span class="face">Hesabı ve verileri sil</span></button></div>`;
+const account = () => `<div class="stack"><div class="card who-card"><b class="h3">${esc(t('guest'))}</b><small class="caption">${esc(t('account.none'))}</small></div>
+  <button class="chunky green" data-do="soon"><span class="face">${esc(t('account.create'))}</span></button>
+  ${ribbon(t('account.children'), ' small')}<button class="chunky blue" data-do="soon"><span class="face">${esc(t('who.add'))}</span></button>
+  ${ribbon(t('account.lock'), ' small')}<button class="chunky white" data-do="soon"><span class="face">${esc(t('account.pin'))}</span></button>
+  <button class="chunky indigo" data-do="soon"><span class="face">${esc(t('account.signout'))}</span></button><span class="caption on-canvas">${esc(t('account.signout.line'))}</span>
+  <button class="chunky orange" data-do="wipe"><span class="face">${esc(t('account.wipe'))}</span></button></div>`;
 const parentPanel = () => { const kid = childOf(); return `<div class="stack"><div class="card child-head"><span class="avatar big"><img src="../assets/site/characters/${kid.image}" alt=""></span><div class="mt">
-  <b class="h3">${esc(kid.name)}</b><small style="color:var(--text-xp)">Seviye ${profile.level} · ${profile.xp} XP</small><span class="p">${profile.answered ?? 0} kart · ${profile.days.length} günde oynadı · ${Object.keys(profile.mastery).length} soru görüldü</span>
-  <small>${(profile.seen ?? []).length} çalgı keşfetti · 0 bilmece izledi · ${profile.badges.length} rozet</small></div></div>
-  <span class="caption on-canvas">Bu bilgiler yalnızca bu cihazda tutulur.</span><button class="chunky white" data-do="soon"><span class="face">Ebeveyn PIN'ini değiştir</span></button></div>`; };
+  <b class="h3">${esc(kidName(kid))}</b><small class="num" style="color:var(--text-xp)">${esc(t('panel.level', { n: profile.level, xp: profile.xp }))}</small><span class="p num">${esc(t('panel.line1', { cards: profile.answered ?? 0, days: profile.days.length, seen: Object.keys(profile.mastery).length }))}</span>
+  <small class="num">${esc(t('panel.line2', { instruments: (profile.seen ?? []).length, badges: profile.badges.length }))}</small></div></div>
+  <span class="caption on-canvas">${esc(t('panel.local'))}</span><button class="chunky white" data-do="soon"><span class="face">${esc(t('account.pin'))}</span></button></div>`; };
 
-/** Each pushed page: its title and its body. */
+/** Each pushed page: its title (a key, or a function of its argument) and its body. */
 const PAGES = {
-  'isaret-kategori': { title: k => SIGN_CATEGORIES.find(c => c.key === k)?.name ?? '', html: signCategory },
-  isaret: { title: id => SIGN_CARDS.find(c => c.id === id)?.name ?? '', html: signCard },
-  calgi: { title: k => DIRECTORY.find(d => slug(d.name) === k)?.name ?? '', html: instrumentPage },
-  sarki: { title: s => SONGS.find(x => x.slug === s)?.instrument ?? '', html: s => songPage(s) },
-  sozler: { title: k => LYRICS.find(l => slug(l.instrument) === k)?.instrument ?? '', html: lyricsPage },
-  melodim: { title: 'Melodim', html: () => songPage(null, true) },
-  'doremimi-nedir': { title: 'Hakkımızda', html: whatIs },
-  kitaplar: { title: 'Kitaplar ve notalar', html: booksPage },
-  'dore-ve-mimi': { title: 'Dore ve Mimi', html: characters },
-  vakif: { title: 'Vakıf', html: foundation },
-  ekip: { title: 'Ekip', html: teamPage },
-  burslar: { title: 'Burslar', html: scholarships },
-  gonullu: { title: 'Gönüllü ol', html: volunteer },
-  iletisim: { title: 'İletişim', html: contact },
-  yardim: { title: 'Yardım ve SSS', html: () => legalPage('yardim') },
-  metin: { title: k => LEGAL[k]?.title ?? '', html: legalPage },
-  hakkinda: { title: 'Uygulama bilgisi', html: about },
-  etkinlikler: { title: 'Etkinlikler ve materyaller', html: events },
-  bulten: { title: 'Bültene abone ol', html: newsletter },
-  destek: { title: 'Destek ol', html: support },
-  destekciler: { title: 'Destekçiler', html: partners },
-  yasal: { title: 'Yasal metinler', html: legalList },
-  tasarim: { title: 'Tasarım sistemi', html: design },
-  profil: { title: 'Profilim', html: profilePage },
-  ayarlar: { title: 'Ayarlar', html: settingsPage },
-  hesabim: { title: 'Hesabım', html: account },
-  'ebeveyn-paneli': { title: 'Ebeveyn paneli', html: parentPanel },
+  'isaret-kategori': { title: k => L.SIGN_CATEGORIES.find(c => c.key === k)?.name ?? '', html: signCategory },
+  isaret: { title: id => L.SIGN_CARDS.find(c => c.id === id)?.name ?? '', html: signCard },
+  calgi: { title: k => L.DIRECTORY.find(d => slug(d.name) === k)?.label ?? '', html: instrumentPage },
+  sarki: { title: s => { const x = SONGS.find(y => y.slug === s); return x ? songName(x) : ''; }, html: s => songPage(s) },
+  sozler: { title: k => { const l = LYRICS.find(x => slug(x.instrument) === k); return l ? instName(l.instrument) : ''; }, html: lyricsPage },
+  melodim: { title: 'page.melodim', html: () => songPage(null, true) },
+  'doremimi-nedir': { title: 'page.doremimi-nedir', html: whatIs },
+  kitaplar: { title: 'page.kitaplar', html: booksPage },
+  'dore-ve-mimi': { title: 'hub.dore-ve-mimi', html: characters },
+  vakif: { title: 'page.vakif', html: foundation },
+  ekip: { title: 'hub.ekip', html: teamPage },
+  burslar: { title: 'hub.burslar', html: scholarships },
+  gonullu: { title: 'hub.gonullu', html: volunteer },
+  iletisim: { title: 'hub.iletisim', html: contact },
+  yardim: { title: 'page.yardim', html: () => legalPage('yardim') },
+  metin: { title: k => (LEGAL[k] ? t(`legal.${k}`) : ''), html: legalPage },
+  hakkinda: { title: 'page.hakkinda', html: about },
+  etkinlikler: { title: 'hub.etkinlikler', html: events },
+  bulten: { title: 'hub.bulten', html: newsletter },
+  destek: { title: 'hub.destek', html: support },
+  destekciler: { title: 'hub.destekciler', html: partners },
+  yasal: { title: 'hub.yasal', html: legalList },
+  tasarim: { title: 'page.tasarim', html: design },
+  profil: { title: 'page.profil', html: profilePage },
+  ayarlar: { title: 'page.ayarlar', html: settingsPage },
+  hesabim: { title: 'page.hesabim', html: account },
+  'ebeveyn-paneli': { title: 'page.ebeveyn-paneli', html: parentPanel },
 };
 const ROOTS = { kesfet: home, ogren: learn, doremimi: hub, izle: watch, cal: playRoot };
 
@@ -797,15 +848,16 @@ function afterRender() {
   if (route.page === 'melodim') setupSong(null, true);
   if (route.page === 'calgi') {
     const seen = new Set(profile.seen ?? []);
-    if (!seen.has(route.arg) && DIRECTORY.some(d => slug(d.name) === route.arg)) {
+    const d = L.DIRECTORY.find(x => slug(x.name) === route.arg);
+    if (!seen.has(route.arg) && d) {
       seen.add(route.arg); profile.seen = [...seen];
       // Opening an instrument for the first time pays 10 XP (learning.json seenInstrument; ch. 02 §3.6).
       const lv = addXp(LEARNING, profile.level, profile.xp, LEARNING.xp.seenInstrument);
       profile.level = lv.level; profile.xp = lv.xp; save(); renderTopbar();
-      toast(`+${LEARNING.xp.seenInstrument} XP`, `${DIRECTORY.find(d => slug(d.name) === route.arg).name} keşfedildi`);
+      toast(t('xp.plus', { n: LEARNING.xp.seenInstrument }), t('instrument.discovered', { name: d.label }));
     }
   }
-  // Öğren's tab row scrolls; the current tab is brought into view, or Notalar opened from a link would be off screen.
+  // Öğren's tab row scrolls; the current tab is brought into view, or a tab opened from a link would be off screen.
   const row = $('.otabs'), on = row?.querySelector('.on');
   if (on) { row.scrollLeft = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2; row.classList.toggle('end', row.scrollLeft + row.clientWidth >= row.scrollWidth - 2); }
   updatePill();
@@ -842,33 +894,16 @@ function gateDigit(d) {
 function renderGate() {
   if (!gate.open) return;
   const locked = Date.now() < gate.lockedUntil;
-  const line = gate.reason === 'parent' ? "Bu sayfa ebeveynler için. Devam etmek için ebeveyn PIN'ini gir." : "Uygulamadan çıkmak üzeresin. Devam etmek için ebeveyn PIN'ini gir.";
+  const line = gate.reason === 'parent' ? t('gate.parent') : t('gate.leave');
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'x', '0', 'ok'];
-  overlayHost.innerHTML = `<div class="overlay scrim"><div class="gate"><span class="pop-ribbon">${icon('IconLock')}Ebeveyn kilidi</span>
-    <button class="chunky white close x" data-do="gate-close" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
-    <p class="p ink c">${line}</p>${gate.reason !== 'parent' ? `<span class="host">${icon('IconExternal')}${esc(gate.reason)}</span>` : ''}
+  overlayHost.innerHTML = `<div class="overlay scrim"><div class="gate"><span class="pop-ribbon">${icon('IconLock')}${esc(t('gate.title'))}</span>
+    <button class="chunky white close x" data-do="gate-close" aria-label="${esc(t('close'))}"><span class="face">${icon('IconCross')}</span></button>
+    <p class="p ink c">${esc(line)}</p>${gate.reason !== 'parent' ? `<span class="host">${icon('IconExternal')}${esc(gate.reason)}</span>` : ''}
     <div class="pin-dots${gate.msg === 'wrong' ? ' bad' : ''}">${Array.from({ length: 6 }, (_, i) => `<i class="${i < gate.typed.length ? 'on' : ''}"></i>`).join('')}</div>
-    ${locked ? '<p class="p c wrong">Çok fazla deneme. Biraz bekle.</p>' : gate.msg === 'wrong' ? "<p class=\"p c wrong\">PIN yanlış. Tekrar dene.</p>" : ''}
-    <div class="pad">${keys.map(k => `<button class="chunky ${k === 'x' ? 'orange' : k === 'ok' ? 'green' : 'white'}" data-pin="${k}"${locked ? ' disabled' : ''}><span class="face">${k === 'x' ? icon('IconErase') : k === 'ok' ? icon('IconCheck') : k}</span></button>`).join('')}</div>
-    <button class="chunky indigo" data-do="gate-close"><span class="face">Vazgeç</span></button></div></div>`;
+    ${locked ? `<p class="p c wrong">${esc(t('gate.locked'))}</p>` : gate.msg === 'wrong' ? `<p class="p c wrong">${esc(t('gate.wrong'))}</p>` : ''}
+    <div class="pad">${keys.map(k => `<button class="chunky ${k === 'x' ? 'orange' : k === 'ok' ? 'green' : 'white'}" data-pin="${k}"${locked ? ' disabled' : ''}${k === 'x' ? ` aria-label="${esc(t('erase'))}"` : k === 'ok' ? ` aria-label="${esc(t('ok'))}"` : ''}><span class="face">${k === 'x' ? icon('IconErase') : k === 'ok' ? icon('IconCheck') : k}</span></button>`).join('')}</div>
+    <button class="chunky indigo" data-do="gate-close"><span class="face">${esc(t('cancel'))}</span></button></div></div>`;
 }
-/*
- * The Hazırlan sheet (dossier ch. 14 §5): every Öğren way into the game shows it first, in the category's colour, with
- * the true number of cards the round will deal. The owner: "this category has this many cards, let's prepare for it".
- * A sign category has one card today, and the sheet says so rather than padding the round with other signs.
- */
-function prepHtml(concept) {
-  const info = CONCEPTS[concept];
-  const t = accentSet(info.color);
-  const n = prepCount(deck, concept);
-  const art = info.family ? `<img src="../assets/cards/portrait-${FAMILIES[info.family].art}.png" alt="">` : `<span class="music">${esc(info.symbol)}</span>`;
-  return `<div class="overlay scrim prep-ov"><div class="prep" style="--kf:${t.face};--kl:${t.label};--ke:${t.edge}" role="dialog" aria-label="${esc(info.name)}">
-    <button class="chunky white close x" data-do="prep-close" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
-    <div class="prep-face"><span class="part">${art}</span><b class="pname">${esc(info.name)}</b><span class="pcount" data-count="${n}">Bu kategoride ${n} kart var</span></div>
-    <p class="p c">Kartları çevir, oku, öğren.</p>
-    <button class="chunky primary large" data-do="prep-start" style="${toneVars(t)}"><span class="face">${icon('IconPlay')}Başla</span></button></div></div>`;
-}
-const openPrep = concept => openOverlay('prep', concept);
 
 function openOverlay(kind, data) { overlay.kind = kind; overlay.data = data; renderOverlay(); }
 function closeOverlay() { overlay.kind = null; renderOverlay(); }
@@ -877,17 +912,15 @@ function renderOverlay() {
   if (overlay.kind === 'switcher') {
     // A list of rows on the canvas (AccountsOverlay, ch. 13): the Navy sheet made every title ink-on-Navy, and the
     // 96 px portraits fit two children on a small phone, not four.
-    overlayHost.innerHTML = `<div class="overlay who-ov"><button class="chunky white close x" data-do="ov-close" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
-      <b class="ttl">Kim oynuyor?</b><div class="card list kids2">${CHILDREN.map(c => `<button class="lrow kid${profile.child === c.id ? ' on' : ''}" data-child="${c.id}"><span class="avatar"><img src="../assets/site/characters/${c.image}" alt=""></span><span class="mt"><b>${c.name}</b><small>${c.age}</small></span>${profile.child === c.id ? icon('IconCheck', 'chev') : icon('IconChevronRight', 'chev')}</button>`).join('')}</div>
-      <button class="chunky white" data-do="soon"><span class="face">Profil ekle</span></button></div>`;
-  } else if (overlay.kind === 'prep') {
-    overlayHost.innerHTML = prepHtml(overlay.data);
+    overlayHost.innerHTML = `<div class="overlay who-ov"><button class="chunky white close x" data-do="ov-close" aria-label="${esc(t('close'))}"><span class="face">${icon('IconCross')}</span></button>
+      <b class="ttl">${esc(t('who.title'))}</b><div class="card list kids2">${CHILDREN.map(c => `<button class="lrow kid${profile.child === c.id ? ' on' : ''}" data-child="${c.id}"><span class="avatar"><img src="../assets/site/characters/${c.image}" alt=""></span><span class="mt"><b>${esc(kidName(c))}</b><small>${esc(kidAge(c))}</small></span>${profile.child === c.id ? icon('IconCheck', 'chev') : icon('IconChevronRight', 'chev')}</button>`).join('')}</div>
+      <button class="chunky white" data-do="soon"><span class="face">${esc(t('who.add'))}</span></button></div>`;
   } else if (overlay.kind === 'player') {
     const v = VIDEOS.find(x => x.id === overlay.data);
-    overlayHost.innerHTML = `<div class="overlay scrim player-ov"><div class="player"><div class="frame"><img src="../assets/site/${esc(v.thumb)}" alt=""><button class="big-play" data-do="vplay" aria-label="Oynat">${icon('IconPlay')}</button></div>
-      <div class="pmeta"><b>${esc(v.title)}</b><small>${esc(KIND_NAMES[v.kind])} · YouTube</small></div>
-      <p class="p c">Uygulamada video YouTube'da açılır. Bu sunum internetsiz çalıştığı için burada yalnızca kapağını gösteriyoruz.</p>
-      <button class="chunky white" data-do="ov-close"><span class="face">Kapat</span></button></div></div>`;
+    overlayHost.innerHTML = `<div class="overlay scrim player-ov"><div class="player"><div class="frame"><img src="../assets/site/${esc(v.thumb)}" alt=""><button class="big-play" data-do="vplay" aria-label="${esc(t('player.play'))}">${icon('IconPlay')}</button></div>
+      <div class="pmeta"><b${TRL()}>${esc(v.title)}</b><small>${esc(t(`kind.${v.kind}`))} · YouTube</small></div>
+      <p class="p c">${esc(t('player.offline'))}</p>
+      <button class="chunky white" data-do="ov-close"><span class="face">${esc(t('close'))}</span></button></div></div>`;
   } else overlayHost.innerHTML = '';
 }
 
@@ -909,8 +942,8 @@ function updatePill() {
   const show = theme.playing && gameEl.hidden;
   if (!show) { pill?.remove(); return; }
   if (pill) return;
-  app.insertAdjacentHTML('beforeend', `<div class="theme-pill" id="pill"><button class="tile body" data-do="pill" aria-label="Çal'ı aç"><span class="eqs on"><i></i><i></i><i></i><i></i></span><span class="mt"><small>Şimdi çalıyor</small><b>Doremimi teması</b></span></button>
-    <button class="chunky white close" data-do="pill-x" aria-label="Durdur"><span class="face">${icon('IconCross')}</span></button></div>`);
+  app.insertAdjacentHTML('beforeend', `<div class="theme-pill" id="pill"><button class="tile body" data-do="pill" aria-label="${esc(t('pill.open'))}"><span class="eqs on"><i></i><i></i><i></i><i></i></span><span class="mt"><small>${esc(t('pill.now'))}</small><b>${esc(t('pill.theme'))}</b></span></button>
+    <button class="chunky white close" data-do="pill-x" aria-label="${esc(t('song.stop'))}"><span class="face">${icon('IconCross')}</span></button></div>`);
 }
 
 // ───────────────────────── sound: the deck's context, the button notes
@@ -923,7 +956,7 @@ document.addEventListener('pointerdown', e => {
   if (!b || b.closest('.keys') || STILL) return;
   // A button's note is also the child's: Melodim keeps button presses as well as keyboard taps (MelodyMemory).
   if (profile.settings.buttons) { const k = melody.next(); sound.key(k); profile.melodim = [...(profile.melodim ?? []), k].slice(-16); save(); }
-  // The theme plays once per launch when Keşfet first shows; on the web it starts at the first tap (ch. 06 §7.7).
+  // The theme plays once per launch when Oyna first shows; on the web it starts at the first tap (ch. 06 §7.7).
   if (!theme.played && route.tab === 'kesfet' && !route.page && profile.settings.music) { theme.played = true; playTheme(); }
 }, true);
 
@@ -934,7 +967,7 @@ let gameBg = null;
 
 /*
  * A round. `origin` is the way in (lib/modes.js RoundOrigin) and decides the level and whether it may move; the
- * default is Keşfet's, the one way in that is not a page of its own. `level` is the old `?seviye=` and the deck's
+ * default is Oyna's, the one way in that is not a page of its own. `level` is the old `?seviye=` and the deck's
  * game.start, mapped to the origin that starts at that level, so old links still land.
  */
 function openGame({ concept = null, origin = null, level = null, intro } = {}) {
@@ -945,7 +978,7 @@ function openGame({ concept = null, origin = null, level = null, intro } = {}) {
   G.roundId = (G.roundId ?? 0) + 1;
   G.results = null; G.levelUp = null; G.roundBadges = []; G.outcome = null;
   // The first game asks the child's level before anything else (ch. 14 §4), whatever the way in.
-  const pages = [...(profile.difficulty ? [] : ['level']), ...INTRO_STEPS.map(x => x.key)];
+  const pages = [...(profile.difficulty ? [] : ['level']), ...L.INTRO_STEPS.map(x => x.key)];
   // `only`: a child who has seen the intro before but has no level yet (a profile from before ch. 14) is asked the
   // level and goes straight to the round.
   G.intro = (intro === true || (intro !== false && !profile.seenIntro) || !profile.difficulty)
@@ -953,6 +986,7 @@ function openGame({ concept = null, origin = null, level = null, intro } = {}) {
   deal();
   gameEl.hidden = false;
   gameEl.innerHTML = `<canvas class="backdrop" id="gbg" aria-hidden="true"></canvas><div class="g-head" id="ghead"></div><div class="g-body" id="gbody"></div><div id="gover"></div>`;
+  gameEl.setAttribute('aria-label', t('game.title'));
   gameBg = new Backdrop($('#gbg'), { seed: 3, mood: moodOf(G.round.ladder.level), clearTop: safeTop(), reduced: REDUCED });
   gameBg.start();
   shellBg.stop();
@@ -976,8 +1010,8 @@ function exitGame() {
   gameBg?.stop(); gameBg = null;
   shellBg.start();
   typing(false);
-  // A round changes what the shell shows (XP, Tekrar zamanı, the game page's %), so the page under the game is
-  // rebuilt when the game closes (OC-29: no stale hub).
+  // A round changes what the shell shows (XP, a category's %), so the page under the game is rebuilt when the game
+  // closes (OC-29: no stale hub).
   render();
 }
 
@@ -1013,7 +1047,7 @@ function submit() {
   if (res.verdict === 'Blank') return;
   if (res.verdict === 'Right' || res.verdict === 'Close') return solved(res);
   G.answer = '';
-  G.feedback = `“${typed}” olmadı. Harfler yardıma geldi: boş kutuları doldur!`;   // :243
+  G.feedback = t('game.wrongTyped', { typed });   // :243
   G.bad = true; G.stage = Stage.Tiles; G.fx = 'wrong';
   renderGame();
 }
@@ -1022,7 +1056,7 @@ function submitTiles() {
   const res = G.round.submitTiles();
   if (res.verdict === 'Blank') return;
   if (res.verdict === 'Right' || res.verdict === 'Close') return solved(res);
-  G.feedback = 'Bu sefer olmadı. Dört cevaptan doğrusunu seç!';   // :268
+  G.feedback = t('game.wrongTiles');   // :268
   G.bad = true; G.stage = Stage.Choices; G.fx = 'wrong';
   renderGame();
 }
@@ -1044,7 +1078,7 @@ function grade(knew) {
   const o = endCard();
   // "A self-graded card has nothing left to show: the answer is already up" (:409-412): straight on.
   next();
-  if (o.xp > 0) { G.outcome = { headline: `+${o.xp} XP`, detail: 'BİLDİM' }; G.outcomeSeq++; renderGame(); }
+  if (o.xp > 0) { G.outcome = { headline: t('xp.plus', { n: o.xp }), detail: t('game.knewBadge') }; G.outcomeSeq++; renderGame(); }
 }
 
 function next() {
@@ -1055,9 +1089,9 @@ function next() {
 function solved(res) {
   const q = G.q;
   const o = endCard();
-  G.feedback = res.verdict === 'Close' ? `Çok yaklaştın! Doğrusu: ${res.answer ?? q.answer}` : 'Doğru bildin!';   // :453
+  G.feedback = res.verdict === 'Close' ? t('game.close', { answer: res.answer ?? q.answer }) : t('game.right');   // :453
   G.bad = false;
-  G.outcome = { headline: `+${o.xp} XP`, detail: { TypedFirstTry: 'İLK DENEMEDE!', TypedWithTiles: 'HARFLERLE BULDUN!' }[o.resolution] ?? 'DOĞRU SEÇİM!' };
+  G.outcome = { headline: t('xp.plus', { n: o.xp }), detail: t({ TypedFirstTry: 'game.firstTry', TypedWithTiles: 'game.withTiles' }[o.resolution] ?? 'game.rightPick') };
   G.outcomeSeq++; G.fx = 'right';
   renderGame();
 }
@@ -1085,7 +1119,7 @@ function endCard() {
   G.stage = ended;
   // A move is silent in words (ch. 14 §2): the toast that named the new level went; the backdrop's mood still changes.
   if (o.move !== Move.None) gameBg?.setMood(moodOf(o.levelAfter), { celebrate: true, up: o.move === Move.Up });
-  const earned = newlyEarned(BADGES, { mastery, deck, round: G.round.outcomes, days: profile.days }, profile.badges);
+  const earned = newlyEarned(L.BADGES, { mastery, deck, round: G.round.outcomes, days: profile.days }, profile.badges);
   profile.badges.push(...earned.map(b => b.id));
   G.roundBadges.push(...earned);
   if (lv.levelsGained > 0) G.levelUp = { level: profile.level, toNext: toNextLevel(LEARNING, profile.level) - profile.xp };
@@ -1097,8 +1131,8 @@ function endCard() {
 function finish() {
   const r = G.round;
   const facts = pickConcepts(r.outcomes, deck, c => mastery.conceptMastery(c, deck), G.random, LEARNING.resultConcepts)
-    .filter(id => CONCEPTS[id])
-    .map(id => ({ id, info: CONCEPTS[id], before: G.masteryBefore[id] ?? 0, after: mastery.conceptMastery(id, deck) }));
+    .filter(id => L.CONCEPTS[id])
+    .map(id => ({ id, info: L.CONCEPTS[id], before: G.masteryBefore[id] ?? 0, after: mastery.conceptMastery(id, deck) }));
   G.results = { stars: starsOf(r.outcomes, LEARNING.roundStars), right: r.outcomes.filter(o => isRight(o.resolution)).length, count: r.outcomes.length,
     xp: r.xpEarned, facts, badges: G.roundBadges.slice() };
   // Profilim's counts: rounds played, the best round (cards known) and the stars (ch. 03 §16.2-16.4).
@@ -1110,7 +1144,7 @@ function finish() {
 function closeIntro() { if (!profile.difficulty) return; profile.seenIntro = true; save(); G.intro = null; renderGame(); }
 /** The first game's level page: the answer is saved and, nothing played yet, the round is dealt again under it. */
 function chooseLevel(key) {
-  if (!G.intro || !DIFFICULTIES.some(d => d.key === key)) return;
+  if (!G.intro || !L.DIFFICULTIES.some(d => d.key === key)) return;
   profile.difficulty = key; save();
   if (G.round && !G.round.outcomes.length) { deal(); showCard(); }
   G.intro.pages = G.intro.pages.filter(p => p !== 'level');
@@ -1134,9 +1168,9 @@ function renderGame() {
   const ended = [Stage.Solved, Stage.Revealed, Stage.Graded].includes(G.stage);
   const current = Math.min(done + (ended ? 0 : 1), r.count);
   $('#ghead').innerHTML = `
-    <button class="chunky white close" data-g="exit" title="Oyundan çık" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
-    <div class="t"><b>Müzik Kart Oyunu</b>${playing ? `<small>Kart ${Math.max(current, 1)} / ${r.count}</small>` : ''}</div>
-    <span class="avatar sv">Sv ${profile.level}</span>`;
+    <button class="chunky white close" data-g="exit" title="${esc(t('game.exit'))}" aria-label="${esc(t('close'))}"><span class="face">${icon('IconCross')}</span></button>
+    <div class="t"><b>${esc(t('game.title'))}</b>${playing ? `<small class="num">${esc(t('game.card', { i: Math.max(current, 1), n: r.count }))}</small>` : ''}</div>
+    <span class="avatar sv num">${esc(t('game.levelChip', { n: profile.level }))}</span>`;
   // The card owns the game screen, so its colour is the one accent (Accent.cs); the popups over it reset to ink.
   gameEl.style.cssText = toneVars(playing && G.q ? accentSet(G.q.accent) : INK_SET);
   const body = $('#gbody');
@@ -1159,10 +1193,10 @@ const accentVars = q => `--accent:${q.accent};--accent-deep:${readable(q.accent)
 
 /** QuestionCardViewModel (:580-607): the chip never names the answer. */
 function chipOf(q) {
-  if (q.kind === 'sign') return 'MÜZİK İŞARETİ';
+  if (q.kind === 'sign') return t('game.chip.sign');
   const inst = q.conceptIds.find(id => id.startsWith('instrument:'));
-  const name = inst ? CONCEPTS[inst]?.name : null;
-  return name && !normalise(q.answer).includes(normalise(name)) ? upperTr(name) : 'ÇALGI SORUSU';
+  const name = inst ? L.CONCEPTS[inst]?.name : null;
+  return name && !normalise(q.answer).includes(normalise(name)) ? up(name) : t('game.chip.quiz');
 }
 
 function cardAreaHtml() {
@@ -1172,42 +1206,41 @@ function cardAreaHtml() {
   const chip = G.outcome && G.shownOutcome !== G.outcomeSeq ? `<div class="xp-chip" data-seq="${G.outcomeSeq}"><span class="toastb">${esc(G.outcome.headline)}</span><small>${esc(G.outcome.detail)}</small></div>` : '';
   G.shownOutcome = G.outcomeSeq;
   if (back) return `<div class="back-scroll"><div class="back" style="${accentVars(q)}">${revealHtml(q)}</div></div>${chip}`;
-  const deal = G.renderedSeq !== G.cardSeq ? ' deal' : '';
-  const solved = G.stage === Stage.Solved;
-  return `<div class="qcard${deal}" style="${accentVars(q)}"><div class="face-card">
+  const dealt = G.renderedSeq !== G.cardSeq ? ' deal' : '';
+  const solvedNow = G.stage === Stage.Solved;
+  return `<div class="qcard${dealt}" style="${accentVars(q)}"><div class="face-card">
       <span class="chip">${esc(chipOf(q))}</span>
       <div class="symbol">${q.symbol ? esc(q.symbol) : `<span class="note-box">${icon('IconNote')}</span>`}</div>
       <div class="prompt">${esc(q.prompt)}</div>
-      ${solved ? `<div class="solved"><b>${esc(q.answer)}</b><small>${esc(G.feedback)}</small></div>` : ''}
+      ${solvedNow ? `<div class="solved"><b>${esc(q.answer)}</b><small>${esc(G.feedback)}</small></div>` : ''}
     </div></div>${chip}`;
 }
 
 /** RevealCardView.axaml: the answer said kindly, then Tanım / Çocuk anlatımı for a sign, the facts for a question. */
 function revealHtml(q) {
-  const concept = CONCEPTS[q.conceptIds[0]]?.name ?? '';
+  const concept = L.CONCEPTS[q.conceptIds[0]]?.name ?? '';
   const head = `<div class="card ans">${q.symbol ? `<span class="s">${esc(q.symbol)}</span>` : '<span></span>'}<div>
-    <small>Birlikte öğrenelim! Doğru cevap:</small><b>${esc(q.answer)}</b><small>${esc(concept)}</small>
-    ${G.wrongPick ? `<small>Senin seçimin: ${esc(G.wrongPick)}</small>` : ''}</div></div>`;
+    <small>${esc(t('game.reveal'))}</small><b>${esc(q.answer)}</b><small>${esc(concept)}</small>
+    ${G.wrongPick ? `<small>${esc(t('game.yourPick', { pick: G.wrongPick }))}</small>` : ''}</div></div>`;
   if (q.kind !== 'sign') {
     const ex = q.explanation;
     const instKey = q.conceptIds.find(id => id.startsWith('instrument:'))?.slice(11);
-    const inst = INSTRUMENTS[instKey];
-    const fam = FAMILIES[inst.family];
-    const facts = [['Hatırla', ex.tip], [`${inst.name} hakkında`, ex.instrumentSummary], [fam.name, ex.familyDescription]].filter(([, t]) => t);
+    const inst = L.INSTRUMENTS[instKey];
+    const fam = L.FAMILIES[inst.family];
+    const facts = [[t('game.remember'), ex.tip], [t('game.about', { name: inst.name }), ex.instrumentSummary], [fam.name, ex.familyDescription]].filter(([, x]) => x);
     // A riddle video exists for the instrument when the site lists one for its page (InstrumentPageViewModel.VideosFor).
-    const entry = DIRECTORY.find(d => quizKeyOf(d.name) === instKey);
+    const entry = DIRECTORY_TR.find(d => quizKeyOf(d.name) === instKey);
     const video = entry ? videosFor(entry)[0] : null;
     G.links = { video: video?.id ?? null, instrument: entry ? slug(entry.name) : null };
-    return `${head}<div class="card"><div class="caption">SORU</div><p class="p" style="color:var(--ink);font-weight:700">${esc(q.prompt)}</p></div>
-      ${facts.map(([t, x]) => `<div class="card fact"><h3 class="h3">${esc(t)}</h3><p class="p">${esc(x)}</p></div>`).join('')}
-      <div class="links2">${video ? `<button class="chunky white" data-g="video"><span class="face">${icon('IconPlay')}Videoyu izle</span></button>` : '<span></span>'}
-        ${G.links.instrument ? `<button class="chunky white" data-g="instrument">` : '<span hidden>'}<span class="face">${icon('IconBook')}Çalgı sayfası</span>${G.links.instrument ? '</button>' : '</span>'}</div>`;
+    return `${head}<div class="card"><div class="caption">${esc(t('game.question'))}</div><p class="p" style="color:var(--ink);font-weight:700">${esc(q.prompt)}</p></div>
+      ${facts.map(([x, y]) => `<div class="card fact"><h3 class="h3">${esc(x)}</h3><p class="p">${esc(y)}</p></div>`).join('')}
+      <div class="links2">${video ? `<button class="chunky white" data-g="video"><span class="face">${icon('IconPlay')}${esc(t('game.video'))}</span></button>` : '<span></span>'}
+        ${G.links.instrument ? `<button class="chunky white" data-g="instrument">` : '<span hidden>'}<span class="face">${icon('IconBook')}${esc(t('game.instrumentPage'))}</span>${G.links.instrument ? '</button>' : '</span>'}</div>`;
   }
   return `${head}${explainHtml(q, G.revealTab, 'data-gtab')}`;
 }
 
 // Controls/PianoVisual.cs: a white key lights the black key after it (diyez) or before it (bemol); idle 4 s, it plays itself.
-const NAMES = ['Do', 'Re', 'Mi', 'Fa', 'Sol', 'La', 'Si'];
 const HAS_BLACK_AFTER = [true, true, false, true, true, true, false];
 const piano = { sel: -1, mode: 'sharp', idleSince: 0 };
 const blackFor = (w, mode) => mode === 'sharp' ? (HAS_BLACK_AFTER[w] ? w : -1) : mode === 'flat' ? (w > 0 && HAS_BLACK_AFTER[w - 1] ? w - 1 : -1) : -1;
@@ -1219,6 +1252,7 @@ function pianoHtml(kind) {
 }
 function pianoInner() {
   const { sel, mode } = piano;
+  const NAMES = t('piano.notes').split(' ');   // Do Re Mi … in tr and fr, C D E … in en
   const lit = blackFor(sel, mode);
   const blacks = HAS_BLACK_AFTER.map((has, i) => has && i < 6 ? `<span class="b${i === lit ? ' lit' : ''}" style="left:calc(8px + (100% - 16px) * ${(i + 1) / 7} - 4.5%)"></span>` : '').join('');
   const x = mode === 'natural' ? (sel + 0.5) / 7 : (lit + 1) / 7;
@@ -1239,7 +1273,7 @@ function clefHtml(q, fa) {
       <circle cx="51" cy="57" r="5" fill="#1D1E2C"/><circle cx="85" cy="53" r="5" fill="#1D1E2C"/>
       ${fa ? '<path transform="translate(34 76)" d="M34,6 C26,-2 10,0 2,10 C12,8 20,12 30,14 C32,14 34,12 34,10 C34,12 36,14 38,14 C48,12 56,8 66,10 C58,0 42,-2 34,6 Z" fill="#1D1E2C"/>'
         : '<ellipse cx="68" cy="92" rx="8" ry="10" fill="#1D1E2C"/><ellipse cx="35" cy="82" rx="7" ry="4" fill="#FF8FB1" opacity=".8"/><ellipse cx="103" cy="78" rx="7" ry="4" fill="#FF8FB1" opacity=".8"/>'}
-    </svg></div><div class="voices"><span class="voice${fa ? '' : ' on'}">ANNE SESLER · ince</span><span class="voice">ORTA SESLER</span><span class="voice${fa ? ' on' : ''}">BABA SESLER · kalın</span></div></div>`;
+    </svg></div><div class="voices"><span class="voice${fa ? '' : ' on'}">${esc(t('clef.high'))}</span><span class="voice">${esc(t('clef.mid'))}</span><span class="voice${fa ? ' on' : ''}">${esc(t('clef.low'))}</span></div></div>`;
 }
 
 function answerHtml() {
@@ -1251,35 +1285,35 @@ function answerHtml() {
       return `<div class="choices-wrap">
         ${G.bad ? `<div class="card note fbnote">${esc(G.feedback)}</div>` : ''}
         <div class="choices">${G.round.choices.map((c, i) => `<button class="chunky white" data-choice="${i}"><span class="face">${esc(c)}</span></button>`).join('')}</div>
-        <button class="quiet dontknow" data-g="dontknow">Bilmiyorum</button></div>`;
+        <button class="quiet dontknow" data-g="dontknow">${esc(t('game.dontKnow'))}</button></div>`;
     case Stage.Question:
-      return `<button class="chunky primary large wide" data-g="flip"><span class="face">${icon('IconReplay')}Kartı çevir</span></button>`;
+      return `<button class="chunky primary large wide" data-g="flip"><span class="face">${icon('IconReplay')}${esc(t('game.flip'))}</span></button>`;
     case Stage.Flipped:
-      return `<div class="grade"><b class="gq">Bu cevabı biliyor muydun?</b><div class="two">
-        <button class="chunky white large" data-g="didnot"><span class="face">${icon('IconCross')}Bilemedim</span></button>
-        <button class="chunky white large" data-g="knew"><span class="face">${icon('IconCheck')}Bildim</span></button></div></div>`;
+      return `<div class="grade"><b class="gq">${esc(t('game.didYouKnow'))}</b><div class="two">
+        <button class="chunky white large" data-g="didnot"><span class="face">${icon('IconCross')}${esc(t('game.didNot'))}</span></button>
+        <button class="chunky white large" data-g="knew"><span class="face">${icon('IconCheck')}${esc(t('game.knew'))}</span></button></div></div>`;
     case Stage.Solved:
-      return `<button class="chunky primary large wide" data-g="next"><span class="face">Devam${icon('IconArrow')}</span></button>`;
+      return `<button class="chunky primary large wide" data-g="next"><span class="face">${esc(t('game.next'))}${icon('IconArrow')}</span></button>`;
     case Stage.Revealed:
-      return `<button class="chunky primary large" data-g="next"><span class="face">${icon('IconCheck')}Anladım, devam</span></button>`;
+      return `<button class="chunky primary large" data-g="next"><span class="face">${icon('IconCheck')}${esc(t('game.gotIt'))}</span></button>`;
     default: return '';
   }
 }
 
 function sheetInner() {
   if (G.stage === Stage.Typing) {
-    return `<span class="hint">Cevabını yaz · büyük küçük harf fark etmez</span>
-      <div class="field" aria-label="Cevap">${G.answer ? `<span class="txt">${esc(upperTr(G.answer))}</span><span class="caret"></span>` : '<span class="caret"></span><span class="ph">Harflere dokun…</span>'}</div>`;
+    return `<span class="hint">${esc(t('game.typeHint'))}</span>
+      <div class="field" aria-label="${esc(t('game.answer'))}">${G.answer ? `<span class="txt">${esc(up(G.answer))}</span><span class="caret"></span>` : `<span class="caret"></span><span class="ph">${esc(t('game.typePlaceholder'))}</span>`}</div>`;
   }
-  const t = G.round.tiles;
-  const caret = t.caret;
+  const tl = G.round.tiles;
+  const caret = tl.caret;
   const words = [];
-  t.tiles.forEach((tile, i) => {
+  tl.tiles.forEach((tile, i) => {
     if (tile.kind === 'Gap') return;
-    (words[tile.word] ??= []).push(`<span class="tl${tile.prefilled ? ' free' : ''}${tile.typed != null ? ' typed' : ''}${i === caret ? ' caret' : ''}${tile.kind === 'Mark' ? ' mark' : ''}">${esc(upperTr(tile.prefilled || tile.kind === 'Mark' ? tile.letter : tile.typed ?? ''))}</span>`);
+    (words[tile.word] ??= []).push(`<span class="tl${tile.prefilled ? ' free' : ''}${tile.typed != null ? ' typed' : ''}${i === caret ? ' caret' : ''}${tile.kind === 'Mark' ? ' mark' : ''}">${esc(up(tile.prefilled || tile.kind === 'Mark' ? tile.letter : tile.typed ?? ''))}</span>`);
   });
-  const shape = `${t.wordLengths.length} kelime · ${t.wordLengths.join(' + ')} harf`;   // :141
-  return `<div class="row2"><span class="fb">${esc(G.feedback)}</span><span class="shape">${shape}</span></div>
+  const shape = t('game.shape', { n: tl.wordLengths.length, letters: tl.wordLengths.join(' + ') });   // :141
+  return `<div class="row2"><span class="fb">${esc(G.feedback)}</span><span class="shape num">${esc(shape)}</span></div>
     <div class="tiles" id="tiles">${words.filter(Boolean).map(w => `<span class="tword">${w.join('')}</span>`).join('')}</div>`;
 }
 
@@ -1301,23 +1335,26 @@ function fitTiles() {
   if (s < 1) el.style.transform = `scale(${Math.max(0.3, s)})`;
 }
 
-// Controls/GameKeyboard.axaml(.cs): the Turkish Q layout without Q, W and X on an 11-key grid, ⌫ three keys wide.
-const ROW1 = 'ERTYUIOPĞÜ', ROW2 = 'ASDFGHJKLŞİ', ROW3 = 'ZCVBNMÖÇ', DIGITS = '1234567890';
+// Controls/GameKeyboard.axaml(.cs): an 11-key grid, ⌫ three keys wide. Each language has its own letters
+// (i18n/keyboards.js): Turkish Q without Q, W and X, as the app; QWERTY for English, AZERTY for French.
 const kb = { digits: false };
 const kbSize = () => profile.keyboard !== 'auto' ? profile.keyboard : innerHeight < 780 ? 'small' : 'medium';   // Resolve, .cs:37-40
 function keyboardHtml() {
   const k = (label, col, span, cls = '', data = '') => `<button class="key ${cls}" style="grid-column:${col} / span ${span}" ${data}><span>${label}</span></button>`;
-  const letters = (row, off) => [...row].map((c, i) => k(c, 1 + off + i * 2, 2, '', `data-k="${c}"`)).join('');
+  // Each row is centred on the 22 half-key grid, so a short row (QWERTY's nine) does not hug the left edge.
+  const offset = (row, extra = 0) => Math.floor((22 - row.length * 2 - extra) / 2);
+  const letters = (row, extra = 0) => [...row].map((c, i) => k(c, 1 + offset(row, extra) + i * 2, 2, '', `data-k="${c}"`)).join('');
+  const layout = KEYBOARDS[lang];
   const size = kbSize();
   return `<div class="kb ${size === 'medium' ? '' : size}" id="kb">
-    <div class="bar"><button class="quiet dk" data-g="dontknow">Bilmiyorum</button>
-      <div class="handle" id="kb-handle" aria-label="Klavye boyutu"><i></i></div>
-      <div class="sizes">${[['small', 's', 'Küçük'], ['medium', 'm', 'Orta'], ['large', 'l', 'Büyük']].map(([v, c, t]) => `<button class="size ${c}${size === v ? ' on' : ''}" data-size="${v}" aria-label="${t} klavye"><span>${t}</span></button>`).join('')}</div></div>
+    <div class="bar"><button class="quiet dk" data-g="dontknow">${esc(t('game.dontKnow'))}</button>
+      <div class="handle" id="kb-handle" aria-label="${esc(t('kb.size'))}"><i></i></div>
+      <div class="sizes">${[['small', 's'], ['medium', 'm'], ['large', 'l']].map(([v, c]) => `<button class="size ${c}${size === v ? ' on' : ''}" data-size="${v}" aria-label="${esc(t(`kb.${v}.aria`))}"><span>${esc(t(`kb.${v}`))}</span></button>`).join('')}</div></div>
     <div class="rows">
-      <div class="krow">${letters(kb.digits ? DIGITS : ROW1, 1)}</div>
-      <div class="krow">${letters(ROW2, 0)}</div>
-      <div class="krow">${letters(ROW3, 0)}${k(icon('IconErase'), 17, 6, 'erase', 'data-kb="erase" aria-label="Sil"')}</div>
-      <div class="krow">${k(kb.digits ? 'ABC' : '123', 1, 4, 'mode word', 'data-kb="mode" aria-label="Rakamlar"')}${k('boşluk', 5, 10, 'space word', 'data-k=" " aria-label="Boşluk"')}${k(icon('IconCheck') + 'Gönder', 15, 8, 'send word', `id="kb-send" data-kb="send"${canSend() ? '' : ' disabled'}`)}</div>
+      <div class="krow">${letters(kb.digits ? layout.digits : layout.rows[0])}</div>
+      <div class="krow">${letters(layout.rows[1])}</div>
+      <div class="krow">${letters(layout.rows[2], 6)}${k(icon('IconErase'), 1 + offset(layout.rows[2], 6) + layout.rows[2].length * 2, 6, 'erase', `data-kb="erase" aria-label="${esc(t('erase'))}"`)}</div>
+      <div class="krow">${k(esc(kb.digits ? t('kb.letters') : t('kb.digits')), 1, 4, 'mode word', `data-kb="mode" aria-label="${esc(t('kb.digits.aria'))}"`)}${k(esc(t('kb.space')), 5, 10, 'space word', `data-k=" " aria-label="${esc(t('kb.space'))}"`)}${k(icon('IconCheck') + esc(t('kb.send')), 15, 8, 'send word', `id="kb-send" data-kb="send"${canSend() ? '' : ' disabled'}`)}</div>
     </div></div>`;
 }
 
@@ -1343,49 +1380,48 @@ function afterCardRender() {
 
 function resultsHtml() {
   const R = G.results;
-  const title = R.stars === 3 ? 'Efsane kulak!' : R.stars === 2 ? 'Harika!' : 'İyi başlangıç!';   // :906
+  const title = t(R.stars === 3 ? 'results.three' : R.stars === 2 ? 'results.two' : 'results.one');   // :906
   // A neutral line (ch. 14 §2): the three it replaces named the level the child had reached.
-  const info = `${R.count} kartın ${R.right} tanesini bildin.`;
+  const info = t('results.info', { right: R.right, n: R.count });
   const star = (i, mid) => `<span class="star${mid ? ' mid' : ''}"><svg viewBox="0 0 24 24"><path class="sock" d="${STAR}"/>${i < R.stars ? `<path class="gold" d="${STAR}"/>` : ''}</svg></span>`;
-  const art = info => info.symbol ? `<span class="music">${esc(info.symbol)}</span>` : info.family ? `<img src="../assets/cards/portrait-${FAMILIES[info.family].art}.png" alt="">` : icon('IconNote');
+  const art = info => info.symbol ? `<span class="music">${esc(info.symbol)}</span>` : info.family ? `<img src="../assets/cards/portrait-${L.FAMILIES[info.family].art}.png" alt="">` : icon('IconNote');
   const facts = R.facts.map(f => {
     const delta = f.after - f.before;
     return `<div class="rrow fact-row" style="--accent:${f.info.color};--accent-deep:${readable(f.info.color)}"><span class="art">${art(f.info)}</span><div>
-      <div class="top"><b>${esc(f.info.name)}</b>${delta > 0.004 ? `<span class="grew">+%${Math.round(delta * 100)}</span>` : ''}</div>
-      <p>${esc(f.info.fact)}</p><div class="bar"><span class="thin"><i style="width:${Math.round(Math.min(1, f.after) * 100)}%"></i></span><small>%${Math.round(Math.min(1, f.after) * 100)}</small></div></div></div>`;
+      <div class="top"><b>${esc(f.info.name)}</b>${delta > 0.004 ? `<span class="grew num">+${esc(pct(delta))}</span>` : ''}</div>
+      <p>${esc(f.info.fact)}</p><div class="bar"><span class="thin"><i style="width:${Math.round(Math.min(1, f.after) * 100)}%"></i></span><small class="num">${esc(pct(f.after))}</small></div></div></div>`;
   }).join('');
-  const medal = medalHtml;
-  const badges = R.badges.map(b => `<div class="rrow badge-row" id="${b === R.badges[0] ? 'first-badge' : ''}">${medal(b)}<div><b>${esc(b.name)}</b><small>${esc(b.description)}</small></div></div>`).join('');
+  const badges = R.badges.map(b => `<div class="rrow badge-row" id="${b === R.badges[0] ? 'first-badge' : ''}">${medalHtml(b)}<div><b>${esc(b.name)}</b><small>${esc(b.description)}</small></div></div>`).join('');
   return `<div class="overlay below" id="results"><div class="pop-wrap">
     <div class="pop-card"><div class="pop-face">
-      <h2 class="r-head">Tur tamamlandı!</h2>
+      <h2 class="r-head">${esc(t('results.head'))}</h2>
       <div class="stars">${star(0)}${star(1, true)}${star(2)}</div>
-      <div class="r-title">${title}</div>
+      <div class="r-title">${esc(title)}</div>
       <p class="p r-info">${esc(info)}</p>
-      <div class="stats3"><div class="rrow"><small>XP</small><b>+${R.xp}</b></div><div class="rrow"><small>Doğru</small><b>${R.right}/${R.count}</b></div><div class="rrow"><small>Yıldız</small><b>${R.stars}/3</b></div></div>
-      ${facts ? `<h3 class="group-title r-group">Müzik bilgin</h3>${facts}` : ''}
-      ${badges ? `<h3 class="group-title r-group" id="new-badges">Yeni rozet</h3>${badges}` : ''}
-      <div class="r-btns"><button class="chunky white" data-g="exit"><span class="face">Çık</span></button>
-        <button class="chunky primary" data-g="replay"><span class="face">${icon('IconReplay')}Tekrar oyna</span></button></div>
+      <div class="stats3 num"><div class="rrow"><small>${esc(t('results.xp'))}</small><b>+${R.xp}</b></div><div class="rrow"><small>${esc(t('results.right'))}</small><b>${R.right}/${R.count}</b></div><div class="rrow"><small>${esc(t('results.stars'))}</small><b>${R.stars}/3</b></div></div>
+      ${facts ? `<h3 class="group-title r-group">${esc(t('results.facts'))}</h3>${facts}` : ''}
+      ${badges ? `<h3 class="group-title r-group" id="new-badges">${esc(t('results.badges', { n: R.badges.length }))}</h3>${badges}` : ''}
+      <div class="r-btns"><button class="chunky white" data-g="exit"><span class="face">${esc(t('results.exit'))}</span></button>
+        <button class="chunky primary" data-g="replay"><span class="face">${icon('IconReplay')}${esc(t('results.replay'))}</span></button></div>
     </div></div>
-    <button class="chunky white close x" data-g="exit" title="Kapat" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>
+    <button class="chunky white close x" data-g="exit" title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><span class="face">${icon('IconCross')}</span></button>
   </div></div>`;
 }
 /** A badge's medal (BadgeArt): an icon, a sign's glyph or a family portrait on the badge's colour. */
 function medalHtml(b) {
   const [kind, key] = b.artKey.split(':');
-  const inner = kind === 'icon' ? icon(key) : kind === 'sign' ? `<span class="music">${esc(SIGN_CARDS.find(c => c.id === key)?.symbol)}</span>` : `<img src="../assets/cards/portrait-${FAMILIES[key].art}.png" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;
+  const inner = kind === 'icon' ? icon(key) : kind === 'sign' ? `<span class="music">${esc(L.SIGN_CARDS.find(c => c.id === key)?.symbol)}</span>` : `<img src="../assets/cards/portrait-${L.FAMILIES[key].art}.png" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;
   return `<span class="medal" style="--accent:${b.color}"><span>${inner}</span></span>`;
 }
 const STAR = 'M12,1.5 L15.1,8.3 L22.5,9.1 L17,14.1 L18.5,21.5 L12,17.8 L5.5,21.5 L7,14.1 L1.5,9.1 L8.9,8.3 Z';
 
 function levelUpHtml() {
-  const L = G.levelUp;
+  const U = G.levelUp;
   return `<div class="overlay below"><div class="pop-wrap" style="max-width:400px"><div class="pop-card"><div class="pop-face" style="gap:12px">
-    <div class="lvl-num">${L.level}</div><div class="r-title">Seviye ${L.level}!</div>
-    <p class="p" style="text-align:center">Her doğru cevap XP getirir. Seviye ${L.level + 1} için ${L.toNext} XP daha topla.</p>
-    <button class="chunky primary large" data-g="lvl-close"><span class="face">Devam${icon('IconArrow')}</span></button></div></div>
-    <button class="chunky white close x" data-g="lvl-close" title="Kapat" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button></div></div>`;
+    <div class="lvl-num num">${U.level}</div><div class="r-title">${esc(t('levelUp.title', { n: U.level }))}</div>
+    <p class="p" style="text-align:center">${esc(t('levelUp.line', { next: U.level + 1, xp: U.toNext }))}</p>
+    <button class="chunky primary large" data-g="lvl-close"><span class="face">${esc(t('game.next'))}${icon('IconArrow')}</span></button></div></div>
+    <button class="chunky white close x" data-g="lvl-close" title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><span class="face">${icon('IconCross')}</span></button></div></div>`;
 }
 
 /*
@@ -1397,81 +1433,81 @@ function introHtml() {
   const { step, pages } = G.intro, key = pages[step], last = step === pages.length - 1;
   const dots = `<div class="stepdots">${pages.map((_, k) => `<span class="dot${k === step ? ' on' : ''}"></span>`).join('')}</div>`;
   const shell = inner => `<div class="overlay intro"><div class="pop-wrap"><div class="pop-card"><div class="pop-face">${inner}</div></div>
-    ${profile.difficulty ? `<button class="chunky white close x" data-g="intro-close" title="Kapat" aria-label="Kapat"><span class="face">${icon('IconCross')}</span></button>` : ''}</div></div>`;
+    ${profile.difficulty ? `<button class="chunky white close x" data-g="intro-close" title="${esc(t('close'))}" aria-label="${esc(t('close'))}"><span class="face">${icon('IconCross')}</span></button>` : ''}</div></div>`;
   if (key === 'level') {
-    return shell(`<h2 class="r-head">${esc(LEVEL_QUESTION)}</h2>
-      <div class="levels">${DIFFICULTIES.map((d, k) => `<button class="chunky white large lvl" data-level="${d.key}"><span class="face"><span class="lstars">${'★'.repeat(k + 1)}</span><span class="ltxt"><b>${d.name}</b><small>${esc(d.line)}</small></span></span></button>`).join('')}</div>
+    return shell(`<h2 class="r-head">${esc(L.LEVEL_QUESTION)}</h2>
+      <div class="levels">${L.DIFFICULTIES.map((d, k) => `<button class="chunky white large lvl" data-level="${d.key}"><span class="face"><span class="lstars">${'★'.repeat(k + 1)}</span><span class="ltxt"><b>${esc(d.name)}</b><small>${esc(d.line)}</small></span></span></button>`).join('')}</div>
       ${dots}`);
   }
-  const s = INTRO_STEPS.find(x => x.key === key);
+  const s = L.INTRO_STEPS.find(x => x.key === key);
   const pic = key === 'see' ? '<div class="see"><span class="m">♭</span></div>'
-    : key === 'find' ? '<div class="tiles5"><span>B</span><span class="free">E</span><span>M</span><span class="free">O</span><span></span></div>'
+    : key === 'find' ? `<div class="tiles5">${[...up(t('oyna.typed')).padEnd(5, ' ').slice(0, 5)].map((c, i) => `<span${i % 2 ? ' class="free"' : ''}>${i < 4 ? esc(c.trim()) : ''}</span>`).join('')}</div>`
       : '<div class="stars3"><span>★</span><span class="mid">★</span><span>★</span></div>';
-  return shell(`<h2 class="r-head">Nasıl oynanır?</h2>
+  return shell(`<h2 class="r-head">${esc(t('oyna.howto'))}</h2>
     <div class="pic" style="--accent:${s.accent}">${pic}</div>
     <div class="tt">${esc(s.title)}</div><p class="p">${esc(s.text)}</p>${dots}
-    <div class="btns"><button class="chunky white" data-g="intro-prev"${step === 0 ? ' disabled' : ''}><span class="face">Geri</span></button>
-      <button class="chunky primary" data-g="intro-next"><span class="face">${last ? 'Hadi oynayalım!' : 'Sonraki'}</span></button></div>`);
+    <div class="btns"><button class="chunky white" data-g="intro-prev"${step === 0 ? ' disabled' : ''}><span class="face">${esc(t('intro.prev'))}</span></button>
+      <button class="chunky primary" data-g="intro-next"><span class="face">${esc(last ? t('intro.go') : t('intro.next'))}</span></button></div>`);
 }
 
 function closeOverlaysOfShell() { toastHost.innerHTML = ''; }
 
 // ───────────────────────── taps
 /** A link out of the app: the gate first, as in the app (ch. 01 G-06); the demo then says it stays offline (G-09). */
-const leaveApp = host => openGate(host, () => toast('Bağlantı bu demoda açılmaz', host));
+const leaveApp = host => openGate(host, () => toast(t('offline.link'), host));
 const openVideo = id => openGate('youtube.com', () => openOverlay('player', id));
+/** Rebuilds everything that shows words after the language changed, keeping the page and its scroll. */
+function rerender() { const y = page.scrollTop; render(); page.scrollTop = y; $('#dock').setAttribute('aria-label', t('dock.aria')); }
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-push], button, [data-w], [data-key]');
-  if (!t) return;
-  if (t.dataset.key && t.closest('.keys')) return tapKey(t);
-  if (t.dataset.pin) return gateDigit(t.dataset.pin);
-  if (t.dataset.do === 'gate-close') return closeGate();
-  if (t.dataset.push) { e.stopPropagation(); return push(t.dataset.push); }
-  if (t.dataset.go) { if (t.dataset.go === location.hash) return render(); inApp = true; location.hash = t.dataset.go; return; }
-  if (t.dataset.w) { piano.sel = +t.dataset.w; piano.idleSince = performance.now(); const el = $('[data-piano]'); if (el) el.innerHTML = pianoInner(); return; }
-  if (t.dataset.today) return tapToday();
-  if (t.dataset.banner) { const go = BANNER_GO[+t.dataset.banner]; return go === 'game' ? openGame({ origin: RoundOrigin.Kesfet }) : go === '#/izle' ? (location.hash = go) : push(go); }
-  if (t.dataset.flip) { flipped.has(t.dataset.flip) ? flipped.delete(t.dataset.flip) : flipped.add(t.dataset.flip); t.outerHTML = signTile(SIGN_CATEGORIES.find(c => c.key === t.dataset.flip)); return; }
-  if (t.dataset.iflip) { instrumentFlips.has(t.dataset.iflip) ? instrumentFlips.delete(t.dataset.iflip) : instrumentFlips.add(t.dataset.iflip); return render(); }
-  if (t.dataset.aile !== undefined) { location.hash = '#/ogren/calgilar' + (t.dataset.aile ? `?aile=${t.dataset.aile}` : ''); return; }
-  if (t.dataset.calf !== undefined) { calFilter = t.dataset.calf; const y = page.scrollTop; render(); page.scrollTop = y; return; }
-  if (t.dataset.sekme) { signTab = +t.dataset.sekme; const y = page.scrollTop; render(); page.scrollTop = y; return; }
-  if (t.dataset.gtab) { G.revealTab = +t.dataset.gtab; return renderGame(); }
-  if (t.dataset.play) return openGame({ concept: t.dataset.play, origin: t.dataset.origin });
-  if (t.dataset.prep) return openPrep(t.dataset.prep);
-  if (t.dataset.level) return chooseLevel(t.dataset.level);
-  if (t.dataset.zorluk) { profile.difficulty = t.dataset.zorluk; save(); const y = page.scrollTop; render(); page.scrollTop = y; return; }
-  if (t.dataset.video) return openVideo(t.dataset.video);
-  if (t.dataset.ext) return leaveApp(t.dataset.ext);
-  if (t.dataset.songInCal) return openIn('cal', `#/sarki/${t.dataset.songInCal}`);
-  if (t.dataset.song === 'toggle') return toggleSong();
-  if (t.dataset.song === 'stop') return stopSong();
-  if (t.dataset.set) { profile.settings[t.dataset.set] = !profile.settings[t.dataset.set]; save(); applySettings(); if (t.dataset.set === 'music' && !profile.settings.music) stopTheme(); return render(); }
-  if (t.dataset.child) { profile.child = t.dataset.child; save(); closeOverlay(); return render(); }
-  if (t.dataset.choice) return pick(G.round.choices[+t.dataset.choice]);
-  if (t.dataset.k) return pressKey(t.dataset.k.toLocaleLowerCase('tr'));
-  if (t.dataset.size) { profile.keyboard = t.dataset.size; save(); return renderGame(); }
-  if (t.dataset.kb === 'send') return pressSend();
-  if (t.dataset.kb === 'mode') { kb.digits = !kb.digits; return renderGame(); }
-  const shell = t.dataset.do, g = t.dataset.g;
-  switch (shell) {
+  const el = e.target.closest('[data-push], button, [data-w], [data-key]');
+  if (!el) return;
+  const d = el.dataset;
+  if (d.key && el.closest('.keys')) return tapKey(el);
+  if (d.pin) return gateDigit(d.pin);
+  if (d.do === 'gate-close') return closeGate();
+  if (d.push) { e.stopPropagation(); return push(d.push); }
+  if (d.go) { if (d.go === location.hash) return render(); inApp = true; location.hash = d.go; return; }
+  if (d.w) { piano.sel = +d.w; piano.idleSince = performance.now(); const p = $('[data-piano]'); if (p) p.innerHTML = pianoInner(); return; }
+  if (d.today) return tapToday();
+  if (d.banner) { const go = BANNER_GO[+d.banner]; return go === 'game' ? openGame({ origin: RoundOrigin.Kesfet }) : go === '#/izle' ? (location.hash = go) : push(go); }
+  if (d.flip) { flipped.has(d.flip) ? flipped.delete(d.flip) : flipped.add(d.flip); el.outerHTML = signTile(L.SIGN_CATEGORIES.find(c => c.key === d.flip)); return; }
+  if (d.aile !== undefined) { location.hash = '#/ogren/calgilar' + (d.aile ? `?aile=${d.aile}` : ''); return; }
+  if (d.calf !== undefined) { calFilter = d.calf; return rerender(); }
+  if (d.sekme) { signTab = +d.sekme; return rerender(); }
+  if (d.gtab) { G.revealTab = +d.gtab; return renderGame(); }
+  if (d.play) return openGame({ concept: d.play, origin: d.origin });
+  if (d.level) return chooseLevel(d.level);
+  if (d.zorluk) { profile.difficulty = d.zorluk; save(); return rerender(); }
+  // Dil applies at once (ch. 14 §11): the tables, the content and the deck switch, and the page redraws where it was.
+  if (d.dil) { profile.settings.lang = d.dil; save(); setLang(d.dil); return rerender(); }
+  if (d.video) return openVideo(d.video);
+  if (d.ext) return leaveApp(d.ext);
+  if (d.songInCal) return openIn('cal', `#/sarki/${d.songInCal}`);
+  if (d.song === 'toggle') return toggleSong();
+  if (d.song === 'stop') return stopSong();
+  if (d.set) { profile.settings[d.set] = !profile.settings[d.set]; save(); applySettings(); if (d.set === 'music' && !profile.settings.music) stopTheme(); return render(); }
+  if (d.child) { profile.child = d.child; save(); closeOverlay(); return render(); }
+  if (d.choice) return pick(G.round.choices[+d.choice]);
+  if (d.k) return pressKey(d.k.toLocaleLowerCase(lang));
+  if (d.size) { profile.keyboard = d.size; save(); return renderGame(); }
+  if (d.kb === 'send') return pressSend();
+  if (d.kb === 'mode') { kb.digits = !kb.digits; return renderGame(); }
+  switch (d.do) {
     case 'back': return back();
-    case 'play': return openGame({ origin: t.dataset.origin });
+    case 'play': return openGame({ origin: d.origin });
     case 'howto': return openGame({ origin: RoundOrigin.Kesfet, intro: true });
-    case 'prep-close': return closeOverlay();
-    case 'prep-start': { const c = overlay.data; closeOverlay(); return openGame({ concept: c, origin: RoundOrigin.Ogren }); }
     case 'switcher': return openOverlay('switcher');
     case 'ov-close': return closeOverlay();
-    case 'vplay': return toast('Video bu demoda açılmaz', 'İnternetsiz sunum');
-    case 'riddle': { const d = DIRECTORY.find(x => slug(x.name) === route.arg); const v = d && videosFor(d)[0]; return v ? openVideo(v.id) : leaveApp('doremimi.org'); }
+    case 'vplay': return toast(t('offline.video'), t('offline.video.line'));
+    case 'riddle': { const x = DIRECTORY_TR.find(y => slug(y.name) === route.arg); const v = x && videosFor(x)[0]; return v ? openVideo(v.id) : leaveApp('doremimi.org'); }
     case 'hesabim': return openGate('parent', () => push('#/hesabim'));
     case 'panel': return openGate('parent', () => push('#/ebeveyn-paneli'));
     case 'pill': return location.hash = '#/cal';
     case 'pill-x': return stopTheme();
-    case 'wipe': store.wipe(); profile = freshProfile(); mastery = new Mastery(LEARNING, profile.mastery, DAY_SHIFT); toast('Silindi', 'Demo verisi sıfırlandı'); return go('#/');
+    case 'wipe': store.wipe(); profile = freshProfile(); mastery = new Mastery(LEARNING, profile.mastery, DAY_SHIFT); setLang(langNow()); toast(t('wiped'), t('wiped.line')); return go('#/');
     case 'soon': return notYet();
   }
-  switch (g) {
+  switch (d.g) {
     case 'exit': return exitGame();
     case 'dontknow': return dontKnow();
     case 'flip': return flip();
@@ -1501,8 +1537,8 @@ applySettings();
 // ⌫ held keeps erasing: the first repeat waits 450 ms, then every 110 ms (GameKeyboard.axaml.cs).
 let eraseTimer = null;
 document.addEventListener('pointerdown', e => {
-  const t = e.target.closest('[data-kb="erase"]');
-  if (!t) return;
+  const el = e.target.closest('[data-kb="erase"]');
+  if (!el) return;
   pressBackspace();
   eraseTimer = setTimeout(function rep() { pressBackspace(); eraseTimer = setTimeout(rep, 110); }, 450);
 });
@@ -1528,7 +1564,7 @@ function hardwareKey(e) {
   if (!gameEl.hidden && G.round && !G.results && !G.intro && isTypingStage()) {
     if (e.key === 'Backspace') { pressBackspace(); flashKey('erase'); return true; }
     if (e.key === 'Enter') { pressSend(); flashKey('send'); return true; }
-    if (e.key === ' ' || (e.key.length === 1 && isLetterOrDigit(e.key))) { const c = e.key.toLocaleLowerCase('tr'); pressKey(c); flashKey(c); return true; }
+    if (e.key === ' ' || (e.key.length === 1 && isLetterOrDigit(e.key))) { const c = e.key.toLocaleLowerCase(lang); pressKey(c); flashKey(c); return true; }
   }
   if (e.key === 'Escape') { back(); return true; }
   return false;
@@ -1543,7 +1579,7 @@ document.addEventListener('keydown', e => {
 });
 
 function flashKey(c) {
-  const sel = c === 'erase' || c === 'send' ? `[data-kb="${c}"]` : `[data-k="${c === ' ' ? ' ' : upperTr(c)}"]`;
+  const sel = c === 'erase' || c === 'send' ? `[data-kb="${c}"]` : `[data-k="${c === ' ' ? ' ' : up(c)}"]`;
   const el = document.querySelector(sel);
   if (!el) return;
   el.classList.add('down'); setTimeout(() => el.classList.remove('down'), 110);
@@ -1575,16 +1611,19 @@ async function done(id) {
 addEventListener('message', e => { if (e.source === parent || e.source === window) receive(e.data); });
 try { new BroadcastChannel('doremimi-demo').onmessage = e => receive(e.data); } catch { /* no second-tab mirroring */ }
 
+/** A fresh child, as on the cover slide: the level question and the badges are new again, the language the default. */
+function freshChild() { store.wipe(); profile = freshProfile(); mastery = new Mastery(LEARNING, profile.mastery, DAY_SHIFT); setLang(langNow()); }
+
 async function run(m) {
   if (m.type === 'reset') {
-    store.wipe(); profile = freshProfile(); mastery = new Mastery(LEARNING, profile.mastery, DAY_SHIFT);
+    freshChild();
     closeLayers(); stopTheme(); theme.played = false;
-    stack = []; banner = 0; flipped.clear(); instrumentFlips.clear(); calFilter = ''; signTab = 1;
+    stack = []; banner = 0; flipped.clear(); calFilter = ''; signTab = 1;
     applySettings();
     go(m.hash ?? '#/');
     return;
   }
-  if (m.type === 'go') { closeLayers(); flipped.clear(); instrumentFlips.clear(); go(m.hash ?? '#/'); return; }
+  if (m.type === 'go') { closeLayers(); flipped.clear(); go(m.hash ?? '#/'); return; }
   if (m.type === 'sound') { sound.context(); sound.key(15); return; }   // the deck's Sesi aç: one middle C says it works
   if (m.type === 'batch') { for (const [i, x] of m.msgs.entries()) { if (i) await sleep(m.gap ?? 900); await run(x); } return; }
   if (m.type === 'key') { script.dirty = true; hardwareKey(new KeyboardEvent('keydown', { key: m.key })); return; }
@@ -1624,8 +1663,8 @@ const ACTS = {
   'intro.finish': async m => {
     while (G.intro) {
       await sleep(800);
-      const page = G.intro.pages[G.intro.step];
-      if (page === 'level') { const k = m?.level ?? 'baslangic'; await flashButton(document.querySelector(`[data-level="${k}"]`)); chooseLevel(k); continue; }
+      const pg = G.intro.pages[G.intro.step];
+      if (pg === 'level') { const k = m?.level ?? 'baslangic'; await flashButton(document.querySelector(`[data-level="${k}"]`)); chooseLevel(k); continue; }
       await pressG('intro-next');
       if (G.intro.step < G.intro.pages.length - 1) { G.intro.step++; renderGame(); } else closeIntro();
     }
@@ -1637,8 +1676,8 @@ const ACTS = {
   /** Types the letters the tiles are missing, computed from the tiles, never stored (ch. 10 S06). */
   'game.fill': async m => {
     if (G.stage !== Stage.Tiles) throw new Error(`game.fill at ${G.stage}`);
-    const missing = G.round.tiles.tiles.filter(t => t.kind === 'Letter' && !t.prefilled && t.typed == null).map(t => t.letter.toLocaleLowerCase('tr')).join('');
-    await ACTS['game.type']({ text: missing, send: m.send });
+    const missingLetters = G.round.tiles.tiles.filter(x => x.kind === 'Letter' && !x.prefilled && x.typed == null).map(x => x.letter.toLocaleLowerCase(lang)).join('');
+    await ACTS['game.type']({ text: missingLetters, send: m.send });
   },
   'game.choose': async m => {
     if (G.stage !== Stage.Choices) throw new Error(`game.choose at ${G.stage}`);
@@ -1663,9 +1702,8 @@ const ACTS = {
   },
   /** A slide that opens on a tab, as a script step, so the script still knows where the phone is (data/script.js). */
   'page': async m => { goNow(m.hash); await sleep(300); },
-  /** Öğren: a category's Hazırlan sheet, opened from its page or its family card as a child would. */
-  'prep.open': async m => { goNow(m.hash); await sleep(300); await pressDo(`[data-prep="${m.concept}"]`); },
-  'prep.start': async () => { await pressDo('[data-do="prep-start"]'); },
+  /** A page, then a tap on it as a child would (Öğren's family card, an instrument in the grid). */
+  'open': async m => { goNow(m.hash); await sleep(300); if (m.tap) await pressDo(m.tap); },
   /** Çal: a song's "Bu çalgıyla oyna", which opens its round at the choices. */
   'song.game': async m => { goNow(m.hash); await sleep(300); await pressDo('[data-play][data-origin="cal"]'); },
   'results.scroll': async () => { const el = $('#new-badges'); el?.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); await sleep(REDUCED ? 0 : 700); },
@@ -1680,8 +1718,8 @@ const ACTS = {
  * round is seeded (G-05), so a replay lands on the same cards every time.
  */
 const script = { pos: -1, dirty: false, at: null };
-/** Where the phone is, as the script left it: the round on screen (if any), the page, the sheet. */
-const scriptPlace = () => [gameEl.hidden ? '' : G.roundId, location.hash, overlay.kind === 'prep' ? overlay.data : ''].join('|');
+/** Where the phone is, as the script left it: the round on screen (if any) and the page. */
+const scriptPlace = () => [gameEl.hidden ? '' : G.roundId, location.hash].join('|');
 
 async function playStep(k) {
   for (const a of SCRIPT[k]) { await ACTS[a.name](a); await sleep(900); }
@@ -1693,7 +1731,7 @@ ACTS.goto = async m => {
   const onScript = !script.dirty && script.pos >= 0 && script.pos <= want && script.at === scriptPlace();
   if (!onScript) {
     // Start over: a fresh child, as on the cover slide, so the level question and the badges are new again.
-    store.wipe(); profile = freshProfile(); mastery = new Mastery(LEARNING, profile.mastery, DAY_SHIFT);
+    freshChild();
     closeLayers();
     script.pos = -1; script.dirty = false;
   }

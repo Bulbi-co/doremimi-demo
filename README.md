@@ -73,11 +73,12 @@ deck/slides.js  deck/flow.js       the slides as data; the lock that waits for t
 app/index.html  app.js  style.css  the phone: shell, every screen, the game, overlays
 app/lib/                           the app's rules ported to JavaScript:
   answers.js tiles.js ladder.js round.js progress.js   the game (Yaz/Seç/Çevir, tiles, matching, XP, badges)
-  modes.js                         ch. 14: the way in decides the level, the difficulty ceiling, the Hazırlan count
+  modes.js                         ch. 14: the way in decides the level (Oyna or Çal; Öğren has no round), the ceiling
   music.js                         PianoKeys synthesis, sequencer, renderer, karaoke, ButtonMelody
   nav.js                           the dock and the routes (ch. 11), as data and one pure function
   backdrop.js icons.js rng.js      the 2.5D note canvas, the app's icons, seeded random
 app/data/content.js  site.js       content copied from the app's C# (signs, questions, directory, people, texts)
+app/data/localise.js              the content in tr, en or fr (ch. 14 §11); app/i18n/ holds the strings and keyboards
 app/data/hub.js                    the logo's page (ch. 14 §6), as data
 app/data/script.js                 the deck's live demo as the phone's steps (ch. 14 §9)
 app/data/songs/*.json              the app's 42 song files, unchanged
@@ -102,6 +103,7 @@ npm test                 # node --test tests/: the game rules, the music, the na
                          # without the app checked out it is skipped, not passed
 npm run e2e              # with npm start running: mashes → in headless Chrome; the deck must wait for the phone
 npm run mutants          # every mutant must be "caught" and every CONTROL "SURVIVED"
+node --experimental-websocket tools/phone-e2e.mjs http://127.0.0.1:4175   # the phone in tr, en, fr: type, stray Turkish, fit
 npm run shots            # with the server running: screenshots into docs/screens/
 ```
 

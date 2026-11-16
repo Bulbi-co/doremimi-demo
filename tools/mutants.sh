@@ -56,7 +56,7 @@ mutate "a button may repeat its key"           music.js   's/keys.filter\(k => k
 mutate "theme keeps its sharps"                music.js   's/\[1, 3, 6, 8, 10\].includes\(\(\(m % 12\) \+ 12\) % 12\) \? m - 1 : m/m/'
 # nav.js (tests/nav.test.mjs)
 mutate "CONTROL: nav comment only"             nav.js     's/draws what `resolve` decides/draws what resolve decides/'
-mutate "Oyunlar back in the dock"              nav.js     "s/label: 'İzle'/label: 'Oyunlar'/"
+mutatef "Oyunlar back in the dock"              app/i18n/ui.js     "s/'tab.izle': 'İzle'/'tab.izle': 'Oyunlar'/"
 mutate "logo moved to the end"                 nav.js     "s/(\{ key: 'doremimi'[^\n]*\n)(.*\n)(.*\n)/\$2\$3\$1/"
 mutate "Daha fazla link lands nowhere"         nav.js     "s/daha: '#\/doremimi', //"
 mutate "songs open on the current tab"         nav.js     "s/sarki: 'cal', //"
@@ -71,11 +71,11 @@ mutate "the hour moves the day"                daily.js   's/Date.UTC\(date.getF
 mutate "the old rule: white labels only"       accent.js  's/\[face, label\] = \[c, INK\];/[face, label] = [darken(c), WHITE];/'
 mutate "every accent is deepened"              accent.js  's/if \(contrast\(INK, c\) >= MIN\) \[face, label\] = \[c, INK\];/if (false) [face, label] = [c, INK];/'
 # dossier ch. 14 (tests/ch14.test.mjs, and ch13/rules where they pin the same thing)
-mutatef "CONTROL: modes comment only"            app/lib/modes.js   's/Pure, with the deck and the mastery/Pure, with deck and mastery/'
-mutatef "CONTROL: app.js comment only"           app/app.js         's/nothing else\. The owner: Keşfet/nothing more. The owner: Keşfet/'
+mutatef "CONTROL: modes comment only"            app/lib/modes.js   's/runs the code app.js runs/runs the very code app.js runs/'
+mutatef "CONTROL: app.js comment only"           app/app.js         's/A round. `origin` is the way in/A round: `origin` is the way in/' 
 mutatef "CONTROL: content comment only"          app/data/content.js 's/a content default the content team may change/a content default that the content team may change/'
 mutatef "Keşfet starts at Seç"                   app/lib/modes.js   's/\[RoundOrigin.Kesfet\]: \{ start: Level.Yaz/[RoundOrigin.Kesfet]: { start: Level.Sec/'
-mutatef "Öğren's ladder moves"                   app/lib/modes.js   's/\[RoundOrigin.Ogren\]: \{ start: Level.Cevir, fixed: true \}/[RoundOrigin.Ogren]: { start: Level.Cevir, fixed: false }/'
+mutatef "Öğren gets its own round back"          app/lib/modes.js   "s/Object.freeze\(\{ Kesfet: 'kesfet', Cal: 'cal' \}\)/Object.freeze({ Kesfet: 'kesfet', Ogren: 'ogren', Cal: 'cal' })/"
 mutatef "Çal starts at Yaz"                      app/lib/modes.js   's/\[RoundOrigin.Cal\]: \{ start: Level.Sec/[RoundOrigin.Cal]: { start: Level.Yaz/'
 mutatef "a fixed ladder moves anyway"            app/lib/ladder.js  's/if \(this.fixed\) \{/if (false) {/'
 mutatef "down after two struggles again"         app/data/content.js 's/downAfterStruggles: 4/downAfterStruggles: 2/'
@@ -83,8 +83,6 @@ mutatef "the ceiling ignores the level"          app/lib/modes.js   's/if \(L < 
 mutatef "the levels below before the own"        app/lib/modes.js   's/d === L \? 0 :/d === L ? 5 :/'
 mutatef "the level above before the ones below"  app/lib/modes.js   's/10 \+ \(d - L\)/0.5 + (d - L)/'
 mutatef "the top-up ignores the ceiling"         app/lib/modes.js   's/cards.push\(\.\.\.byCeiling\(all\(null\)\.filter\(c => kinds.has\(c.kind\) && !cards.includes\(c\)\), level\)/cards.push(...all(null).filter(c => kinds.has(c.kind) \&\& !cards.includes(c))/'
-mutatef "Öğren deals a round, not the category"  app/lib/modes.js   's/: all\(concept\);/: all(concept).slice(0, count);/'
-mutatef "the sheet counts a round's worth"       app/lib/modes.js   's/export const prepCount = \(deck, concept\) => deck.forConcept\(concept\).length;/export const prepCount = (deck, concept) => Math.min(6, deck.forConcept(concept).length);/'
 mutatef "Keşfet shows only the signs"            app/lib/modes.js   "s/!id.startsWith\('instrument:'\) && concepts\[id\]/id.startsWith('signcat:') \&\& concepts[id]/"
 mutatef "a sign card has no difficulty"          app/data/content.js "s/\{ difficulty: 'orta', id: 'bemol'/{ id: 'bemol'/"
 mutatef "Natürel is Başlangıç"                   app/data/content.js "s/\{ difficulty: 'ileri', id: 'naturel'/{ difficulty: 'baslangic', id: 'naturel'/"
@@ -93,21 +91,20 @@ mutatef "the intro names a level"                app/data/content.js "s/title: '
 mutatef "Nefesli back on Natürel's blue"         app/data/content.js "s/NefesliUflemeliCalgilar: \{ name: 'Nefesli Çalgılar', color: '#1E7A4C'/NefesliUflemeliCalgilar: { name: 'Nefesli Çalgılar', color: '#1E9BFF'/"
 mutatef "Vurmalı group back on Fa's orange"      app/data/site.js   "s/'Vurmalı': '#7A5C4E'/'Vurmalı': '#FF9A1F'/"
 mutatef "Telli badge keeps the old red"          app/data/content.js "s/color: '#C2379B', rule: \{ kind: 'LearnQuestions', count: 3 \}, conceptId: 'family:TelliCalgilar'/color: '#FF5A4E', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:TelliCalgilar'/"
-mutatef "the newsletter opens İletişim again"    app/data/hub.js    "s/'Bültene abone ol', 'Yeniliklerden ilk sen haberdar ol', \{ push: '#\/bulten' \}/'Bültene abone ol', 'Yeniliklerden ilk sen haberdar ol', { push: '#\/iletisim' }/"
+mutatef "the newsletter opens İletişim again"    app/data/hub.js    "s/\['IconMail', 'bulten', \{ push: '#\/bulten' \}\]/['IconMail', 'bulten', { push: '#\/iletisim' }]/"
 mutatef "a hub row leads to no page"             app/data/hub.js    "s/push: '#\/destekciler'/push: '#\/sponsorlar'/"
-mutatef "Öğren back to five tabs"                app/lib/nav.js     "s/, \{ key: 'notalar', label: 'Notalar' \}//"
+mutatef "Öğren gets Bilmeceler back"            app/lib/nav.js     "s/\{ key: 'aileler' \}, \{ key: 'degerler' \}/{ key: 'aileler' }, { key: 'bilmeceler' }, { key: 'degerler' }/"
 mutatef "the round starts from the saved ladder" app/app.js         's/ladderFor\(G.origin, LEARNING.ladder\), LEARNING, G.random/ladderFor(G.origin, LEARNING.ladder, profile.ladder), LEARNING, G.random/'
 mutatef "a song's round is Keşfet's"             app/app.js         's/data-play="\$\{P.concept \?\? .karisik.\}" data-origin="cal"/data-play="\${P.concept ?? "karisik"}" data-origin="kesfet"/'
-mutatef "the sign page skips the sheet"          app/app.js         's/data-prep="signcat:\$\{key\}"/data-play="signcat:\${key}" data-origin="kesfet"/'
+mutatef "the instrument page can play again"     app/app.js         's/(\n    \$\{d\.riddle \? `<button class="chunky purple")/\n    <button class="chunky yellow" data-play="instrument:x" data-origin="cal"><\/button>$1/' 
 mutatef "the level toast is back"                app/app.js         "s/  if \(o.move !== Move.None\) gameBg/  if (o.move !== Move.None) G.line = 'Harika! Yazma seviyesine çıktın';\n  if (o.move !== Move.None) gameBg/"
-mutatef "the results tile shows the level"       app/app.js         's/<small>Yıldız<\/small><b>\$\{R.stars\}\/3<\/b>/<small>Seviye<\/small><b>Yaz<\/b>/'
+mutatef "the results tile shows the level"       app/app.js         's/<small>\$\{esc\(t\(.results\.stars.\)\)\}<\/small><b>\$\{R\.stars\}\/3<\/b>/<small>Seviye<\/small><b>Yaz<\/b>/' 
 mutatef "the first game does not ask the level"  app/app.js         "s/\.\.\.\(profile.difficulty \? \[\] : \['level'\]\)/...([])/"
 mutatef "the chosen level is not saved"          app/app.js         's/profile.difficulty = key; save\(\);/save();/'
-mutatef "Zorluk does not change the level"       app/app.js         's/profile.difficulty = t.dataset.zorluk; save\(\);/save();/'
+mutatef "Zorluk does not change the level"       app/app.js         's/profile.difficulty = d.zorluk; save\(\);/save();/' 
 mutatef "the round ignores the child's level"    app/app.js         's/level: profile.difficulty, mastery/level: null, mastery/'
 mutatef "Tekrar oyna forgets the way in"         app/app.js         's/openGame\(\{ concept: c, origin: G.origin, intro: false \}\)/openGame({ concept: c, intro: false })/'
 mutatef "the Tekrar row is back"                 app/app.js         's/    \$\{oynaHtml\(\)\}/    \${oynaHtml()}<button class="trow" data-do="review">Tekrar zamanı<\/button>/'
-mutatef "the sheet promises a round's worth"     app/app.js         's/Bu kategoride \$\{n\} kart var/Bu kategoride \${LEARNING.cardsPerRound} kart var/'
 mutatef "OYNA is a bar again"                    app/style.css      's/width: min\(56%, 220px\); aspect-ratio: 1;/width: 100%;/'
 # the deck's story against the phone's script, dossier ch. 14 §9 (tests/deck.test.mjs)
 mutatef "CONTROL: slides comment only"           deck/slides.js     's/Its own module, apart from sunum.js/Its own module, separate from sunum.js/'
@@ -116,7 +113,7 @@ mutatef "Tur sonu asks for the old steps"        deck/slides.js     "s/phone: at
 mutatef "a step the script does not have"        deck/slides.js     "s/\['Rozetler', play\(15\)\]/['Rozetler', play(16)]/"
 mutatef "the script loses Öğren's page step"     app/data/script.js "s/  \[\{ name: 'page', hash: '#\/ogren\/aileler' \}\],[^\n]*\n//"
 mutatef "Öğren opens with a plain go()"          deck/slides.js     "s/phone: at\(9\)/phone: go('#\/ogren\/aileler')/"
-mutatef "OYNA only in the fast replay"           deck/slides.js     "s/\['OYNA', play\(0\)\]/['OYNA', at(0)]/"
+mutatef "Şimdi Oyna only in the fast replay"    deck/slides.js     "s/\['Şimdi Oyna', play\(0\)\]/['Şimdi Oyna', at(0)]/"
 mutatef "Çal's round not played on Çal"          deck/slides.js     "s/\['Keman: bu çalgıyla oyna', play\(13\)\]/['Keman: bu çalgıyla oyna', at(13)]/"
 mutatef "Çal told before Öğren"                  deck/slides.js     "s/id: 'ogren'/id: 'TMP'/; s/id: 'cal'/id: 'ogren'/; s/id: 'TMP'/id: 'cal'/"
 mutatef "the ladder bullet is back"              deck/slides.js     "s/'Ancak üst üste dört zorlanmada kolaylaşır'/\"Zorlandıkça Yaz → Seç → Çevir'e iner, bildikçe çıkar\"/"
@@ -129,3 +126,38 @@ mutatem "the families swap colours, consistently" \
 mutatef "Bakır nefesli drifts"                   app/data/site.js    "s/'Bakır nefesli': '#F6B53A'/'Bakır nefesli': '#F6B53B'/"
 mutatef "a badge colour drifts"                  app/data/content.js "s/color: '#2B9BFF', rule: \{ kind: 'TypedFirstTryInRound'/color: '#2B9BFE', rule: { kind: 'TypedFirstTryInRound'/"
 mutatef "a badge line drifts"                    app/data/content.js "s/Üç farklı günde müzik oynadın\./Üç ayrı günde müzik oynadın./"
+# dossier ch. 14 §10, revision 2 (tests/ch14.test.mjs, nav.test.mjs)
+mutatef "the tab is Keşfet again"                app/i18n/ui.js     "s/'tab.kesfet': 'Oyna'/'tab.kesfet': 'Keşfet'/"
+mutatef "the circle says OYNA again"             app/i18n/ui.js     "s/'oyna.button': 'Şimdi Oyna'/'oyna.button': 'OYNA'/"
+mutatef "the banners back on Oyna"               app/app.js         's/<div class="stack home">\n    \$\{oynaHtml\(\)\}/<div class="stack home">\n    \${carouselHtml()}\n    \${oynaHtml()}/'
+mutatef "the foundation card back on the hub"    app/app.js         's/    \$\{carouselHtml\(\)\}\n    \$\{HUB\.map/    <div class="card hub-hero"><\/div>\n    \${HUB.map/'
+mutatef "the carousel turns on Oyna"             app/app.js         "s/if \(route\.tab === 'doremimi' && !route\.page\) startCarousel/if (route.tab === 'kesfet' \&\& !route.page) startCarousel/"
+mutatef "İzle drops the riddles"                 app/app.js         "s/const WATCH_KINDS = \['riddle', /const WATCH_KINDS = [/"
+mutatef "a family card opens a round"            app/app.js         's/data-fam="\$\{key\}" data-go=/data-fam="\${key}" data-play="family:\${key}" data-origin="kesfet" data-go=/'
+mutatef "Öğren's tabs in another order"          app/lib/nav.js     "s/\{ key: 'isaretler' \}, \{ key: 'calgilar' \}/{ key: 'calgilar' }, { key: 'isaretler' }/"
+mutatef "two tabs called Play in English"        app/i18n/ui.js     "s/'tab.cal': 'Music'/'tab.cal': 'Play'/"
+# dossier ch. 14 §11, three languages (tests/i18n.test.mjs)
+mutatef "CONTROL: ui comment only"               app/i18n/ui.js     's/Every word the phone shows outside/Each word the phone shows outside/'
+mutatef "CONTROL: i18n comment only"             app/i18n/index.js  's/Türkçe is the source,/Türkçe is the source language,/'
+mutatef "a key missing in French"                app/i18n/ui.js     "s/'kb.digits.aria': 'Chiffres', 'kb.space': 'espace', /'kb.digits.aria': 'Chiffres', /"
+mutatef "a placeholder lost in English"          app/i18n/ui.js     "s/'game.card': 'Card \{i\} of \{n\}'/'game.card': 'Card {i}'/"
+mutatef "a Turkish word left in app.js"          app/app.js         's/\$\{esc\(t\(.results\.exit.\)\)\}/Çık/'
+mutatef "an English word left in an attribute"   app/app.js         's/aria-label="\$\{esc\(t\(.song\.stop.\)\)\}"/aria-label="Stop"/'
+mutatef "a French letter not on the keyboard"    app/i18n/keyboards.js "s/'QSDFGHJKLM'/'QSDFGHJKL'/"
+mutatef "an English answer it does not accept"   app/i18n/content-en.js "s/accepted: \['Flat', 'flat sign'\]/accepted: ['flat sign']/"
+mutatef "a French question left out"             app/i18n/content-fr.js "s/    tempo: \{ q:[^\n]*\n//"
+mutatef "the deck's phone follows the laptop"    app/i18n/index.js  "s/  if \(embed\) return 'tr';\n//"
+mutatef "the device language is ignored"         app/i18n/index.js  "s/  for \(const l of languages\)[^\n]*\n//"
+mutatef "Dil does not rebuild the deck"          app/app.js         's/  deck = new QuestionDeck\(L\.QUESTIONS\);\n//'
+mutatef "a fresh child keeps the old language"   app/app.js         's/mastery = new Mastery\(LEARNING, profile\.mastery, DAY_SHIFT\); setLang\(langNow\(\)\); \}/mastery = new Mastery(LEARNING, profile.mastery, DAY_SHIFT); }/'
+mutatef "the foundation page says nothing"       app/app.js         's/return `<div class="stack">\$\{trOnly\(\)\}\n    <div class="card"><span class="eyebrow">/return `<div class="stack">\n    <div class="card"><span class="eyebrow">/'
+# dossier ch. 14 §11, the type system (tests/type.test.mjs)
+mutatef "CONTROL: style comment only"            app/style.css      's/One role per kind of text, each/A role per kind of text, each/'
+mutatef "meta back to Regular"                   app/style.css      's/--t-meta: 500 13px/--t-meta: 400 13px/'
+mutatef "titles tracked open"                    app/style.css      's/--ls-title: -0.021em/--ls-title: 0.01em/'
+mutatef "eyebrows not in capitals"               app/style.css      's/text-transform: uppercase; font-feature-settings: "case";/font-feature-settings: "case";/'
+mutatef "counts in proportional figures"         app/style.css      's/\.num \{ font-variant-numeric: tabular-nums; \}/.num { }/'
+mutatef "text on colour at Medium"               app/style.css      's/(\.ftxt small, \.ftxt em\) \{ font: )600 13px/${1}500 13px/'
+mutatef "a weight Inter does not ship"           app/style.css      's/--t-card: 600 17px/--t-card: 650 17px/'
+mutatef "the section as big as the title"        app/style.css      's/--t-section: 700 20px\/26px/--t-section: 700 28px\/34px/'
+mutatef "a count loses its figures"              app/app.js         's/<small class="num">\$\{esc\(t\(.game\.card./<small>\${esc(t(\x27game.card\x27/'

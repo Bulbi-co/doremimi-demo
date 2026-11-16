@@ -219,8 +219,10 @@ img { display: block; }
 .chunky.oyna.circle { --lipd: 7px; --sink: 5px; width: min(56%, 220px); aspect-ratio: 1; padding-bottom: var(--lipd); }
 .chunky.oyna.circle > .face { width: 100%; height: 100%; border-radius: 50%; padding: 0; flex-direction: column; gap: 6px; min-height: 0;
   background: radial-gradient(circle at 50% 38%, #FFE066 0%, var(--yellow) 62%); }
-.oyna .word { font: 800 34px/34px var(--font-play); letter-spacing: .02em; }
-.oyna .mini { position: relative; width: 36%; aspect-ratio: 3 / 4; perspective: 300px; }
+/* The word is "Şimdi Oyna" since ch. 14 §10, two words where OYNA was one: it may take two lines ("Jouer maintenant"),
+   so it is set smaller and centred, and the card above gives up a little height. */
+.oyna .word { max-width: 78%; font: 800 25px/25px var(--font-play); letter-spacing: .01em; text-align: center; text-wrap: balance; }
+.oyna .mini { position: relative; width: 33%; aspect-ratio: 3 / 4; perspective: 300px; }
 .oyna .flipper { position: absolute; inset: 0; transform-style: preserve-3d; animation: okFlip 4.5s var(--ease-sine-in-out) infinite; }
 .oyna .side { position: absolute; inset: 0; border-radius: 9px; background: #fff; box-shadow: 0 4px 0 0 #D6B000, 0 6px 10px rgba(22,24,44,.18); display: grid; place-items: center; backface-visibility: hidden; color: var(--ink); }
 .oyna .side.front { font-size: 60px; line-height: 1; padding-bottom: 22px; }
@@ -290,29 +292,93 @@ img { display: block; }
 .soon .card { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 
 
-/* ───────────────────────── the app register's type scale (ch. 13 §2, AppStyles.axaml): h1 28/34 Bold, h2 20/26 and
-   h3 17/22 SemiBold, body 15/21, soft 13, caption 12, eyebrow 11 in capitals. Scoped off the game, which keeps the
-   heavier Baloo scale above. */
-:is(.topbar, .page, .overlay-host) :is(.ribbon h2, .h2) { font: 600 20px/26px var(--font-display); letter-spacing: -.005em; }
-:is(.topbar, .page, .overlay-host) .h3 { font: 600 17px/22px var(--font-display); }
-:is(.topbar, .page, .overlay-host) .h1 { font: 700 28px/34px var(--font-display); }
-:is(.topbar, .page, .overlay-host) .ribbon.small h2 { font: 600 13px/18px var(--font-display); color: var(--ink-soft); }
-:is(.topbar, .page, .overlay-host) .group-title { margin: 8px 16px 2px; font: 600 13px/18px var(--font-display); color: var(--ink-soft); }
-:is(.topbar, .page, .overlay-host) .p { font: 400 15px/21px var(--font-body); }
+/* ───────────────────────── the type system (dossier ch. 14 §11). The owner: the menus read like "default Android text
+   with no makeup"; a premium app is read by weight. Montserrat was the spec's candidate, but the app has not chosen it
+   (its main, a265c0b, still ships Inter only), so the phone keeps Inter, as the spec says to when there is no winner,
+   and finishes the hierarchy instead. One role per kind of text, each a font token on :root:
+
+     title    28/34 Bold        the top bar's page name
+     hero     22/28 Bold        a coloured header's name (a sign, an instrument, a song)
+     section  20/26 Bold        a heading on the canvas
+     card     17/22 SemiBold    a card's own title, and a group's title inside its card
+     row      15/20 SemiBold    a list row's or a tile's name
+     body     15/22 Regular     running text on white
+     meta     13/18 Medium      the line under a name, captions, counts
+     eyebrow  11/14 SemiBold    capitals: a card's kind, a badge, a small label on the canvas
+     label    15/20 SemiBold    buttons, tabs, chips (13 and 11 for chips and the dock)
+
+   Tracking follows Inter's own "dynamic metrics" (tracking = -0.0223 + 0.185·e^(-0.1745·size) em, the formula rsms
+   publishes with the font; quoted from memory, and the same constants as the app's in-progress Controls/Tracking.cs): tight on large titles, about neutral at
+   12 px, and capitals opened by hand to 0.08 em. Small text is never Regular: at 13 px and below it is Medium, and on a
+   coloured face SemiBold, because 400 on colour is what read as "no makeup". Counts carry .num, tabular figures, so a
+   column of "3 kart" / "12 kart" does not shimmer. Scoped off the game, which keeps Baloo 2 and Nunito. */
+:root {
+  --t-title: 700 28px/34px var(--font-display);   --ls-title: -0.021em;
+  --t-hero: 700 22px/28px var(--font-display);    --ls-hero: -0.015em;
+  --t-section: 700 20px/26px var(--font-display); --ls-section: -0.017em;
+  --t-card: 600 17px/22px var(--font-display);    --ls-card: -0.013em;
+  --t-row: 600 15px/20px var(--font-display);     --ls-row: -0.009em;
+  --t-row-s: 600 13px/17px var(--font-display);   --ls-row-s: -0.003em;
+  --t-body: 400 15px/22px var(--font-body);       --ls-body: -0.009em;
+  --t-meta: 500 13px/18px var(--font-body);       --ls-meta: -0.003em;
+  --t-meta-s: 500 12px/16px var(--font-body);
+  --t-eyebrow: 600 11px/14px var(--font-display); --ls-eyebrow: 0.08em;
+  --t-label: 600 15px/20px var(--font-display);   --ls-label: -0.006em;
+  --t-label-l: 600 17px/22px var(--font-display);
+  --t-chip: 600 13px/18px var(--font-display);
+  --t-dock: 600 11px/14px var(--font-display);    --ls-dock: 0.01em;
+}
+.num { font-variant-numeric: tabular-nums; }
+:is(.topbar, .page, .overlay-host, .dock) { text-rendering: optimizeLegibility; }
+:is(.topbar, .page, .overlay-host) :is(.topbar h1, .h1, .who-ov .ttl) { font: var(--t-title); letter-spacing: var(--ls-title); }
+:is(.topbar, .page, .overlay-host) :is(.ribbon:not(.small) h2, .h2, .khead, .who-line .mt b.h2) { font: var(--t-section); letter-spacing: var(--ls-section); }
+:is(.topbar, .page, .overlay-host) :is(.h3, .hub-hero b, .nedir .head b, .today .ttxt b, .ftxt b, .card.lyric b, .pmeta b) { font: var(--t-card); letter-spacing: var(--ls-card); }
+/* A group's title (Katıl, Tanış, Aile ve ayarlar) is a card title, not small capitals: the app's in-progress scale has
+   it so (AppStyles.axaml group-title, 17 SemiBold), and it is set below, with the eyebrows. */
+:is(.topbar, .page, .overlay-host) :is(.mt b, .imeta b, .video .meta b) { font: var(--t-row); letter-spacing: var(--ls-row); }
+:is(.topbar, .page, .overlay-host) :is(.song-tile b, .sign-tile b) { font: var(--t-row-s); letter-spacing: var(--ls-row-s); }
+/* After the row rule on purpose: inside :is() every selector takes the list's highest specificity, so the row list
+   (which holds .video .meta b) ties with this one and the later rule wins; a header's name is a .mt b too. */
+:is(.topbar, .page, .overlay-host) :is(.sign-hero b, .inst-hero .mt b, .song-head .mt b) { font: var(--t-hero); letter-spacing: var(--ls-hero); }
+/* On a coloured face the name is Bold: SemiBold on a saturated colour thinned out at arm's length. */
+:is(.topbar, .page, .overlay-host) .kface b { font: 700 15px/19px var(--font-display); letter-spacing: var(--ls-row); }
+:is(.topbar, .page, .overlay-host) :is(.p, .srow, ul.mani, .field) { font: var(--t-body); letter-spacing: var(--ls-body); }
 :is(.topbar, .page, .overlay-host) .p.strong { font-weight: 500; }
-:is(.topbar, .page, .overlay-host) .caption { font: 400 13px/18px var(--font-body); }
-:is(.topbar, .page, .overlay-host) .eyebrow { font: 600 11px/14px var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
-:is(.topbar, .page, .overlay-host) .mt b { font: 600 15px/20px var(--font-display); }
-:is(.topbar, .page, .overlay-host) .mt small { font: 400 13px/17px var(--font-body); color: var(--ink-soft); }
-/* Radius only: each card variant keeps the padding its own rule gives it. */
+:is(.topbar, .page, .overlay-host) .today .ttxt .p { font: var(--t-meta); letter-spacing: var(--ls-meta); }
+:is(.topbar, .page, .overlay-host) :is(.mt small, .caption, .imeta small, .ttxt small, .video .meta small, .prow em, .card.lyric small, .pmeta small) { font: var(--t-meta); letter-spacing: var(--ls-meta); }
+:is(.topbar, .page, .overlay-host) :is(.prow, .prof-level .three) { font: var(--t-meta); letter-spacing: var(--ls-meta); }
+:is(.topbar, .page, .overlay-host) .prow > span:first-child { font: var(--t-row); letter-spacing: var(--ls-row); }
+:is(.topbar, .page, .overlay-host) :is(.kface small, .hero .txt small, .sign-hero small, .inst-hero .mt small, .ftxt small, .ftxt em) { font: 600 13px/18px var(--font-body); letter-spacing: var(--ls-meta); }
+:is(.topbar, .page, .overlay-host) .kface small { font-size: 12px; line-height: 16px; }
+:is(.topbar, .page, .overlay-host) :is(.eyebrow, .ribbon.small h2, .lvbox small, .badge) { font: var(--t-eyebrow); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; font-feature-settings: "case"; color: var(--ink-soft); }
+/* An eyebrow is its own line: inline, the Vakıf page's "DUYURU" ran straight into the title it labels. */
+:is(.topbar, .page, .overlay-host) .eyebrow { display: block; }
+:is(.topbar, .page, .overlay-host) .card > .eyebrow { margin-bottom: 4px; }
+:is(.topbar, .page, .overlay-host) .group-title { font: var(--t-card); letter-spacing: var(--ls-card); color: var(--ink); }
+:is(.topbar, .page, .overlay-host) .card.menu .group-title { margin: 12px 16px 4px; }
+:is(.topbar, .page, .overlay-host) .group-title.on-canvas { margin: 6px 16px -6px; }
+:is(.topbar, .page, .overlay-host) .badge.soonb { color: var(--text-gold); }
+:is(.topbar, .page, .overlay-host) .chunky:not(.oyna) { font: var(--t-label); letter-spacing: var(--ls-label); }
+:is(.topbar, .page, .overlay-host) .chunky.large:not(.oyna) { font: var(--t-label-l); letter-spacing: var(--ls-label); }
+:is(.topbar, .page, .overlay-host) .chunky.small:not(.oyna) { font: var(--t-chip); }
+:is(.topbar, .page, .overlay-host) :is(.chip-btn, .zopt) { font: var(--t-chip); }
+:is(.topbar, .page, .overlay-host) .chip-btn { line-height: 32px; }
+:is(.topbar, .page, .overlay-host) .zopt { line-height: 36px; }
+:is(.topbar, .page, .overlay-host) .otab { font: var(--t-label); line-height: 40px; letter-spacing: var(--ls-label); }
+:is(.topbar, .page, .overlay-host) .quiet.link { font: var(--t-meta); text-decoration: underline; text-underline-offset: 3px; }
+:is(.topbar, .page, .overlay-host) .oyna-cap { font: var(--t-row); letter-spacing: var(--ls-row); }
+:is(.topbar, .page, .overlay-host) .levelbtn .lv b { font: 600 12px/15px var(--font-display); }
+:is(.topbar, .page, .overlay-host) :is(.lvbox b, .prof-level .three b) { letter-spacing: -0.017em; }
+.dock .tab span { font: var(--t-dock); letter-spacing: var(--ls-dock); }
+/* A long page title steps down rather than being cut (app.js fitTitle): the hero size, then two lines of 18. */
+.topbar .title h1.fit1 { font: var(--t-hero); letter-spacing: var(--ls-hero); }
+.topbar .title h1.fit2 { font: 700 18px/22px var(--font-display); letter-spacing: -0.012em; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; text-wrap: balance; }
 :is(.topbar, .page, .overlay-host) .card { border-radius: var(--r-card); }
-:is(.topbar, .page, .overlay-host) .badge { font-weight: 600; box-shadow: none; }
-:is(.topbar, .page, .overlay-host) .video .meta b { font: 600 13px/17px var(--font-display); }
-:is(.topbar, .page, .overlay-host) .card.lyric b { font: 600 15px/20px var(--font-display); }
-:is(.topbar, .page, .overlay-host) :is(.hub-hero b, .nedir .head b, .navy-card b) { font: 600 17px/22px var(--font-display); }
-:is(.topbar, .page, .overlay-host) ul.mani { font: 500 15px/22px var(--font-body); }
-:is(.topbar, .page, .overlay-host) .swatches span { font: 600 13px var(--font-display); }
-:is(.topbar, .page, .overlay-host) .gate .host { font: 600 12px var(--font-display); }
+:is(.topbar, .page, .overlay-host) .badge { box-shadow: none; }
+:is(.topbar, .page, .overlay-host) .swatches span { font: var(--t-chip); }
+:is(.topbar, .page, .overlay-host) .gate .host { font: var(--t-chip); }
+/* A short note that the foundation's own texts are Turkish in this language (ch. 14 §11). */
+.tr-only { margin: -4px 4px 0; font-style: italic; }
 
 /* ───────────────────────── shared rows, chips and notes (ShellView.axaml §17.2 menu rows; ch. 02 §3) */
 .p.strong { color: var(--ink); font-weight: 700; }
@@ -797,7 +863,7 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 /* The child's name is the page's h2 (20), not a row title: .mt b would otherwise set it at 15. */
 :is(.topbar, .page, .overlay-host) .who-line .mt b.h2 { font: 600 20px/26px var(--font-display); }
 
-/* ───────────────────────── dossier ch. 14: Öğren's grids, the Hazırlan sheet, Zorluk, the level question, the hub */
+/* ───────────────────────── dossier ch. 14: Öğren's grids, Zorluk and Dil, the level question, the hub */
 /* Çalgılar: a photo grid; the instrument on white, its name, a slim bar in its group colour. */
 .igrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .itile { display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r-card); box-shadow: var(--drop-card); overflow: hidden; text-align: left; }
@@ -829,18 +895,7 @@ ul.mani { margin: 0; padding: 0 0 0 20px; display: flex; flex-direction: column;
 .vpart + .vpart::before { content: ''; position: absolute; top: 0; right: 0; left: var(--rule); height: 1px; background: var(--hairline); }
 .vpart .badge.soonb, .wait-card .badge.soonb { font-size: 10px; padding: 2px 7px; }
 .card.wait-card { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-/* The Hazırlan sheet: from the bottom, the category's colour on its face, the count large. */
-.overlay.scrim.prep-ov { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; padding: 0; }
-.prep { position: relative; width: 100%; max-width: 520px; margin: 0 auto; background: var(--surface); border-radius: 18px 18px 0 0; padding: 18px 18px calc(18px + var(--safe-bottom)); display: flex; flex-direction: column; gap: 14px; box-shadow: var(--drop-hero); animation: sheetUp 320ms var(--ease-cubic-out) both; }
-@keyframes sheetUp { from { transform: translateY(40%); opacity: 0; } }
-.prep > .x { position: absolute; right: 12px; top: 12px; z-index: 2; }
-.prep-face { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 16px 20px; border-radius: var(--r-card); background: var(--kf); color: var(--kl); box-shadow: 0 6px 0 0 var(--ke); margin-bottom: 6px; }
-.prep-face .part { width: 92px; height: 92px; border-radius: 16px; background: rgba(255,255,255,.94); color: var(--ink); display: grid; place-items: center; overflow: hidden; font-size: 56px; line-height: 1; padding-bottom: 8px; }
-.prep-face .part:has(img) { padding: 0; }
-.prep-face .part img { width: 100%; height: 100%; object-fit: cover; }
-.prep-face .pname { font: 700 22px/28px var(--font-display); text-align: center; }
-.prep-face .pcount { font: 600 15px/20px var(--font-body); padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--kl) 16%, transparent); }
-/* Ayarlar › Zorluk */
+/* Ayarlar › Zorluk and Dil: the same segmented track */
 .card.zorluk { display: flex; flex-direction: column; gap: 12px; }
 .ztrack { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; border-radius: var(--r-m); background: var(--sunken); }
 .zopt { height: 36px; border-radius: 8px; font: 600 14px/36px var(--font-display); color: var(--ink-soft); }

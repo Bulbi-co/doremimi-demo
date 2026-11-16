@@ -1,45 +1,55 @@
 /*
- * The logo's page, Doremimi (dossier ch. 14 §6), as data so tests/ch14.test.mjs checks the page app.js draws.
+ * The logo's tab, Dore Mimi Vakfı (dossier ch. 14 §6 and §10), as data so tests/ch14.test.mjs checks the page app.js
+ * draws.
  *
  * One page and every destination once. Testers called walking around the app confusing, and the old hub was part of
  * it: İletişim was reached by two rows ("Bültene abone ol" opened it too), and the characters, the foundation and the
- * books by both a banner and a row. The foundation is the header itself; the books stay on their banner and in Öğren ›
- * Notalar. The Tasarım sistemi row went with the old groups: its page text is still the pre-ch. 13 one and waits on
- * the owner (the page itself is kept at #/tasarim).
+ * books by both a banner and a row. Since revision 2 the banner carousel opens the tab where the foundation's card was
+ * (the foundation is the tab's title now), and the foundation's page is the "Vakfımız kuruldu!" banner's.
  *
- * A row is [icon, title, line, where]: `push` a page on this tab, `go` to a tab root, `ext` a site behind the gate.
+ * A row is [icon, key, where]: its title is t(`hub.<key>`) and its line t(`hub.<key>.line`) (i18n/ui.js); `push` a page
+ * on this tab, `go` to a tab root, `ext` a site behind the gate.
  */
-export const HUB_HEADER = { title: 'Dore Mimi Yetenek ve Eğitim Vakfı', push: '#/vakif' };
-
 export const HUB = [
-  { title: 'Faaliyetler', cards: true, rows: [
-    ['IconHeart', 'Müzikle Değerler Eğitimi', 'Kitaplar, şarkılar ve oyunlarla değerler', { go: '#/ogren/degerler' }],
-    ['IconBolt', 'Burslar', 'Si Bemol ve Mi Bemol', { push: '#/burslar' }],
-    ['IconStar', 'Etkinlikler ve materyaller', 'Konserler, bilmeceler, eğitici materyaller', { push: '#/etkinlikler' }],
+  { key: 'faaliyetler', cards: true, rows: [
+    ['IconHeart', 'degerler', { go: '#/ogren/degerler' }],
+    ['IconBolt', 'burslar', { push: '#/burslar' }],
+    ['IconStar', 'etkinlikler', { push: '#/etkinlikler' }],
   ] },
-  { title: 'Katıl', rows: [
-    ['IconHand', 'Gönüllü ol', 'D. M. Gönüllüleri başvurusu', { push: '#/gonullu' }],
-    ['IconMail', 'Bültene abone ol', 'Yeniliklerden ilk sen haberdar ol', { push: '#/bulten' }],
-    ['IconHeart', 'Destek ol', 'Bağış ve destek', { push: '#/destek' }],
+  { key: 'katil', rows: [
+    ['IconHand', 'gonullu', { push: '#/gonullu' }],
+    ['IconMail', 'bulten', { push: '#/bulten' }],
+    ['IconHeart', 'destek', { push: '#/destek' }],
   ] },
-  { title: 'Tanış', rows: [
-    ['IconSmile', 'Dore ve Mimi', 'Karakterlerle tanış', { push: '#/dore-ve-mimi' }],
-    ['IconUsers', 'Ekip', 'Projeyi hayata geçirenler', { push: '#/ekip' }],
-    ['IconStar', 'Destekçiler', 'Yanımızda olan kurumlar', { push: '#/destekciler' }],
+  { key: 'tanis', rows: [
+    ['IconSmile', 'dore-ve-mimi', { push: '#/dore-ve-mimi' }],
+    ['IconUsers', 'ekip', { push: '#/ekip' }],
+    ['IconStar', 'destekciler', { push: '#/destekciler' }],
   ] },
-  { title: 'Bize ulaş', rows: [
-    ['IconPhone', 'İletişim', 'Telefon, e-posta ve mesaj formu', { push: '#/iletisim' }],
-    ['IconPlay', 'YouTube', 'Tüm klipler ve bilmeceler', { ext: 'youtube.com' }],
-    ['IconCamera', 'Instagram', '@dore_mimi_music', { ext: 'instagram.com' }],
-    ['IconUsers', 'Facebook', 'doremimitv', { ext: 'facebook.com' }],
-    ['IconGlobe', 'Web sitesi', 'doremimi.org', { ext: 'doremimi.org' }],
+  { key: 'ulas', rows: [
+    ['IconPhone', 'iletisim', { push: '#/iletisim' }],
+    ['IconPlay', 'youtube', { ext: 'youtube.com' }],
+    ['IconCamera', 'instagram', { ext: 'instagram.com' }],
+    ['IconUsers', 'facebook', { ext: 'facebook.com' }],
+    ['IconGlobe', 'web', { ext: 'doremimi.org' }],
   ] },
-  { title: 'Uygulama', rows: [
-    ['IconHelp', 'Yardım ve SSS', 'Sık sorulan sorular', { push: '#/yardim' }],
-    ['IconLock', 'Yasal metinler', 'Gizlilik, kullanım koşulları, KVKK', { push: '#/yasal' }],
-    ['IconInfo', 'Uygulama bilgisi', 'Sürüm ve lisanslar', { push: '#/hakkinda' }],
+  { key: 'uygulama', rows: [
+    ['IconHelp', 'yardim', { push: '#/yardim' }],
+    ['IconLock', 'yasal', { push: '#/yasal' }],
+    ['IconInfo', 'hakkinda', { push: '#/hakkinda' }],
   ] },
 ];
 
-/** Every place the hub leads, header included, as one list (what the duplicate guard reads). */
-export const hubDestinations = () => [HUB_HEADER.push, ...HUB.flatMap(g => g.rows.map(r => Object.values(r[3])[0]))];
+/** Every place the rows lead, as one list (what the duplicate guard reads). */
+export const hubDestinations = () => HUB.flatMap(g => g.rows.map(r => Object.values(r[2])[0]));
+
+/*
+ * Where each banner leads, by its place in content.js BANNERS (NR-10, OC-21): the game, the characters, İzle, the
+ * foundation's page, the books. The characters banner and the Tanış row both open Dore ve Mimi: the banner is an
+ * announcement that rotates away, the row is where a parent finds the page again, and ch. 14 keeps both (§6 lists
+ * the row under Tanış; §10 moves the carousel here unchanged).
+ */
+export const BANNER_GO = ['game', '#/dore-ve-mimi', '#/izle', '#/vakif', '#/kitaplar'];
+
+/** The directory group each family's instruments are filed under (Öğren › Aileler opens Çalgılar under it). */
+export const FAMILY_GROUP = { TelliCalgilar: 'Telli', YayliCalgilar: 'Yaylı', VurmaliCalgilar: 'Vurmalı', TusluCalgilar: 'Tuşlu', NefesliUflemeliCalgilar: 'Nefesli' };

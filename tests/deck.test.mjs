@@ -35,13 +35,14 @@ test('the deck tells ch. 14 §9’s story: Keşfet → its written round → Ö�
   const order = SLIDES.map(s => s.id);
   const story = ['kesfet', 'oyun', 'ogren', 'cal', 'sonuc', 'aile', 'kapanis'];
   assert.deepEqual(order.filter(id => story.includes(id)), story);
-  // Each part is played on its own slide, in view: the level question on Keşfet, the typing on Oyun, the Hazırlan
-  // sheet and the turned card on Öğren, the song's round at the choices on Çal, the round's end on Tur sonu.
+  // Each part is played on its own slide, in view: the level question on Keşfet, the typing on Oyun, a family's
+  // instruments and one instrument's page on Öğren (information only since ch. 14 §10), the song's round at the
+  // choices on Çal, the round's end on Tur sonu.
   assert.equal(playedOn(stepWith('game.start', { origin: 'kesfet' })), 'kesfet');
   assert.equal(playedOn(stepWith('game.type', { text: 'sol' })), 'oyun');
   assert.equal(playedOn(stepWith('game.choose', { right: false })), 'oyun');
-  assert.equal(playedOn(stepWith('prep.open')), 'ogren');
-  assert.equal(playedOn(stepWith('game.flip')), 'ogren');
+  assert.equal(playedOn(stepWith('open', { hash: '#/ogren/aileler' })), 'ogren');
+  assert.equal(playedOn(stepWith('open', { hash: '#/ogren/calgilar?aile=yayli' })), 'ogren');
   assert.equal(playedOn(stepWith('song.game')), 'cal');
   assert.equal(playedOn(stepWith('game.finish')), 'sonuc');
   assert.equal(playedOn(stepWith('results.scroll')), 'sonuc');

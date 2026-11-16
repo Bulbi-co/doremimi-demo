@@ -92,8 +92,8 @@ test('two registers: Inter for the app, Baloo 2 and Nunito back inside the game,
   const game = css.match(/\.game \{[^}]*\}/)[0];
   assert.match(game, /--font-display: var\(--font-play\); --font-body: var\(--font-play-body\);/);
   assert.match(css, /\.hero \.txt b \{ font: 800 22px\/26px var\(--font-play\); \}/);
-  // OYNA is a circle since ch. 14 §1; its word stays in the playful register
-  assert.match(css, /\.oyna \.word \{ font: 800 34px\/34px var\(--font-play\);/);
+  // the circle since ch. 14 §1 (Şimdi Oyna since §10); its word stays in the playful register
+  assert.match(css, /\.oyna \.word \{[^}]*font: 800 25px\/25px var\(--font-play\);/);
   assert.match(readFileSync(new URL('../assets/fonts/fonts.css', import.meta.url), 'utf8'), /font-family: 'Inter'; src: url\('Inter-SemiBold\.ttf'\)/);
 });
 
@@ -105,12 +105,12 @@ test('buttons lose the lip off the game only; OYNA and the game keep theirs', ()
   assert.match(html, /<main class="page" id="page"[^>]*><\/main>\s*<nav class="dock"[^>]*><\/nav>\s*<section class="game"/, 'the game is a sibling of .page, not inside it');
 });
 
-test('Keşfet: a category card shows progress only once played; Bugünün kartı is plain', () => {
+test('Oyna: a category card shows progress only once played; Bugünün kartı is plain', () => {
   // ch. 14 §1 replaced the İŞARETLER / ÇALGILAR list with one grid of cards (tests/ch14.test.mjs); the rule that a card
   // says only "N kart" until it has been played carries over.
   const card = app.slice(app.indexOf('function categoryCard('), app.indexOf('function home('));
   assert.doesNotMatch(card, /henüz oynamadın/);
-  assert.match(card, /\$\{cards\} kart\$\{played \? ` · %\$\{Math\.round\(m \* 100\)\}` : ''\}/);
+  assert.match(card, /\$\{esc\(t\('cards', \{ n: cards \}\)\)\}\$\{played \? ` · \$\{esc\(pct\(m\)\)\}` : ''\}/);
   assert.match(card, /\$\{played \? `<span class="ktrack">/);
   const today = css.match(/\.today \{[^}]*\}/)[0];
   assert.doesNotMatch(today, /0 8px 0 0/, 'no coloured edge under it');

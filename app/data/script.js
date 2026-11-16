@@ -7,9 +7,11 @@
  * phone plays and hold the deck's slides to it. After ch. 14 the steps were renumbered while sunum.js still asked for
  * the old ones, and slide 5 opened Öğren's round under the title "Tur sonu"; nothing failed.
  *
- * The story, in the order the slides tell it: Keşfet's round, where the child writes (0-8); Öğren, a family's
- * Hazırlan sheet and its cards turned over (9-11); Çal, a song's round at the choices, to its results (12-15).
- * Each way in plays the way it plays in the app; nothing here picks a level (ch. 14 §3). The 'page' steps (9, 12) are
+ * The story, in the order the slides tell it: Oyna's round, where the child writes (0-8); Öğren, information only
+ * since ch. 14 §10: a family's instruments and one instrument's page (9-11); Çal, a song's round at the choices, to
+ * its results (12-15). Each way in plays the way it plays in the app; nothing here picks a level (ch. 14 §3). Steps 10
+ * and 11 were the Hazırlan sheet and a round of turned cards until revision 2 took Öğren's play buttons away; they keep
+ * their numbers so the deck's slides (deck/slides.js) still ask for the same steps. The 'page' steps (9, 12) are
  * where a slide opens on a tab: as script steps, a forward walk through the deck never leaves the script, so the
  * phone never has to start over and replay the round from the beginning in front of the audience.
  *
@@ -17,7 +19,7 @@
  * for 10.8 s in headless Chrome (2026-11-16), long enough in front of an audience to look stuck.
  */
 export const SCRIPT = [
-  [{ name: 'game.start', deck: 'sunum', origin: 'kesfet', intro: true }],                             // 0  Keşfet · OYNA: the level question
+  [{ name: 'game.start', deck: 'sunum', origin: 'kesfet', intro: true }],                             // 0  Oyna · Şimdi Oyna: the level question
   [{ name: 'intro.finish' }],                                                                           // 1  Başlangıç, then the intro's pages
   [{ name: 'game.type', text: 'sol', send: true }],                                                     // 2  Yanlış yaz: "sol", harf kutuları
   [{ name: 'game.fill', send: true }],                                                                  // 3  Kutuları doldur
@@ -27,8 +29,8 @@ export const SCRIPT = [
   [{ name: 'game.next' }],                                                                              // 7  Bemol, yine yazarak
   [{ name: 'game.type', text: 'bemol', send: true }],                                                   // 8  Doğru yaz: tek zorlanma oyunu indirmez
   [{ name: 'page', hash: '#/ogren/aileler' }],                                                          // 9  Öğren › Aileler
-  [{ name: 'prep.open', hash: '#/ogren/aileler', concept: 'family:YayliCalgilar' }],                    // 10 Yaylı Çalgılar: Hazırlan, "7 kart"
-  [{ name: 'prep.start' }, { name: 'game.flip' }, { name: 'game.grade', knew: true }],                  // 11 Başla: kartı çevir, Bildim
+  [{ name: 'open', hash: '#/ogren/aileler', tap: '[data-fam="YayliCalgilar"]' }],                        // 10 Yaylı Çalgılar: the family's instruments
+  [{ name: 'open', hash: '#/ogren/calgilar?aile=yayli', tap: '[data-push="#/calgi/keman"]' }],          // 11 Keman: its page, nothing to play
   [{ name: 'page', hash: '#/cal' }],                                                                    // 12 Çal
   [{ name: 'song.game', hash: '#/sarki/keman' }, { name: 'game.choose', right: true }],                 // 13 Keman: Bu çalgıyla oyna, seç
   [{ name: 'game.next' }, { name: 'game.finish', gap: 400 }],                                           // 14 Turu bitir: sonuçlar

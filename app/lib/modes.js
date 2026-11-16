@@ -1,26 +1,32 @@
 /*
- * Where a round comes from decides how it is played (dossier ch. 14 §3 and §4). Pure, with the deck and the mastery
- * passed in, so tests/ch14.test.mjs runs the code app.js runs.
+ * Where a round comes from decides how it is played (dossier ch. 14 §3 and §4, revised by §10). Pure, with the deck and
+ * the mastery passed in, so tests/ch14.test.mjs runs the code app.js runs.
  *
- * The child never picks a way to play. Keşfet's round opens at the top, where the child writes the answer, and the
- * game moves down only after four struggles in a row; Öğren's round is the cards turned over to read, and Çal's is the
- * four choices, and neither moves. The names of those three ways stay out of the screen: as names they read as three
- * different games rather than one game that adapts (owner, 2026-11-16).
+ * The child never picks a way to play. Oyna's round opens at the top, where the child writes the answer, and the game
+ * moves down only after four struggles in a row, as far as the cards turned over to read; Çal's round is the four
+ * choices and does not move. Öğren had a third way in, its cards turned over from the start; revision 2 made Öğren
+ * information only, so that origin went and the turned cards come only as the ladder's help inside an Oyna round. The
+ * names of the three levels stay out of the screen: as names they read as three games rather than one that adapts.
  */
 import { LevelLadder, Level } from './ladder.js';
 
-/** The ways into the game. Not "mode" or "entry": the app's GameGuardTests bans those names for a picker. */
-export const RoundOrigin = Object.freeze({ Kesfet: 'kesfet', Ogren: 'ogren', Cal: 'cal' });
+/**
+ * The ways into the game. Not "mode" or "entry": the app's GameGuardTests bans those names for a picker. Kesfet is the
+ * Oyna tab (its key did not change with its name).
+ */
+export const RoundOrigin = Object.freeze({ Kesfet: 'kesfet', Cal: 'cal' });
 
 /** The level each way in starts at, and whether the ladder may move from there. */
 export const ORIGIN_RULES = Object.freeze({
   [RoundOrigin.Kesfet]: { start: Level.Yaz, fixed: false },
-  [RoundOrigin.Ogren]: { start: Level.Cevir, fixed: true },
   [RoundOrigin.Cal]: { start: Level.Sec, fixed: true },
 });
 
-/** The demo's old `?seviye=` links and the deck's `game.start { level }` name the way in by its level. */
-export const ORIGIN_OF_LEVEL = Object.freeze({ yaz: RoundOrigin.Kesfet, cevir: RoundOrigin.Ogren, sec: RoundOrigin.Cal });
+/**
+ * The demo's old `?seviye=` links and the deck's `game.start { level }` name the way in by its level. `cevir` was
+ * Öğren's; with no round of its own any more it lands on Oyna's, which reaches the turned cards when the child needs them.
+ */
+export const ORIGIN_OF_LEVEL = Object.freeze({ yaz: RoundOrigin.Kesfet, cevir: RoundOrigin.Kesfet, sec: RoundOrigin.Cal });
 
 export function rulesOf(origin) {
   const r = ORIGIN_RULES[origin];
@@ -58,14 +64,12 @@ export function byCeiling(cards, level) {
 }
 
 /**
- * The cards of a round. Öğren deals the whole category and nothing else, unfiltered: the child is reading it, and the
- * Hazırlan sheet promised "N kart". Keşfet and Çal deal a round's worth under the ceiling; a short concept is topped up
- * from the rest of the deck, same kinds only, as the app's Deal does (MusicCardGameViewModel.cs:201-216).
+ * The cards of a round: a round's worth under the ceiling; a short concept is topped up from the rest of the deck, same
+ * kinds only, as the app's Deal does (MusicCardGameViewModel.cs:201-216).
  */
 export function dealRound({ deck, origin, concept = null, level = null, mastery, random, count }) {
   rulesOf(origin);
   const all = c => deck.deal(c, deck.all.length, mastery, random);
-  if (origin === RoundOrigin.Ogren) return concept == null ? all(null).slice(0, count) : all(concept);
   const cards = byCeiling(all(concept), level).slice(0, count);
   if (cards.length < count && concept != null) {
     const kinds = new Set(cards.map(c => c.kind));
@@ -74,8 +78,5 @@ export function dealRound({ deck, origin, concept = null, level = null, mastery,
   return cards;
 }
 
-/** What the Hazırlan sheet says: the true count of the cards the Öğren round will deal. */
-export const prepCount = (deck, concept) => deck.forConcept(concept).length;
-
-/** Keşfet's categories: every concept but the single instruments, in the deck's order, signs and families together. */
+/** Oyna's categories: every concept but the single instruments, in the deck's order, signs and families together. */
 export const kesfetCategories = (deck, concepts) => deck.concepts.filter(id => !id.startsWith('instrument:') && concepts[id]);

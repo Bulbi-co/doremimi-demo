@@ -102,7 +102,7 @@ export const INSTRUMENTS = {
 };
 
 /** Doremimi.Core/Content/InMemoryContentCatalog.cs:72-110: [key, question, tip, answer, archetype, instrument]. */
-const QUIZ = [
+export const QUIZ = [
   ['guitar-family', 'Gitar hangi çalgı ailesindedir?', 'Sesi, titreşen teller üretir.', 'Telli çalgılar.', 'InstrumentFamily', 'guitar'],
   ['guitar-strings', 'Klasik bir gitarda kaç tel bulunur?', 'Bir elin parmak sayısından bir fazla.', 'Altı tel.', 'InstrumentAnatomy', 'guitar'],
   ['baglama-cura', 'Bağlama ailesinin en küçük ve en ince sesli üyesinin adı nedir?', 'Adı “c” harfiyle başlar, dört harflidir.', 'Cura.', 'InstrumentIdentity', 'baglama'],
@@ -140,7 +140,7 @@ const QUIZ = [
  * ConceptCatalog.FirstSentence: up to the first full stop that ends a sentence. A full stop after a digit is the Turkish
  * ordinal ("4." is "fourth"), not an end: cut there, Fa anahtarı's fact in Konu seç ended on "(dizek) 4.".
  */
-const firstSentence = t => {
+export const firstSentence = t => {
   if (!t || !t.trim()) return null;
   const s = t.trim();
   for (let e = s.indexOf('. '); e >= 0; e = s.indexOf('. ', e + 1)) if (e === 0 || !/\d/.test(s[e - 1])) return s.slice(0, e + 1);
@@ -148,37 +148,47 @@ const firstSentence = t => {
 };
 
 /** The catalogue's labels (InMemoryContentCatalog.cs:65-67, data/site.js DIFFICULTY) as lib/modes.js DIFFICULTIES keys. */
-const LEVEL_OF = { 'Başlangıç Seviyesi': 'baslangic', 'Orta Seviye': 'orta', 'İleri Seviye': 'ileri' };
+export const LEVEL_OF = { 'Başlangıç Seviyesi': 'baslangic', 'Orta Seviye': 'orta', 'İleri Seviye': 'ileri' };
 
-/** QuestionDeck.From (QuestionDeck.cs:45-85): one list of questions, signs then instrument questions. */
-export const QUESTIONS = [
-  ...SIGN_CARDS.map(card => {
-    const category = SIGN_CATEGORIES.find(c => c.key === card.category);
-    return {
-      id: 'sign:' + card.id, kind: 'sign', conceptIds: ['signcat:' + category.key], prompt: card.prompt, symbol: card.symbol,
-      answer: card.name, accepted: distinctByFold(card.accepted), distractorGroup: 'sign', fallbackGroup: null,
-      explanation: { definition: card.definition, kids: card.kids, kidsVisual: card.kidsVisual }, accent: category.color,
-      difficulty: card.difficulty,
-    };
-  }),
-  ...QUIZ.map(([key, question, tip, answer, archetype, instrumentKey]) => {
-    const instrument = INSTRUMENTS[instrumentKey];
-    const family = FAMILIES[instrument.family];
-    return {
-      id: 'q:' + key, kind: 'quiz', conceptIds: ['family:' + instrument.family, 'instrument:' + instrumentKey], prompt: question, symbol: null,
-      answer: clean(answer), accepted: acceptedFor(answer), distractorGroup: 'archetype:' + archetype, fallbackGroup: 'family:' + instrument.family,
-      explanation: { tip, instrumentSummary: instrument.summary, familyDescription: family.description }, accent: family.color,
-      difficulty: LEVEL_OF[DIFFICULTY[key]],
-    };
-  }),
-];
+/**
+ * QuestionDeck.From (QuestionDeck.cs:45-85): one list of questions, signs then instrument questions. A function of its
+ * content so ./localise.js builds the English and French decks the same way; `acceptedOf` gives each instrument
+ * question's accepted answers (Turkish derives them, AcceptedAnswers.For; the other languages list theirs).
+ */
+export function questionsOf({ signCards, signCategories, quiz, instruments, families, acceptedOf }) {
+  return [
+    ...signCards.map(card => {
+      const category = signCategories.find(c => c.key === card.category);
+      return {
+        id: 'sign:' + card.id, kind: 'sign', conceptIds: ['signcat:' + category.key], prompt: card.prompt, symbol: card.symbol,
+        answer: card.name, accepted: distinctByFold(card.accepted), distractorGroup: 'sign', fallbackGroup: null,
+        explanation: { definition: card.definition, kids: card.kids, kidsVisual: card.kidsVisual }, accent: category.color,
+        difficulty: card.difficulty,
+      };
+    }),
+    ...quiz.map(([key, question, tip, answer, archetype, instrumentKey]) => {
+      const instrument = instruments[instrumentKey];
+      const family = families[instrument.family];
+      return {
+        id: 'q:' + key, kind: 'quiz', conceptIds: ['family:' + instrument.family, 'instrument:' + instrumentKey], prompt: question, symbol: null,
+        answer: clean(answer), accepted: acceptedOf(key, answer), distractorGroup: 'archetype:' + archetype, fallbackGroup: 'family:' + instrument.family,
+        explanation: { tip, instrumentSummary: instrument.summary, familyDescription: family.description }, accent: family.color,
+        difficulty: LEVEL_OF[DIFFICULTY[key]],
+      };
+    }),
+  ];
+}
+export const QUESTIONS = questionsOf({ signCards: SIGN_CARDS, signCategories: SIGN_CATEGORIES, quiz: QUIZ, instruments: INSTRUMENTS, families: FAMILIES, acceptedOf: (key, answer) => acceptedFor(answer) });
 
 /** ConceptCatalog.From (ConceptCatalog.cs): name, one-line fact and colour of every concept. */
-export const CONCEPTS = Object.fromEntries([
-  ...SIGN_CATEGORIES.map(c => { const card = SIGN_CARDS.find(k => k.category === c.key); return ['signcat:' + c.key, { name: c.name, fact: firstSentence(card.definition) ?? c.meaning, color: c.color, symbol: card.symbol }]; }),
-  ...Object.entries(FAMILIES).map(([k, f]) => ['family:' + k, { name: f.name, fact: firstSentence(f.description), color: f.color, family: k }]),
-  ...Object.entries(INSTRUMENTS).map(([k, i]) => ['instrument:' + k, { name: i.name, fact: firstSentence(i.summary) ?? firstSentence(FAMILIES[i.family].description), color: FAMILIES[i.family].color, family: i.family }]),
-]);
+export function conceptsOf({ signCategories, signCards, families, instruments }) {
+  return Object.fromEntries([
+    ...signCategories.map(c => { const card = signCards.find(k => k.category === c.key); return ['signcat:' + c.key, { name: c.name, fact: firstSentence(card.definition) ?? c.meaning, color: c.color, symbol: card.symbol }]; }),
+    ...Object.entries(families).map(([k, f]) => ['family:' + k, { name: f.name, fact: firstSentence(f.description), color: f.color, family: k }]),
+    ...Object.entries(instruments).map(([k, i]) => ['instrument:' + k, { name: i.name, fact: firstSentence(i.summary) ?? firstSentence(families[i.family].description), color: families[i.family].color, family: i.family }]),
+  ]);
+}
+export const CONCEPTS = conceptsOf({ signCategories: SIGN_CATEGORIES, signCards: SIGN_CARDS, families: FAMILIES, instruments: INSTRUMENTS });
 
 /**
  * Doremimi/Assets/Content/catalog/badges.json. Two names changed in dossier ch. 14 §2 because they named a level

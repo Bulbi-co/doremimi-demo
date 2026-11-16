@@ -279,3 +279,10 @@ mutatef "deck: a tour slide before the section"  deck/slides.js      "s/(  \/\/ 
 mutatef "deck: a foundation step opens #/yok"    deck/foundation.js  "s/acts: \[\['İzle: bilmeceler', \{ type: 'go', hash: '#\/izle' \}\]\]/acts: [['İzle: bilmeceler', { type: 'go', hash: '#\/yok' }]]/"
 mutatef "deck: a postponed concert on the timeline" deck/foundation.js "s/  \{ date: '2021', text:/  { date: '2020-11-20\/22', text: 'CSO konserleri' },\n  { date: '2021', text:/"
 mutatef "deck: a phone number in the notes"      deck/foundation.js  "s/Buradan sonra uygulamaya geçiyoruz\./Vakıf: 0312 555 12 34. Buradan sonra uygulamaya geçiyoruz./"
+# the fake status bar's clock is the device's, not the app's language's (tests/clock.test.mjs)
+mutate  "clock CONTROL: comment only"            clock.js           's/so it does not follow Ayarlar › Dil\./so it does not follow the Dil setting./'
+mutate  "clock: 12-hour"                         clock.js           's/two\(date\.getHours\(\)\)/two(date.getHours() % 12 || 12)/'
+mutate  "clock: no leading zero"                 clock.js           's/String\(n\)\.padStart\(2, .0.\)/String(n)/'
+mutate  "clock: minutes before hours"            clock.js           's/two\(date\.getHours\(\)\)\}:\$\{two\(date\.getMinutes\(\)\)/two(date.getMinutes())}:\${two(date.getHours())/'
+mutatef "clock: formatted in the app's language again" app/app.js   "s/deviceClock\(new Date\(\)\)/new Date().toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })/"
+mutatef "clock: Intl in the app's language"      app/app.js         "s/deviceClock\(new Date\(\)\)/new Intl.DateTimeFormat(lang, { timeStyle: 'short' }).format(new Date())/"

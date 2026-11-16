@@ -28,24 +28,29 @@ test('walking the deck with → plays the script front to back, once, to its las
   // child and replay it in front of the audience.
   const steps = messages().filter(m => isGoto(m.msg)).map(m => m.msg.step);
   steps.forEach((k, i) => i && assert.ok(k >= steps[i - 1], `step ${k} comes after step ${steps[i - 1]}`));
-  assert.equal(Math.max(...steps), SCRIPT.length - 1, 'the deck reaches the script’s last step');
+  // Up to Çal's page (step 12). The script's last three steps (a song's round and its results) are no longer shown:
+  // owner, 2026-11-16, no way into the game from a song and no XP on screen.
+  assert.equal(Math.max(...steps), SCRIPT.findIndex(acts => acts.some(x => x.name === 'page' && x.hash === '#/cal')), 'the deck ends its script on Çal’s page');
+  // Nothing is skipped in front of the audience: every played step follows the one before it by exactly one, so the
+  // phone never fast-replays moves between two buttons (the flash the owner recorded between steps 2 and 6).
+  const played = messages().filter(m => isGoto(m.msg) && m.msg.play).map(m => m.msg.step);
+  played.forEach((k, i) => i && played[i - 1] < 9 && k < 9 && assert.equal(k, played[i - 1] + 1, `the round plays step ${played[i - 1] + 1} before step ${k}`));
 });
 
-test('the deck tells ch. 14 §9’s story: Keşfet → its written round → Öğren → Çal → results → family → foundation', () => {
+test('the deck tells ch. 14 §9’s story: Oyna and its whole round → Öğren → Çal → family → foundation', () => {
   const order = SLIDES.map(s => s.id);
-  const story = ['kesfet', 'oyun', 'ogren', 'cal', 'sonuc', 'aile', 'kapanis'];
+  const story = ['kesfet', 'ogren', 'cal', 'aile', 'kapanis'];
   assert.deepEqual(order.filter(id => story.includes(id)), story);
-  // Each part is played on its own slide, in view: the level question on Keşfet, the typing on Oyun, a family's
-  // instruments and one instrument's page on Öğren (information only since ch. 14 §10), the song's round at the
-  // choices on Çal, the round's end on Tur sonu.
+  // The whole round is played on the Oyna slide (owner, 2026-11-16), a family's instruments and one instrument's
+  // page on Öğren. No slide shows results or XP, and none opens the game from a song.
+  for (const id of ['oyun', 'sonuc']) assert.ok(!order.includes(id), `the ${id} slide is gone`);
   assert.equal(playedOn(stepWith('game.start', { origin: 'kesfet' })), 'kesfet');
-  assert.equal(playedOn(stepWith('game.type', { text: 'sol' })), 'oyun');
-  assert.equal(playedOn(stepWith('game.choose', { right: false })), 'oyun');
+  assert.equal(playedOn(stepWith('game.type', { text: 'sol' })), 'kesfet');
+  assert.equal(playedOn(stepWith('game.choose', { right: false })), 'kesfet');
   assert.equal(playedOn(stepWith('open', { hash: '#/ogren/aileler' })), 'ogren');
   assert.equal(playedOn(stepWith('open', { hash: '#/ogren/calgilar?aile=yayli' })), 'ogren');
-  assert.equal(playedOn(stepWith('song.game')), 'cal');
-  assert.equal(playedOn(stepWith('game.finish')), 'sonuc');
-  assert.equal(playedOn(stepWith('results.scroll')), 'sonuc');
+  for (const name of ['song.game', 'game.finish', 'results.scroll']) assert.equal(playedOn(stepWith(name)), undefined, `${name} is not shown`);
+  assert.doesNotMatch(SLIDES.map(s => `${s.html} ${s.notes ?? ''} ${(s.acts ?? []).map(x => x[0]).join(' ')}`).join(' '), /\bXP\b|bu çalgıyla oyna/i);
   assert.equal(SLIDES.find(s => s.id === 'kapanis').phone.hash, '#/doremimi', 'the deck closes on the foundation’s page');
 });
 

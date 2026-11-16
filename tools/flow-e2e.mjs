@@ -22,7 +22,7 @@ let ok = true;
 // The counter as the deck prints it, and the game slide (Oyun: its first step types "sol" and reaches the letter
 // tiles), read from the slides the deck runs: the numbers were written in by hand and went stale when ch. 14 added a
 // slide.
-const N = SLIDES.length, GAME = SLIDES.findIndex(s => s.id === 'oyun');
+const N = SLIDES.length, GAME = SLIDES.findIndex(s => s.id === 'kesfet');
 const count = i => `${String(i + 1).padStart(2, '0')} / ${String(N).padStart(2, '0')}`;
 const check = (cond, text) => { console.log(`${cond ? 'ok  ' : 'FAIL'}  ${text}`); if (!cond) ok = false; };
 
@@ -73,6 +73,11 @@ try {
   await ev(`document.querySelector('[data-dot="${GAME}"]').click()`); await idle();
   check((await state()).count === count(GAME), 'walked to the game slide');
 
+  // The Oyna slide carries the whole round: its first three steps (the categories, Şimdi Oyna, the level) come before
+  // the typing, each under its own lock.
+  const BEFORE = 3;
+  for (let i = 0; i < BEFORE; i++) { await key('ArrowRight'); await sleep(100); await idle(); }
+  check((await state()).done === BEFORE, 'the three steps before the typing each played and finished');
   // A game step: the phone types "sol" and sends; mash → throughout.
   const t0 = Date.now();
   await key('ArrowRight');
@@ -81,11 +86,11 @@ try {
   check(s.playing === 1 && s.busy === 'true', 'the step button shows it is playing');
   await mash(15);
   s = await state();
-  check(s.count === count(GAME) && s.done === 0, `mashing during the step neither skips it nor leaves the slide (${s.count}, ${s.done} done)`);
+  check(s.count === count(GAME) && s.done === BEFORE, `mashing during the step neither skips it nor leaves the slide (${s.count}, ${s.done} done)`);
   await idle();
   const stepMs = Date.now() - t0;
   s = await state();
-  check(s.count === count(GAME) && s.done === 1, `after the phone finishes, exactly one step is done (${s.done})`);
+  check(s.count === count(GAME) && s.done === BEFORE + 1, `after the phone finishes, exactly one more step is done (${s.done})`);
   // The phone really finished what it was showing: the typed attempt was sent and the game moved to the tiles.
   const phoneStage = await ev(`(() => { const d = document.querySelector('#phone').contentDocument; return { tiles: !!d.querySelector('[data-tile], .tiles'), keys: d.querySelectorAll('.key, [data-key]').length }; })()`);
   check(phoneStage?.tiles, 'the phone reached the letter tiles before the deck unlocked');
@@ -102,7 +107,7 @@ try {
   s = await state();
   check(!movedWhileBusy && [count(GAME), count(GAME - 1)].includes(s.count), `← pressed ${presses} times during the undo: no move while busy, at most one after (${s.count})`);
   if (s.count === count(GAME - 1)) { await ev(`document.querySelector('[data-dot="${GAME}"]').click()`); await idle(); }
-  check((await state()).done === 0, 'the undo leaves no step done');
+  { const d = (await state()).done; check(d === BEFORE || d === 0, `the undo takes back the typing step only (${d} done)`); }
 
   check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
   ws.close();

@@ -2,8 +2,9 @@
  * The deck's slides as data: copy, the phone message each slide sends when it opens, and its "canlı göster" steps.
  * The copy began as dossier ch. 10 part 5 (PROPOSED, the owner's to change) and was cut to a short deck at the owner's
  * request (2026-11-13: no step counter, no icon tiles, nothing that is there only to be shown). Ch. 14 §9 re-tells
- * it: Oyna is the game (Keşfet until ch. 14 §10) → an Oyna round, written → Öğren, read, not played → Çal, a round
- * at the choices → results → family and the foundation.
+ * it: Oyna is the game (Keşfet until ch. 14 §10) and its whole round, one press per move → Öğren, read, not played →
+ * Çal → family and the foundation. Owner, 2026-11-16: no slide about XP or results (progress is tracked, never shown as
+ * XP), and no way into the game from a song or an instrument, so the "Tur sonu" slide and Çal's game step went.
  *
  * Its own module, apart from sunum.js (which draws and drives it), so tests/deck.test.mjs can import the slides and
  * hold every scripted step they ask for to the phone's script (app/data/script.js).
@@ -53,20 +54,28 @@ export const SLIDES = [
     notes: `<p>Vakıfla konuştuğumuz düzen: <b>Oyna · Öğren · logo · İzle · Çal.</b> Testçiler uygulamada dolaşmayı karışık bulmuştu; her yer artık tek bir yerden açılır.</p><ol><li><b>Logo</b>: Dore Mimi Vakfı. En üstte duyurular döner; altında Faaliyetler, Katıl, Tanış, Bize ulaş ve Uygulama, her bağlantı bir kez.</li><li><b>Öğren</b>: yalnızca bilgi, dört sekme. İşaretler, Çalgılar, Aileler, Değerler.</li></ol><p>İzle'de bilmeceler dahil bütün videolar, Çal'da nota çalan her şey.</p>`,
   },
   {
+    /*
+     * The whole round is played here, one press per move (owner, 2026-11-16): the deck used to jump from step 2 to
+     * step 6 on one button, and the phone replayed the steps between with no pauses, so the retry, the card change
+     * and both wrong typings flashed past. Every step is its own button now, so each plays at its own pace.
+     */
     id: 'kesfet', label: 'Oyna', theme: 'light', phone: go('#/'),
     html: step('Oyna: oyunun kendisi',
-      'Açılış ekranı oyundur: ortada büyük Şimdi Oyna, altında her konu kendi renginde bir kart.',
-      ['12 kategori tek ızgarada: 7 işaret, 5 çalgı ailesi', 'İlk oyun çocuğun seviyesini sorar']),
-    acts: [['Kategoriler', batch(go('#/'), act('scroll', { to: '.kats-sec' }))], ['Şimdi Oyna', play(0)]],
-    notes: `<p>Testçilere göre Keşfet oyunu içermiyor gibiydi. Artık sekmenin adı Oyna ve kendisi oyun; duyurular logonun sekmesine taşındı.</p><ol><li><b>Şimdi Oyna</b>: yuvarlak düğmenin içinde küçük bir kart döner, dört cevap çubuğu belirir, harfler yazılır. Oyunun yollarını isim vermeden gösterir. Dokununca tur her zaman yazarak başlar.</li><li><b>Kategoriler</b>: her işaret ve her çalgı ailesi kendi renginde bir kart, kaç kartı olduğu üstünde. Oynandıkça ilerleme çubuğu çıkar. Ayrı bir “Tekrar” satırı yok: tekrarı gelen kartlar her turda önce gelir.</li><li><b>Şimdi Oyna</b> (canlı): ilk oyun seviyeyi sorar: Başlangıç, Orta, İleri. Sorular bu seviyeye göre gelir; Ayarlar › Zorluk'tan değişir.</li></ol><p>Bugünün kartı en altta, eskisi gibi.</p>`,
-  },
-  {
-    id: 'oyun', label: 'Oyun', theme: 'light', phone: at(1),
-    html: step('Oyna turu: cevabı yazar',
-      'Çocuk kartı görür, cevabı kendisi yazar. Bilemezse harf kutuları, sonra dört seçenek gelir; yanlışta kart dönüp anlatır.',
-      ['Ancak üst üste dört zorlanmada kolaylaşır', 'Yanlış cevap hiçbir şey kaybettirmez']),
-    acts: [['Yanlış yaz: “sol”', play(2)], ['Seçenekler, bilgi kartı', play(6)]],
-    notes: `<p>Oyna'dan (Şimdi Oyna, bir kategori, oyun banner'ı) girilen her tur <b>yazarak</b> başlar; asıl beceri cevabı yazmak. Seviye sorusunda Başlangıç seçildi.</p><ol><li><b>Yanlış yaz</b>: “sol” olmadı; cevap harf kutularına döner, kartın renginde gelen harfler yardım eder.</li><li><b>Seçenekler</b>: iki yazma denemesi de yanlış olunca dört seçenek gelir; yanlış seçimde kart dönüp anlatır.</li></ol><p>Ekranda seviye adı ya da basamak şeridi yok. Oyun ancak üst üste dört zorlanmada bir adım kolaylaşır; çocuk bunu yalnızca arka planın değişen renginden görür. Laptop klavyesiyle de yazabilirsiniz.</p>`,
+      'Açılış ekranı oyundur: ortada büyük Şimdi Oyna, altında her konu kendi renginde bir kart. Çocuk kartı görür, cevabı kendisi yazar.',
+      ['Bilemezse harf kutuları, sonra dört seçenek gelir', 'Yanlışta kart dönüp anlatır; yanlış cevap hiçbir şey kaybettirmez']),
+    acts: [
+      ['Kategoriler', batch(go('#/'), act('scroll', { to: '.kats-sec' }))],
+      ['Şimdi Oyna', play(0)],
+      ['Seviye: Başlangıç', play(1)],
+      ['Yanlış yaz: “sol”', play(2)],
+      ['Harf kutularını doldur', play(3)],
+      ['Sıradaki kart', play(4)],
+      ['İki deneme de yanlış', play(5)],
+      ['Yanlış seçim: kart anlatır', play(6)],
+      ['Anladım, devam', play(7)],
+      ['Doğru yaz', play(8)],
+    ],
+    notes: `<p>Testçilere göre Keşfet oyunu içermiyor gibiydi. Artık sekmenin adı Oyna ve kendisi oyun; duyurular logonun sekmesine taşındı.</p><ol><li><b>Kategoriler</b>: her işaret ve her çalgı ailesi kendi renginde bir kart.</li><li><b>Şimdi Oyna</b>: ilk oyun çocuğun seviyesini sorar; Başlangıç seçilir.</li><li><b>Yanlış yaz</b>: “sol” olmadı; cevap harf kutularına döner, kartın renginde gelen harfler yardım eder.</li><li><b>Kutuları doldur</b>: çocuk kalan harfleri yazar.</li><li><b>Sıradaki kart</b>, <b>iki deneme de yanlış</b>: dört seçenek gelir.</li><li><b>Yanlış seçim</b>: kart dönüp anlatır; <b>Anladım, devam</b> ile sıradaki karta geçilir ve çocuk bu kez doğru yazar.</li></ol><p>Ekranda seviye adı ya da basamak şeridi yok. Oyun ancak üst üste dört zorlanmada bir adım kolaylaşır.</p>`,
   },
   {
     id: 'ogren', label: 'Öğren', theme: 'light', phone: at(9),
@@ -78,19 +87,11 @@ export const SLIDES = [
   },
   {
     id: 'cal', label: 'Çal', theme: 'light', phone: at(12),
-    html: step('Çal: piyano, şarkı ve oyun',
-      'Çocuk piyanoda serbestçe çalar; her çalgının şarkısı karaoke sözleriyle çalar. Bir şarkıdan oyuna girince cevap dört seçenekten seçilir.',
+    html: step('Çal: piyano ve şarkılar',
+      'Çocuk piyanoda serbestçe çalar; her çalgının şarkısı karaoke sözleriyle çalar.',
       []),
-    acts: [['Piyanoda çal', batch(go('#/cal'), act('keys.play', { keys: [60, 62, 64, 65, 67, 67, 69, 67] }))], ['Keman: bu çalgıyla oyna', play(13)]],
-    notes: `<p>Nota çalan her şey burada.</p><ol><li><b>Piyano</b>: çalınanlar Melodim'e eklenir.</li><li><b>Keman</b>: şarkı sayfasındaki “Bu çalgıyla oyna”. Tur dört seçenekle açılır ve tur boyunca öyle kalır; çalgının kendi sayfasındaki aynı düğme de böyle.</li></ol><p>41 çalgının her birinin şarkısı var; karaoke satırı ilerler, tuşlar yanar. Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı.</p>`,
-  },
-  {
-    id: 'sonuc', label: 'Tur sonu', theme: 'light', phone: at(13),
-    html: step('Tur sonu ve ilerleme',
-      'Yıldızlar, XP, kaç kartı bildiği ve hangi müzik konusunda ne kadar ilerlediği. Yeni rozetler burada açılır.',
-      ['Yıldız ve XP hiçbir şey ödemez', 'Zorlandığı konu önce gelir']),
-    acts: [['Turu bitir', play(14)], ['Rozetler', play(15)]],
-    notes: `<p>Yıldızlar yalnızca turun notu; para ya da ödül yok. Sonuçta seviye değil, <b>kaç kartı bildiği</b> yazar. Asıl önemli kısım <b>Müzik bilgin</b>: çocuk hangi konuda zorlandıysa önce o gelir, ilerleme çubuğuyla.</p><p>Rozetler bir içerik dosyası; panelde rozet tablosu henüz yok (planlanan).</p>`,
+    acts: [['Piyanoda çal', batch(go('#/cal'), act('keys.play', { keys: [60, 62, 64, 65, 67, 67, 69, 67] }))]],
+    notes: `<p>Nota çalan her şey burada.</p><ol><li><b>Piyano</b>: çalınanlar Melodim'e eklenir.</li></ol><p>41 çalgının her birinin şarkısı var; karaoke satırı ilerler, tuşlar yanar. Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı.</p>`,
   },
   {
     id: 'aile', label: 'Aile ve içerik', theme: 'light', phone: go('#/profil'),

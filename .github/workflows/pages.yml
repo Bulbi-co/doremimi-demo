@@ -42,8 +42,10 @@ jobs:
         with:
           node-version: 22
       # The guards that compare the demo with the app's own files skip here, and say so: the app repo is not checked out.
+      # The files, not the folder: Node 22 reads `node --test tests/` as a module to load ("Cannot find module
+      # '…/tests'") where Node 20 walked the folder. The first run of this workflow failed on exactly that.
       - name: Guards
-        run: node --test tests/
+        run: node --test tests/*.test.mjs
       - name: The site only
         run: |
           mkdir _site

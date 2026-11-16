@@ -126,7 +126,7 @@ the game as `#/oyun?deste=karisik`. The old `#/oyunlar`, `#/daha`, `#/ogren/vide
 ## Checks
 
 ```
-npm test                 # node --test tests/: the game rules, the music, the navigation, the deck's flow lock
+npm test                 # node --test tests/*.test.mjs: the game rules, the music, the navigation, the deck's flow lock
                          # tests/app-parity.test.mjs reads the app's own files (../doremimi-superapp, or DOREMIMI_APP);
                          # without the app checked out it is skipped, not passed
 npm run e2e              # with npm start running: mashes → in headless Chrome; the deck must wait for the phone
@@ -146,7 +146,7 @@ Chrome. It starts its own headless Chrome with a throwaway profile and stops it 
 ## Deploy
 
 **GitHub Pages** is where the demo is published: <https://bulbi-co.github.io/doremimi-demo/>. Every push to `main`
-runs `.github/workflows/pages.yml`: the guards (`node --test tests/`), then the site alone (`index.html`, `sunum.*`,
+runs `.github/workflows/pages.yml`: the guards (`node --test tests/*.test.mjs`), then the site alone (`index.html`, `sunum.*`,
 `robots.txt`, `app/`, `assets/`, `deck/`) goes up; `tests/`, `tools/` and `docs/` do not. It needs one repository
 setting, once: Settings → Pages → Build and deployment → Source: GitHub Actions. Every path is relative, so the
 project page's `/doremimi-demo/` prefix needs nothing, and `app/index.html` adds the missing trailing slash itself

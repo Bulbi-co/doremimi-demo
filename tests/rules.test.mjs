@@ -1,4 +1,4 @@
-// Guards for the ported game rules. Run: node --test tests/
+// Guards for the ported game rules. Run: node --test tests/*.test.mjs
 //
 // They import the very files the phone runs (app/lib, app/data), never a copy. Where a fact can be read off the
 // running app, it comes from there: the tile prefill is checked against the screenshot 13-game-tiles.png (rendered

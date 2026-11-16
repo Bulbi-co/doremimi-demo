@@ -15,7 +15,7 @@ mutatef() { # name path-from-root perl-substitution
   cp -R "$root/app" "$root/tests" "$root/deck" "$root/tools" "$root/sunum.js" "$root/index.html" "$root/package.json" "$tmp/"; ln -s "$root/assets" "$tmp/assets"
   perl -0pi -e "$3" "$tmp/$2"
   if cmp -s "$root/$2" "$tmp/$2"; then echo "NOT APPLIED  $1"; rm -rf "$tmp"; return; fi
-  if (cd "$tmp" && node --test tests/ >/dev/null 2>&1); then echo "SURVIVED     $1"; else echo "caught       $1"; fi
+  if (cd "$tmp" && node --test tests/*.test.mjs >/dev/null 2>&1); then echo "SURVIVED     $1"; else echo "caught       $1"; fi
   rm -rf "$tmp"
 }
 mutate() { mutatef "$1" "app/lib/$2" "$3"; } # name file-in-app/lib perl-substitution
@@ -29,7 +29,7 @@ mutatem() {
   local changed=0
   while [ $# -ge 2 ]; do perl -0pi -e "$2" "$tmp/$1"; cmp -s "$root/$1" "$tmp/$1" || changed=1; shift 2; done
   if [ $changed = 0 ]; then echo "NOT APPLIED  $name"; rm -rf "$tmp"; return; fi
-  if (cd "$tmp" && node --test tests/ >/dev/null 2>&1); then echo "SURVIVED     $name"; else echo "caught       $name"; fi
+  if (cd "$tmp" && node --test tests/*.test.mjs >/dev/null 2>&1); then echo "SURVIVED     $name"; else echo "caught       $name"; fi
   rm -rf "$tmp"
 }
 # tests/app-parity.test.mjs finds the app relative to its own file, which a temp copy is not; point it at the app here,

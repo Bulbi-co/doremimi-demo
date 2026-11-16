@@ -14,9 +14,9 @@
  *     partner's role, nothing from the study but that it exists, no phone number, no e-mail address.
  *   - Where each fact comes from is in the presenter notes ("Kaynak: …"), one line per fact, not on the slide.
  *
- * TODO(@JanberkV2): tests/foundation.test.mjs. These rules are held by nothing but this comment today: the section
- * went in minutes before a deploy and its guard (numbers against the snapshot, the banned words, the section's place,
- * the step's route, each listing's hall inside its fact's sentence) was planned, not written.
+ * tests/foundation.test.mjs holds them: every integer against the snapshot, the banned words, the section's place,
+ * the step's route, each listing's time and hall inside its fact's sentence. What it cannot hold is judgement (a new
+ * sentence that implies a concert took place, a partner's role): read CAVEATS.md before adding a line.
  *
  * It imports nothing from ../app and nothing from slides.js (which imports this), so it can be read on its own.
  */
@@ -79,7 +79,7 @@ const timeline = `<ol class="fnd-line">${years.map(y => `<li><b class="fnd-y">${
 
 /*
  * The CSO slide's rows. `time` and `where` are typed here because facts.json has them only inside each entry's
- * sentence (the same words are there; nothing checks that yet). The March 2023 row names no hall: the source gives
+ * sentence (tests/foundation.test.mjs checks the same words are there). The March 2023 row names no hall: the source gives
  * one for the 22nd and 23rd only.
  */
 export const LISTINGS = [

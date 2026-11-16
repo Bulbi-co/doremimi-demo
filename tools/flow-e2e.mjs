@@ -73,11 +73,12 @@ try {
   await ev(`document.querySelector('[data-dot="${GAME}"]').click()`); await idle();
   check((await state()).count === count(GAME), 'walked to the game slide');
 
-  // The Oyna slide carries the whole round: its first three steps (the categories, Şimdi Oyna, the level) come before
-  // the typing, each under its own lock.
-  const BEFORE = 3;
+  // The Oyna slide carries the whole round: the steps before the typing (the categories, Bugünün kartı, Şimdi Oyna,
+  // the level) each play under their own lock. Counted from the slides: the number was written in by hand and went
+  // stale when a step was added.
+  const BEFORE = SLIDES[GAME].acts.findIndex(a => a[1].step === 2);
   for (let i = 0; i < BEFORE; i++) { await key('ArrowRight'); await sleep(100); await idle(); }
-  check((await state()).done === BEFORE, 'the three steps before the typing each played and finished');
+  check(BEFORE > 0 && (await state()).done === BEFORE, `the ${BEFORE} steps before the typing each played and finished`);
   // A game step: the phone types "sol" and sends; mash → throughout.
   const t0 = Date.now();
   await key('ArrowRight');
@@ -108,6 +109,20 @@ try {
   check(!movedWhileBusy && [count(GAME), count(GAME - 1)].includes(s.count), `← pressed ${presses} times during the undo: no move while busy, at most one after (${s.count})`);
   if (s.count === count(GAME - 1)) { await ev(`document.querySelector('[data-dot="${GAME}"]').click()`); await idle(); }
   { const d = (await state()).done; check(d === BEFORE || d === 0, `the undo takes back the typing step only (${d} done)`); }
+
+  // Ayarlar's steps are whole states (deck/slides.js settings): ← takes the phone back one language and one Zorluk,
+  // and R to the slide's own opening state, whatever was pressed in between.
+  const AYARLAR = SLIDES.findIndex(x => x.id === 'ayarlar');
+  const phoneSettings = () => ev(`(() => { const d = document.querySelector('#phone').contentDocument; return d.documentElement.lang + ' ' + (d.querySelector('[data-zorluk][aria-checked="true"]')?.dataset.zorluk ?? '-') + ' ' + document.querySelector('#phone').contentWindow.location.hash; })()`);
+  const press = async k => { await key(k); await sleep(100); await idle(); };
+  await ev(`document.querySelector('[data-dot="${AYARLAR}"]').click()`); await idle();
+  check(await phoneSettings() === 'tr baslangic #/ayarlar', `the Ayarlar slide opens on Türkçe and Başlangıç (${await phoneSettings()})`);
+  await press('ArrowRight'); await press('ArrowRight'); await press('ArrowRight');
+  check(await phoneSettings() === 'fr orta #/ayarlar', `three steps on, the phone is in French at Orta (${await phoneSettings()})`);
+  await press('ArrowLeft');
+  check(await phoneSettings() === 'en orta #/ayarlar', `← takes it back to English (${await phoneSettings()})`);
+  await press('r');
+  check(await phoneSettings() === 'tr baslangic #/ayarlar' && (await state()).done === 0, `R puts the slide back as it opened (${await phoneSettings()})`);
 
   check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
   ws.close();

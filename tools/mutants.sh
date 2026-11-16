@@ -7,9 +7,12 @@ set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
 # deck/, sunum.js and index.html are copied too: tests/flow.test.mjs reads them, and without them every run failed, the
 # CONTROLs included, so no mutant could survive and the table proved nothing.
+# tools/ as well: the deck's guards import tools/phone-routes.mjs and tools/foundation-facts.mjs.
+# ONLY=<regex> runs the mutants whose name matches, for one area's table without the whole file's.
 mutatef() { # name path-from-root perl-substitution
+  if [ -n "${ONLY:-}" ] && ! [[ "$1" =~ $ONLY ]]; then return; fi
   local tmp; tmp="$(mktemp -d)"
-  cp -R "$root/app" "$root/tests" "$root/deck" "$root/sunum.js" "$root/index.html" "$root/package.json" "$tmp/"; ln -s "$root/assets" "$tmp/assets"
+  cp -R "$root/app" "$root/tests" "$root/deck" "$root/tools" "$root/sunum.js" "$root/index.html" "$root/package.json" "$tmp/"; ln -s "$root/assets" "$tmp/assets"
   perl -0pi -e "$3" "$tmp/$2"
   if cmp -s "$root/$2" "$tmp/$2"; then echo "NOT APPLIED  $1"; rm -rf "$tmp"; return; fi
   if (cd "$tmp" && node --test tests/ >/dev/null 2>&1); then echo "SURVIVED     $1"; else echo "caught       $1"; fi
@@ -20,8 +23,9 @@ mutate() { mutatef "$1" "app/lib/$2" "$3"; } # name file-in-app/lib perl-substit
 # demo (so the demo's own guards agree with it) and only the app's files can expose.
 mutatem() {
   local name="$1"; shift
+  if [ -n "${ONLY:-}" ] && ! [[ "$name" =~ $ONLY ]]; then return; fi
   local tmp; tmp="$(mktemp -d)"
-  cp -R "$root/app" "$root/tests" "$root/deck" "$root/sunum.js" "$root/index.html" "$root/package.json" "$tmp/"; ln -s "$root/assets" "$tmp/assets"
+  cp -R "$root/app" "$root/tests" "$root/deck" "$root/tools" "$root/sunum.js" "$root/index.html" "$root/package.json" "$tmp/"; ln -s "$root/assets" "$tmp/assets"
   local changed=0
   while [ $# -ge 2 ]; do perl -0pi -e "$2" "$tmp/$1"; cmp -s "$root/$1" "$tmp/$1" || changed=1; shift 2; done
   if [ $changed = 0 ]; then echo "NOT APPLIED  $name"; rm -rf "$tmp"; return; fi
@@ -161,3 +165,54 @@ mutatef "text on colour at Medium"               app/style.css      's/(\.ftxt s
 mutatef "a weight Inter does not ship"           app/style.css      's/--t-card: 600 17px/--t-card: 650 17px/'
 mutatef "the section as big as the title"        app/style.css      's/--t-section: 700 20px\/26px/--t-section: 700 28px\/34px/'
 mutatef "a count loses its figures"              app/app.js         's/<small class="num">\$\{esc\(t\(.game\.card./<small>\${esc(t(\x27game.card\x27/'
+# the deck: auto-play (tests/flow.test.mjs, dossier ch. 14 §11)
+mutatef "deck CONTROL: flow comment only"        deck/flow.js       's/It is not a\n \* second way to move/It is not\n * a second way to move/'
+mutatef "deck: a tick skips the slide's steps"   deck/flow.js       "s/return move\(\{ \.\.\.s, armed: false \}, \{ type: 'next' \}\);/return s.cur < s.slides.length - 1 ? enter({ ...s, armed: false }, s.cur + 1) : { state: s, effects: [] };/"
+mutatef "deck: a stale tick is taken"            deck/flow.js       's/ \|\| e\.token !== s\.autoToken \|\| s\.phase/ || s.phase/'
+mutatef "deck: → does not stop auto-play"        deck/flow.js       's/const taken = s\.auto && MANUAL\.includes\(e\.type\);/const taken = false;/'
+mutatef "deck: a press the lock ignores does not stop it" deck/flow.js "s/const taken = s\.auto && MANUAL/const taken = s.auto \&\& s.phase === 'idle' \&\& MANUAL/"
+mutatef "deck: a dot does not stop auto-play"    deck/flow.js       "s/\['next', 'prev', 'goto', 'act', 'reset'\]/['next', 'prev', 'act', 'reset']/"
+mutatef "deck: auto-play never ends"             deck/flow.js       's/  if \(atEnd\(state\)\) return [^\n]*\n//'
+mutatef "deck: a tick is armed while busy"       deck/flow.js       "s/if \(!state\.auto \|\| state\.phase !== 'idle'\) return state\.armed/if (!state.auto) return state.armed/"
+mutatef "deck: two ticks for one rest"           deck/flow.js       's/  if \(state\.armed\) return \{ state, effects \};\n//'
+mutatef "deck: every slide gets the same pause"  deck/flow.js       's/Math\.max\(AUTO_SLIDE, state\.slides\[state\.cur\]\?\.read \?\? 0\)/AUTO_SLIDE/'
+mutatef "deck: a step is given a blink"          deck/flow.js       's/export const AUTO_STEP = 3500;/export const AUTO_STEP = 800;/'
+mutatef "deck: reading time ignores the words"   deck/slides.js     's/return Math\.min\(READ_MAX, 2500 \+ words \* 300\);/return 6000;/'
+mutatef "deck: the control clicks → by itself"   sunum.js           "s/\\\$\('#auto'\)\.onclick = \(\) => dispatch\(\{ type: 'auto' \}\);/\\\$('#auto').onclick = () => setInterval(() => \\\$('#next').click(), 4000);/"
+mutatef "deck: A is not a shortcut"              sunum.js           "s/  if \(k === 'a' \|\| k === 'A'\) dispatch\(\{ type: 'auto' \}\);\n//"
+mutatef "deck: the tick timer is never set"      sunum.js           "s/  else if \(fx\.type === 'autotimer'\)[^\n]*\n//"
+mutatef "deck: a letter is typed during auto-play" sunum.js         "s/if \(flow\.auto\) dispatch\(\{ type: 'auto', on: false \}\); else phone/phone/"
+mutatef "deck: no auto-play control on the page" index.html         's/          <button class="auto-btn" id="auto"[^\n]*\n//'
+mutatef "deck: the lock disables the control"    sunum.js           "s/\[\\\$\('#prev'\), \\\$\('#next'\), /[\\\$('#prev'), \\\$('#next'), \\\$('#auto'), /"
+# the deck: the walkthrough and the played steps (tests/deck.test.mjs)
+mutatef "deck CONTROL: slides comment only"      deck/slides.js     's/Scrolled to, not tapped: the card turns daily/Scrolled to and not tapped: the card turns daily/'
+mutatef "deck: the round skips a step"           deck/slides.js     "s/\['Sıradaki kart', play\(4\)\],\n//"
+mutatef "deck: two steps on one button"          deck/slides.js     "s/\['İki deneme de yanlış', play\(5\)\]/['İki deneme de yanlış', play(6)]/"
+mutatef "deck: the round is played out of order" deck/slides.js     "s/(      \['Yanlış yaz: “sol”', play\(2\)\],\n)(      \['Harf kutularını doldur', play\(3\)\],\n)/\$2\$1/"
+mutatef "deck: a step asks past the script"      deck/slides.js     "s/\['Keman', play\(11\)\]/['Keman', play(31)]/"
+mutatef "deck: İzle opens the player without the PIN" deck/slides.js "s/batch\(go\('#\/izle'\), act\('video\.open'\), act\('gate\.type'\)\)/batch(go('#\/izle'), act('player.open'))/"
+mutatef "deck: the tapped banner is not the foundation's" deck/slides.js "s/act\('banner\.show', \{ index: 3 \}\), act\('tap', \{ sel: '\[data-banner=\"3\"\]' \}\)/act('banner.show', { index: 1 }), act('tap', { sel: '[data-banner=\"1\"]' })/"
+mutatef "deck: the phone is left in French"      deck/slides.js     "s/, \['Türkçe', settings\('orta', 'tr'\)\]\]/]/"
+mutatef "deck: English is skipped"               deck/slides.js     "s/\['English', settings\('orta', 'en'\)\], //"
+mutatef "deck: a Zorluk the app does not have"   deck/slides.js     "s/\['Zorluk: Orta', settings\('orta', 'tr'\)\]/['Zorluk: Orta', settings('zor', 'tr')]/"
+mutatef "deck: Ayarlar opens with a press"       deck/slides.js     "s/phone: settings\('baslangic', 'tr', true\)/phone: settings('baslangic', 'tr')/"
+mutatef "deck: a slide opens a page the phone lacks" deck/slides.js "s/id: 'izle', label: 'İzle', theme: 'light', phone: go\('#\/izle'\)/id: 'izle', label: 'İzle', theme: 'light', phone: go('#\/videolar')/"
+mutatef "deck: the phone loses the settings act" app/app.js         "s/  'settings': async m => \{/  'ayarlar': async m => {/"
+mutatef "deck: Bugünün kartı after the round starts" deck/slides.js "s/(      \/\/ Scrolled to, not tapped[^\n]*\n      \['Bugünün kartı'[^\n]*\n)(      \['Şimdi Oyna', play\(0\)\],\n)/\$2\$1/"
+mutatef "deck: the XP slide comes back"          deck/slides.js     "s/Sekmenin başlığı vakfın kendisi\./Sekmenin başlığı vakfın kendisi. Her tur XP kazandırır./"
+mutatef "deck: İzle's lead grows a second sentence" deck/slides.js  "s/önce ebeveyn PIN’i istenir\.'/önce ebeveyn PIN’i istenir. Çocuk tek başına çıkamaz.'/"
+# the deck: "Dore Mimi, bugüne kadar" (tests/foundation.test.mjs, dossier ch. 14 §13)
+mutatef "deck CONTROL: foundation benign wording" deck/foundation.js "s/Buradan sonra uygulamaya geçiyoruz\./Şimdi uygulamaya geçiyoruz./"
+mutatef "deck: the series has 12 books"          deck/foundation.js  's/\$\{N\.books\} kitaplık seri, \$\{FACTS\.concerts\.orchestraTr\}/12 kitaplık seri, \${FACTS.concerts.orchestraTr}/'
+mutatef "deck: a concert an hour later"          deck/foundation.js  "s/time: '15\.00'/time: '16.00'/"
+mutatef "deck: a concert in another hall"        deck/foundation.js  "s/time: '14\.30', where: \['CSO Tarihi Salon'\]/time: '14.30', where: ['CSO Ada Ankara']/"
+mutatef "deck: a number changed in the snapshot" deck/foundation-facts.js 's/"value": 74,/"value": 80,/'
+mutatef "deck: a year typed into the notes"      deck/foundation.js  "s/Vakfın kuruluş tarihi slaytta yok:/Vakıf 2018’de kuruldu;/"
+mutatef "deck: Harika on a slide"                deck/foundation.js  "s/Buradan sonra uygulamaya geçiyoruz\./Harika bir kütüphane. Buradan sonra uygulamaya geçiyoruz./"
+mutatef "deck: thanks in capitals"               deck/foundation.js  "s/Dore Mimi, <em>bugüne kadar<\/em>/TEŞEKKÜRLER, <em>bugüne kadar<\/em>/"
+mutatef "deck: MEB onaylı in the lead"           deck/foundation.js  "s/okul öncesi ve 1\. sınıf için;/okul öncesi ve 1. sınıf için, MEB onaylı;/"
+mutatef "deck: the section moved after the tour" deck/slides.js      "s/(  \.\.\.FOUNDATION_SLIDES,\n)((?:.*\n)*?)(  \{\n    id: 'platform')/\$2\$1\$3/"
+mutatef "deck: a tour slide before the section"  deck/slides.js      "s/(  \/\/ What the foundation has done, before the app is shown[^\n]*\n  \.\.\.FOUNDATION_SLIDES,\n)((?:.*\n)*?)(  \{\n    \/\*\n     \* The whole round is played here)/\$2\$1\$3/"
+mutatef "deck: a foundation step opens #/yok"    deck/foundation.js  "s/acts: \[\['İzle: bilmeceler', \{ type: 'go', hash: '#\/izle' \}\]\]/acts: [['İzle: bilmeceler', { type: 'go', hash: '#\/yok' }]]/"
+mutatef "deck: a postponed concert on the timeline" deck/foundation.js "s/  \{ date: '2021', text:/  { date: '2020-11-20\/22', text: 'CSO konserleri' },\n  { date: '2021', text:/"
+mutatef "deck: a phone number in the notes"      deck/foundation.js  "s/Buradan sonra uygulamaya geçiyoruz\./Vakıf: 0312 555 12 34. Buradan sonra uygulamaya geçiyoruz./"

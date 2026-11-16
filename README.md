@@ -42,28 +42,37 @@ the server.
 | N | speaker notes (Turkish) |
 | F | full screen |
 | R | resets the phone to this slide's starting state |
+| A · the **Otomatik** button | auto-play on / off: the deck walks itself from where it is to the last slide |
 | swipe | next / previous slide on a touch screen |
 
 - **The deck waits for the phone.** While the phone is playing a step, or a slide is still coming in, every control
   (→ ←, the dots, the step buttons, swipe, Home/End, R) is disabled and the step being played shows a spinner. Presses
   in that time are ignored, not queued, so nothing can skip what the audience is watching (`deck/flow.js`; the phone
   answers `dm-done` when it has finished). A phone that never answers frees the deck after 20 s.
+- **Auto-play** (`A`, or **Otomatik** beside the counter; `?oynat` on the URL starts it). It presses → for you: every
+  step and every slide, each after a pause (3.5 s after a step; on a new slide the time it takes to read it, 5 to 20 s,
+  so the foundation's text slides stay longest). It is the same `next` through the same lock, so it waits for the
+  phone exactly as a presenter must. →, ←, a dot, a step button, R, swipe, a touch on the phone or A stops it, and it
+  stops by itself on the last slide. While the game on the phone takes letters, any letter stops it and is not typed.
 - **Slide 1 resets the phone.** Going back to it starts the demo over.
 - **Sound:** click **Sesi aç** (top right) once before you start. Browsers start audio only after a click.
 - **Typing in the game:** while the game asks for a typed answer, the laptop keyboard types into it. During that time
-  N, F and R are letters, not shortcuts.
+  N, F, R and A are letters, not shortcuts.
 - **Demo PIN: `135790`.** The parent gate accepts only this demo PIN, never the app's own default (ch. 10 G-06). It
-  is in the notes of slide 8 (Aile ve içerik).
+  is in the notes of the İzle and Aile ve içerik slides.
 - `?notlar` on the deck URL opens the notes. `#7` opens slide 7.
 
-The deck has 10 slides, each with at most two "canlı göster" steps, and tells dossier ch. 14 §9's story: Kapak,
-Gezinme (the dock; logo, Öğren), Keşfet (the categories; OYNA, and the first game's level question), Oyun (Keşfet's
-round: a wrong typing, the letter tiles, the choices and the card that explains), Öğren (a family's Hazırlan sheet;
-its cards turned over), Çal (the piano; a song's round at the choices), Tur sonu (the results; the new badge), Aile ve
-içerik (profiles, parent PIN, content the foundation edits), Platformlar and Kapanış (the foundation's page). The
-slides are data in `deck/slides.js`; the phone's side is one seeded script, `app/data/script.js`, that the scripted
-slides walk front to back, so every press lands on the same card each time and → never makes the phone start over.
-`tests/deck.test.mjs` holds the two lists to each other.
+The deck has 15 slides (dossier ch. 14 §9 to §14): Kapak; the four slides of "Dore Mimi, bugüne kadar", what the
+foundation has done (`deck/foundation.js`, numbers from `deck/foundation-facts.js`); Gezinme (the dock; logo, Öğren);
+Oyna (the categories, Bugünün kartı, then the whole round, one press per move: the level question, a wrong typing, the
+letter tiles, the choices, the card that explains); Öğren (a family's instruments, one instrument's page; nothing to
+play); Çal (the piano); İzle (a riddle: the parent gate, then the player); Vakıf (the logo's tab: the banner, the
+foundation's page); Aile ve içerik (profiles, parent PIN); Ayarlar (Zorluk, then English, Français and back to Türkçe);
+Platformlar and Kapanış. No slide shows results or XP, and none opens the game from a song or an instrument. The slides
+are data in `deck/slides.js`. Up to Çal the phone's side is one seeded script, `app/data/script.js`, walked front to
+back, so every press lands on the same card each time and → never makes the phone start over; after Çal each step is
+a whole state of its own. `tests/deck.test.mjs` holds the slides to the script, to the phone's routes and acts, and
+`tests/foundation.test.mjs` holds the opening section to its facts.
 
 ## What is where
 
@@ -87,6 +96,9 @@ assets/                            fonts, logo, characters, banners, sprites, in
 tests/                             guards for the ported rules, the music and the navigation
 tools/mutants.sh                   checks the guards catch breakage (each mutant "caught", each CONTROL "SURVIVED")
 tools/shoot.mjs                    screenshots every slide, step and phone screen into docs/screens/
+tools/deck-walk.mjs                walks the deck with → and saves every slide and step (npm run walk)
+tools/auto-e2e.mjs                 auto-plays the whole deck in headless Chrome (npm run e2e:auto)
+tools/foundation-facts.mjs         writes deck/foundation-facts.js from the app repo's research
 docs/screens/                      the latest screenshots (not deployed)
 ```
 
@@ -102,6 +114,8 @@ npm test                 # node --test tests/: the game rules, the music, the na
                          # tests/app-parity.test.mjs reads the app's own files (../doremimi-superapp, or DOREMIMI_APP);
                          # without the app checked out it is skipped, not passed
 npm run e2e              # with npm start running: mashes → in headless Chrome; the deck must wait for the phone
+npm run e2e:auto         # auto-play end to end: every slide and step, in order, to the last slide; about two minutes
+npm run walk             # → through the whole deck, a PNG of every slide and step into docs/screens/deck/
 npm run mutants          # every mutant must be "caught" and every CONTROL "SURVIVED"
 node --experimental-websocket tools/phone-e2e.mjs http://127.0.0.1:4175   # the phone in tr, en, fr: type, stray Turkish, fit
 npm run shots            # with the server running: screenshots into docs/screens/

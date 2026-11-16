@@ -1,0 +1,114 @@
+// Auto-play, end to end, in headless Chrome (dossier ch. 14 §11: the deck "walks it unattended, still behind the
+// flow lock"). tests/flow.test.mjs proves the machine; this proves the running deck and phone: the visible control
+// and the A key start it, anything the presenter does stops it, and left alone it walks every slide and every step,
+// in order, to the last slide, with no page error, no phone step that failed and no watchdog (a watchdog means the
+// phone missed an answer and the deck moved on without it). On the way it records what the phone really showed:
+// every tab, the pages the slides promise, the parent gate, the player and the three languages.
+//
+//   npm start  (in another terminal)  then
+//   node --experimental-websocket tools/auto-e2e.mjs http://127.0.0.1:4175 [pause-ms] [shots-dir] [1600x900]
+//
+// The pause between moves defaults to 300 ms (?bekle=), so the run takes about two minutes, not the six or seven the
+// reading pauses add up to on stage; the lock and every dm-done are waited for exactly as on stage. With a shots-dir
+// every rest is saved as a PNG (use a pause of 1500 or more, so a rest lasts long enough to be captured). Exit code
+// 0 = every check passed.
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { SLIDES } from '../deck/slides.js';
+import { TABS } from '../app/lib/nav.js';
+import { launch, openDeck, sleep, DECK_STATE, restName } from './cdp.mjs';
+
+const base = (process.argv[2] ?? 'http://127.0.0.1:4175').replace(/\/$/, '');
+const pause = Number(process.argv[3] ?? 300);
+const shots = process.argv[4] ?? null;
+const [width, height] = (process.argv[5] ?? '1600x900').split('x').map(Number);
+if (shots) mkdirSync(shots, { recursive: true });
+const N = SLIDES.length;
+const count = i => `${String(i + 1).padStart(2, '0')} / ${String(N).padStart(2, '0')}`;
+let ok = true;
+const check = (cond, text) => { console.log(`${cond ? 'ok  ' : 'FAIL'}  ${text}`); if (!cond) ok = false; };
+
+const c = await launch({ width, height });
+try {
+  const state = () => c.ev(DECK_STATE);
+  const idle = async () => { for (let i = 0; i < 600; i++) { const s = await state(); if (s?.busy === 'false') return s; await sleep(50); } return null; };
+
+  // 1. The control and the key; the presenter's input stops it.
+  await openDeck(c, `${base}/?bekle=60000#1`);   // a pause far longer than this part, so nothing moves by itself
+  check(await c.ev(`(() => { const b = document.querySelector('#auto'); const r = b.getBoundingClientRect(); return !b.disabled && r.width > 40 && r.height > 20 && r.bottom <= innerHeight && r.right <= innerWidth && b.textContent.trim() === 'Otomatik'; })()`), 'the auto-play control is on screen and says Otomatik');
+  await c.key('a');
+  check((await state()).auto === 'true' && await c.ev(`document.querySelector('#auto').textContent.trim()`) === 'Durdur', 'A switches auto-play on, and the control says Durdur');
+  await c.key('a');
+  check((await state()).auto === 'false', 'A again switches it off');
+  await c.ev(`document.querySelector('#auto').click()`);
+  check((await state()).auto === 'true', 'the control switches it on');
+  await c.key('ArrowRight');
+  let s = await state();
+  check(s.auto === 'false' && s.count === count(1), `→ from the presenter switches it off and still moves one slide (${s.count})`);
+  await c.ev(`document.querySelector('#auto').click()`);
+  await c.key('ArrowRight');   // the lock from the slide change is still held: this press moves nothing
+  s = await state();
+  check(s.auto === 'false' && s.count === count(1) && s.busy === 'true', 'a press the lock ignores still stops auto-play');
+  await idle();
+  // While the phone takes letters, A is a letter: during auto-play it must stop the deck and not be typed.
+  const GAME = SLIDES.findIndex(x => x.id === 'kesfet');
+  const TYPING = SLIDES[GAME].acts.findIndex(a => a[1].step === 1);   // after the level question the round is at its typing stage
+  await c.ev(`document.querySelector('[data-dot="${GAME}"]').click()`); await idle();
+  await c.ev(`document.querySelectorAll('.slide.on .act')[${TYPING}].click()`); await idle();
+  const before = await c.ev(`document.querySelector('#phone').contentDocument.body.innerText`);
+  await c.ev(`document.querySelector('#auto').click()`);
+  await c.key('a'); await sleep(300);
+  const after = await c.ev(`document.querySelector('#phone').contentDocument.body.innerText`);
+  check((await state()).auto === 'false' && before === after, 'at the typing stage, A stops auto-play and is not typed into the answer');
+  await c.key('a'); await sleep(300);
+  check(await c.ev(`document.querySelector('#phone').contentDocument.body.innerText`) !== before, 'with auto-play off the same key is a letter again (the check above can fail)');
+
+  // 2. Left alone from the cover, it walks the whole deck.
+  await openDeck(c, `${base}/?bekle=${pause}#1`);
+  c.errors.length = 0; c.warnings.length = 0;
+  // Recorder in the page, sampled every 50 ms: each rest of the deck (slide, steps done), and what the phone showed.
+  await c.ev(`(() => { const seen = window.__seen = { rests: [], hashes: [], langs: [], gate: false, player: false, movedBusy: 0 }; let last = '';
+    setInterval(() => {
+      const d = document.querySelector('#phone').contentDocument, w = document.querySelector('#phone').contentWindow;
+      const h = w.location.hash; if (seen.hashes.at(-1) !== h) seen.hashes.push(h);
+      const l = d.documentElement.lang; if (seen.langs.at(-1) !== l) seen.langs.push(l);
+      if (d.querySelector('.gate')) seen.gate = true;
+      if (d.querySelector('.player-ov')) seen.player = true;
+      if (document.querySelector('#stage').getAttribute('aria-busy') !== 'false') return;
+      const r = document.querySelector('#count').textContent + '|' + document.querySelectorAll('.slide.on .act.done').length;
+      if (r !== last) { seen.rests.push(r); last = r; }
+    }, 50); })()`);
+  const t0 = Date.now();
+  await c.ev(`document.querySelector('#auto').click()`);
+  let last = '', saved = 0;
+  for (;;) {
+    s = await state();
+    const rest = `${s.count}|${s.done}`;
+    if (s.busy === 'false' && rest !== last) {
+      last = rest;
+      const i = Number(s.count.slice(0, 2)) - 1;
+      if (s.done === 0) console.log(`      ${s.count}  ${Math.round((Date.now() - t0) / 1000)} s`);
+      if (shots) { await sleep(Math.min(400, pause / 3)); await c.shot(join(shots, `${restName(SLIDES, i, s.done)}.png`)); saved++; }
+    }
+    if (s.auto === 'false' && s.busy === 'false') break;
+    if (Date.now() - t0 > 20 * 60_000) { check(false, 'auto-play finished within 20 minutes'); break; }
+    await sleep(shots ? 40 : 150);
+  }
+  const secs = Math.round((Date.now() - t0) / 1000);
+  const seen = await c.ev('window.__seen');
+  const end = await state();
+  check(end.count === count(N - 1) && end.busy === 'false' && end.auto === 'false', `it stopped by itself on the last slide (${end.count}, ${secs} s)`);
+  check(end.done === end.acts, `the last slide's steps all played (${end.done}/${end.acts})`);
+  const want = SLIDES.flatMap((x, i) => Array.from({ length: (x.acts ?? []).length + 1 }, (_, k) => `${count(i)}|${k}`));
+  check(JSON.stringify(seen.rests) === JSON.stringify(want), `every slide and every step, in order, none skipped (${seen.rests.length}/${want.length} rests)${JSON.stringify(seen.rests) === JSON.stringify(want) ? '' : ': first difference at ' + want.find((w, i) => seen.rests[i] !== w)}`);
+  if (shots) check(saved === want.length, `every rest was saved (${saved} PNGs in ${shots})`);
+  const hashes = new Set(seen.hashes.map(h => h.split('?')[0]));
+  const promised = [...TABS.map(t => t.hash), '#/ogren/aileler', '#/ogren/calgilar', '#/calgi/keman', '#/vakif', '#/profil', '#/hesabim', '#/ayarlar'];
+  const missing = promised.filter(h => !hashes.has(h));
+  check(missing.length === 0, `the phone showed every tab and the pages the slides promise${missing.length ? ' (missing ' + missing.join(' ') + ')' : ''}`);
+  check(seen.gate && seen.player, 'the parent gate came up and the player opened behind it');
+  check(JSON.stringify(seen.langs) === JSON.stringify(['tr', 'en', 'fr', 'tr']), `the phone switched Türkçe → English → Français → Türkçe (${seen.langs.join(' → ')})`);
+  check(c.errors.length === 0, `no page errors${c.errors.length ? ': ' + c.errors.join(' | ') : ''}`);
+  check(c.warnings.length === 0, `no failed phone step and no watchdog${c.warnings.length ? ': ' + c.warnings.join(' | ') : ''}`);
+} catch (err) { console.log(String(err?.stack ?? err)); ok = false; } finally { c.close(); }
+process.exit(ok ? 0 : 1);

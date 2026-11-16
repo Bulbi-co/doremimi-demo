@@ -5,6 +5,8 @@
  * it: Oyna is the game (Keşfet until ch. 14 §10) and its whole round, one press per move → Öğren, read, not played →
  * Çal → family and the foundation. Owner, 2026-11-16: no slide about XP or results (progress is tracked, never shown as
  * XP), and no way into the game from a song or an instrument, so the "Tur sonu" slide and Çal's game step went.
+ * Ch. 14 §11 asks for every tab and scenario, so after Çal the walk goes on: İzle and a riddle behind the parent PIN,
+ * the logo's tab and the foundation's page, the family, then Ayarlar with Zorluk and the three languages.
  *
  * Its own module, apart from sunum.js (which draws and drives it), so tests/deck.test.mjs can import the slides and
  * hold every scripted step they ask for to the phone's script (app/data/script.js).
@@ -27,6 +29,12 @@ export const act = (name, args = {}) => ({ type: 'act', name, ...args });
 export const batch = (...msgs) => ({ type: 'batch', msgs });
 export const at = step => ({ type: 'act', name: 'goto', step });           // the phone's scripted story, app/data/script.js
 export const play = step => ({ type: 'act', name: 'goto', step, play: true });
+/*
+ * Ayarlar as a whole state too: the phone opens the page and presses Zorluk and Dil until they read as asked
+ * (app/app.js ACTS.settings). `quiet` sets them without a press, for the slide's own entry, where a tap nobody asked
+ * for would be shown; the flow machine's ← and R resend a step with play: false, which the phone treats the same way.
+ */
+export const settings = (zorluk, dil, quiet = false) => ({ type: 'act', name: 'settings', zorluk, dil, ...(quiet ? { quiet } : {}) });
 // The new dock as a small picture for the navigation slide (dossier ch. 11 NR-02).
 const dockPic = `<div class="dockpic">${[['IconCards', 'Oyna'], ['IconBook', 'Öğren'], null, ['IconEye', 'İzle'], ['IconNote', 'Çal']].map(t => t
   ? `<span class="dp">${icon(t[0])}<b>${t[1]}</b></span>` : '<span class="dp logo"><img src="assets/brand/logo.png" alt="Doremimi"></span>').join('')}</div>`;
@@ -34,8 +42,11 @@ const dockPic = `<div class="dockpic">${[['IconCards', 'Oyna'], ['IconBook', 'Ö
 /*
  * The scripted slides (kesfet to sonuc) ask for steps in rising order, and the two 'page' steps of the script open
  * Öğren and Çal, so walking the deck with → plays the story once, front to back, and the phone never starts over.
- * The Çal slide's piano step is not a script step, but it stays on the page step 12 opened (#/cal), so the script
- * still knows where the phone is and the Keman step that follows carries on from there.
+ * The Çal slide's piano step is not a script step, but it stays on the page step 12 opened (#/cal).
+ *
+ * The slides after Çal (İzle, the logo's tab, the family, Ayarlar) are off the script on purpose: each of their steps
+ * is a whole state (batch, settings), so nothing has to be replayed to reach it, and the script's own last steps (a
+ * song's round and its results) are no longer shown at all.
  */
 export const SLIDES = [
   {
@@ -68,6 +79,8 @@ export const SLIDES = [
       ['Bilemezse harf kutuları, sonra dört seçenek gelir', 'Yanlışta kart dönüp anlatır; yanlış cevap hiçbir şey kaybettirmez']),
     acts: [
       ['Kategoriler', batch(go('#/'), act('scroll', { to: '.kats-sec' }))],
+      // Scrolled to, not tapped: the card turns daily (app/lib/daily.js), so a tap would open a different page each day.
+      ['Bugünün kartı', batch(go('#/'), act('scroll', { to: '.today' }))],
       ['Şimdi Oyna', play(0)],
       ['Seviye: Başlangıç', play(1)],
       ['Yanlış yaz: “sol”', play(2)],
@@ -78,7 +91,7 @@ export const SLIDES = [
       ['Anladım, devam', play(7)],
       ['Doğru yaz', play(8)],
     ],
-    notes: `<p>Testçilere göre Keşfet oyunu içermiyor gibiydi. Artık sekmenin adı Oyna ve kendisi oyun; duyurular logonun sekmesine taşındı.</p><ol><li><b>Kategoriler</b>: her işaret ve her çalgı ailesi kendi renginde bir kart.</li><li><b>Şimdi Oyna</b>: ilk oyun çocuğun seviyesini sorar; Başlangıç seçilir.</li><li><b>Yanlış yaz</b>: “sol” olmadı; cevap harf kutularına döner, kartın renginde gelen harfler yardım eder.</li><li><b>Kutuları doldur</b>: çocuk kalan harfleri yazar.</li><li><b>Sıradaki kart</b>, <b>iki deneme de yanlış</b>: dört seçenek gelir.</li><li><b>Yanlış seçim</b>: kart dönüp anlatır; <b>Anladım, devam</b> ile sıradaki karta geçilir ve çocuk bu kez doğru yazar.</li></ol><p>Ekranda seviye adı ya da basamak şeridi yok. Oyun ancak üst üste dört zorlanmada bir adım kolaylaşır.</p>`,
+    notes: `<p>Testçilere göre Keşfet oyunu içermiyor gibiydi. Artık sekmenin adı Oyna ve kendisi oyun; duyurular logonun sekmesine taşındı.</p><ol><li><b>Kategoriler</b>: her işaret ve her çalgı ailesi kendi renginde bir kart.</li><li><b>Bugünün kartı</b>: sayfanın en altında, her gün başka bir kart: bir çalgı, bir soru ya da bir işaret.</li><li><b>Şimdi Oyna</b>: ilk oyun çocuğun seviyesini sorar; Başlangıç seçilir.</li><li><b>Yanlış yaz</b>: “sol” olmadı; cevap harf kutularına döner, kartın renginde gelen harfler yardım eder.</li><li><b>Kutuları doldur</b>: çocuk kalan harfleri yazar.</li><li><b>Sıradaki kart</b>, <b>iki deneme de yanlış</b>: dört seçenek gelir.</li><li><b>Yanlış seçim</b>: kart dönüp anlatır; <b>Anladım, devam</b> ile sıradaki karta geçilir ve çocuk bu kez doğru yazar.</li></ol><p>Ekranda seviye adı ya da basamak şeridi yok. Oyun ancak üst üste dört zorlanmada bir adım kolaylaşır.</p>`,
   },
   {
     id: 'ogren', label: 'Öğren', theme: 'light', phone: at(9),
@@ -97,12 +110,40 @@ export const SLIDES = [
     notes: `<p>Nota çalan her şey burada.</p><ol><li><b>Piyano</b>: çalınanlar Melodim'e eklenir.</li></ol><p>41 çalgının her birinin şarkısı var; karaoke satırı ilerler, tuşlar yanar. Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı.</p>`,
   },
   {
+    id: 'izle', label: 'İzle', theme: 'light', phone: go('#/izle'),
+    html: step('İzle: videolar ve bilmeceler',
+      'Bilmece videoları en üstte, ardından klipler, söyleşiler, karaoke ve jenerikler; videolar YouTube’da olduğu için önce ebeveyn PIN’i istenir.',
+      []),
+    // The first card on İzle is a riddle: the page lists the kinds in WATCH_KINDS' order, riddles first (app/app.js).
+    acts: [['Bir bilmece', batch(go('#/izle'), act('video.open'))], ["PIN'i gir", batch(go('#/izle'), act('video.open'), act('gate.type'))]],
+    notes: `<p>Bütün videolar tek sekmede; Öğren'deki bilmeceler de buraya taşındı.</p><ol><li><b>Bir bilmece</b>: videoya dokununca ebeveyn kilidi açılır; çocuk tek başına YouTube'a çıkamaz.</li><li><b>PIN'i gir</b>: demo PIN'i <b>135790</b>. Oynatıcı açılır; demo çevrimdışı olduğu için video burada oynamaz, uygulamada YouTube'dan oynar.</li></ol>`,
+  },
+  {
+    id: 'vakif', label: 'Vakıf', theme: 'light', phone: go('#/doremimi'),
+    html: step('Logo: Dore Mimi Vakfı',
+      'Ortadaki logo vakfın sekmesini açar: en üstte duyurular döner, altında her bağlantı bir kez yer alır.',
+      []),
+    acts: [
+      ['Duyuru: Vakfımız kuruldu!', batch(go('#/doremimi'), act('banner.show', { index: 3 }))],
+      ['Vakfın sayfası', batch(go('#/doremimi'), act('banner.show', { index: 3 }), act('tap', { sel: '[data-banner="3"]' }))],
+    ],
+    notes: `<p>Sekmenin başlığı vakfın kendisi. Duyurular eskiden Oyna'nın üstündeydi; artık burada dönüyor.</p><ol><li><b>Duyuru</b>: “Vakfımız kuruldu!” duyurusu öne gelir.</li><li><b>Vakfın sayfası</b>: duyuruya dokununca vakfın kendi sayfası açılır: haber, vizyon, yönetim kurulu ve kurucular.</li></ol><p>Altta Faaliyetler, Katıl, Tanış, Bize ulaş ve Uygulama; henüz hazır olmayan sayfalar “Hazırlanıyor” der.</p>`,
+  },
+  {
     id: 'aile', label: 'Aile ve içerik', theme: 'light', phone: go('#/profil'),
     html: step('Aile, kilit, içerik',
       "Her çocuğa ayrı profil. Dışarı giden her bağlantı ebeveyn PIN'i ister. İçeriği vakıf düzenler.",
       ['Reklam yok, sohbet yok, ücretli ödül yok', "İşaret, soru, çalgı, video: Excel'de açılan tablolar"]),
     acts: [['Kim oynuyor?', batch(go('#/profil'), act('switcher.open'))], ["Ebeveyn PIN'i", batch(go('#/profil'), act('gate.open', { row: 'hesabim' }), act('gate.type'))]],
     notes: `<p>Profil sağ üstte; kardeşler <b>Kim oynuyor?</b> ile geçer. Ebeveyn sayfaları ve dışarı giden her bağlantı altı haneli PIN ister; üç yanlışta 30 saniye kilit. Demo PIN'i <b>135790</b> (yalnızca bu demoya ait).</p><p>İçerik kodda değil, tablolarda: vakıf ekibi panelden düzenler, yayından önce hatalar satır satır gösterilir. Her sorunun bir zorluğu var (Başlangıç, Orta, İleri); işaret kartlarınınkini biz koyduk, içerik ekibi değiştirebilir. Bugün içerik değişikliği yeni bir sürümle telefona ulaşır.</p>`,
+  },
+  {
+    id: 'ayarlar', label: 'Ayarlar', theme: 'light', phone: settings('baslangic', 'tr', true),
+    html: step('Ayarlar: zorluk ve dil',
+      'İlk oyunda seçilen seviye burada değişir; dil Türkçe, English ya da Français olur ve uygulama anında o dile geçer.',
+      ['Şarkı sözleri, video adları ve vakfın uzun metinleri Türkçe kalır', 'İngilizce ve Fransızca taslak: anadili olan biri okuyacak']),
+    acts: [['Zorluk: Orta', settings('orta', 'tr')], ['English', settings('orta', 'en')], ['Français', settings('orta', 'fr')], ['Türkçe', settings('orta', 'tr')]],
+    notes: `<p>Ayarlar, Profilim'in altındaki Aile bölümünden açılır.</p><ol><li><b>Zorluk: Orta</b>: sorular seçilen seviyeye kadar gelir. Seviye ilk oyunda bir kez sorulur, sonra buradan değişir.</li><li><b>English</b>, <b>Français</b>: menüler, sorular, cevaplar, işaret ve aile adları o dile geçer; alt menü de.</li><li><b>Türkçe</b>: geri döner. Sunuma devam etmeden önce bu adımı oynatın.</li></ol><p>Uygulama, cihazın dili bu üçünden biriyse o dille açılır; değilse Türkçe. Çeviriler taslak ve tablolarında öyle işaretli.</p>`,
   },
   {
     id: 'platform', label: 'Platformlar', theme: 'dark', layout: 'full', cls: 'platforms',
@@ -123,3 +164,16 @@ export const SLIDES = [
     notes: `<p>Telefonda vakfın kendi sayfası açık: faaliyetleri (Müzikle Değerler Eğitimi, burslar, etkinlikler), gönüllülük ve iletişim. Sorularınız ve değiştirmek istedikleriniz bizim için yol haritası.</p>`,
   },
 ];
+
+/** The longest auto-play leaves any slide before its first step, however much it says. */
+export const READ_MAX = 20000;
+/**
+ * How long auto-play leaves a slide on screen before it moves: time to read what the slide says at a presenter's pace
+ * (about 200 words a minute, 300 ms a word) plus a beat to find the phone. It is why the foundation slides, which are
+ * mostly text, stay longer than a tour slide with one sentence (dossier ch. 14 §13). The notes are not counted: they
+ * are the presenter's, not the audience's.
+ */
+export function readMs(slide) {
+  const words = slide.html.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
+  return Math.min(READ_MAX, 2500 + words * 300);
+}

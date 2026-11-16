@@ -83,7 +83,7 @@ const CHECK = `(() => {
   return out;
 })()`;
 
-const PAGES = ['#/', '#/ogren/isaretler', '#/ogren/calgilar', '#/ogren/calgilar?aile=bakir-nefesli', '#/ogren/aileler', '#/ogren/degerler', '#/isaret-kategori/diyez',
+const PAGES = ['#/', '#/ogren/isaretler', '#/ogren/calgilar', '#/ogren/calgilar?aile=bakir-nefesli', '#/ogren/aileler', '#/degerler', '#/isaret-kategori/diyez',
   '#/isaret/fa-anahtari', '#/calgi/keman', '#/calgi/baglama', '#/izle', '#/cal', '#/sarki/keman', '#/sozler/akordeon', '#/doremimi', '#/vakif', '#/dore-ve-mimi', '#/ekip',
   '#/burslar', '#/gonullu', '#/iletisim', '#/etkinlikler', '#/bulten', '#/destek', '#/destekciler', '#/yasal', '#/metin/kvkk', '#/yardim', '#/hakkinda', '#/kitaplar',
   '#/doremimi-nedir', '#/profil', '#/ayarlar', '#/hesabim', '#/ebeveyn-paneli', '#/melodim'];

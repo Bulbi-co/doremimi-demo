@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { SLIDES, SONG_HOLD } from '../deck/slides.js';
 import { SCRIPT } from '../app/data/script.js';
 import { FAMILIES, SIGN_CATEGORIES } from '../app/data/content.js';
+import { UI } from '../app/i18n/ui.js';
 import { TABS, OGREN_TABS } from '../app/lib/nav.js';
 import { knownRoute, ACT_NAMES, flat } from '../tools/phone-routes.mjs';
 import { SONGS, DIRECTORY } from '../app/data/site.js';
@@ -130,7 +131,7 @@ test('the deck says nothing in the developers’ own words, and calls the piano 
   assert.doesNotMatch(SLIDES.map(s => `${s.html} ${(s.acts ?? []).map(a => a[0]).join(' ')}`).join(' '), /klavye/i, 'the slides call it the piano');
 });
 
-test('the numbers typed on the slides are the phone’s: 12 categories, 7 signs, 5 families, 41 instruments, 4 Öğren tabs', () => {
+test('the numbers typed on the slides are the phone’s: 12 categories, 7 signs, 5 families, 41 instruments, 3 Öğren tabs', () => {
   const families = Object.keys(FAMILIES).length, signs = SIGN_CATEGORIES.length;
   const NUM = ['sıfır', 'bir', 'iki', 'üç', 'dört', 'beş', 'altı', 'yedi', 'sekiz', 'dokuz', 'on'];
   assert.match(slide('kesfet').html, new RegExp(`altında ${signs + families} kategori`));
@@ -139,8 +140,23 @@ test('the numbers typed on the slides are the phone’s: 12 categories, 7 signs,
   assert.match(slide('ogren').html, new RegExp(`>${DIRECTORY.length} çalgı:`));
   assert.match(slide('cal').html, new RegExp(`altında ${SONGS.filter(x => x.slug !== 'ana-tema').length} şarkı\\.`));
   assert.match(words(slide('ogren')), new RegExp(`Öğren'in ${NUM[OGREN_TABS.length]} sekmesi`));
+  assert.match(slide('ogren').html, new RegExp(`>${NUM[OGREN_TABS.length][0].toLocaleUpperCase('tr')}${NUM[OGREN_TABS.length].slice(1)} bölüm: ${OGREN_TABS.map(x => UI.tr[`ogren.${x.key}`]).join(', ')}\\.`), 'the slide names Öğren’s tabs, all of them and no other');
+  // Müzikle Değerler Eğitimi is the foundation's, on the logo's tab (ch. 14 §17): the Öğren slide does not claim it.
+  assert.doesNotMatch(words(slide('ogren')), /Değerler/);
   assert.match(app, /if \(gate\.wrong >= 3\) \{ gate\.lockedUntil = Date\.now\(\) \+ 30_000;/, 'the gate locks for 30 s after three wrong PINs');
   assert.match(words(slide('aile')), /üç yanlışta 30 saniye kilitlenir/);
+});
+
+test('the deck shows the app a family uses, and says nothing about the content panel behind it', () => {
+  // Owner, 2026-11-16, of "İşaret, soru, çalgı, video: Excel'de açılan tablolar": "really unnecessary, please exclude
+  // everything about the doremimi panel itself".
+  const PANEL = /excel|tablolar|içerik panel|içerik ekibi|içeriği vakıf|\bcsv\b|yayından önce/;
+  for (const s of SLIDES) assert.doesNotMatch(words(s).toLocaleLowerCase('tr'), PANEL, `${s.id} talks about how the content is edited`);
+  assert.equal(slide('aile').label, 'Aile');
+  // The matcher: the sentences that were cut are caught; "Ebeveyn paneli" (a page of the app) and the study's table in
+  // the foundation slide's notes are not the content panel and pass.
+  for (const cut of ["excel'de açılan tablolar", 'vakıf ekibi içerik panelinden düzenler', 'içeriği vakıf düzenler']) assert.ok(PANEL.test(cut), cut);
+  for (const fine of ['ebeveyn paneli', 'çalışmanın tablosunda']) assert.ok(!PANEL.test(fine), fine);
 });
 
 test('the closing slide carries the platforms as one line, and every slide has presenter notes', () => {

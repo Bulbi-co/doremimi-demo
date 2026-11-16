@@ -95,7 +95,7 @@ test('every way into the game names its origin, and all of them are on Oyna: not
 
 test('Öğren is information only: no page reached from it has a play button, a Hazırlan sheet or a round to start', () => {
   const PLAY = /data-play=|data-do="play"|data-prep|prep-start|openPrep|RoundOrigin\.Ogren/;
-  for (const f of ['function learn(', 'const LEARN_TABS = {', 'function familyCard(', 'function valuesTab(', 'function signTile(',
+  for (const f of ['function learn(', 'const LEARN_TABS = {', 'function familyCard(', 'function signTile(',
     'function signCategory(', 'function signCard(', 'function explainHtml(', 'function instrumentPage(']) {
     const body = code(slice(f, '\n}'));
     assert.doesNotMatch(body, PLAY, f);
@@ -105,7 +105,7 @@ test('Öğren is information only: no page reached from it has a play button, a 
   assert.doesNotMatch(slice('function instrumentPage(', '\n}'), /iflip|Kendini dene|instrumentFlips/);
   assert.doesNotMatch(app, /function prepHtml|overlay\.kind === 'prep'/);
   // Değerler's games part goes to the Oyna tab, a link, not a round
-  assert.match(slice('function valuesTab(', '\n}'), /part\('IconCards', t\('values\.games'\), t\('values\.games\.line'\), 'data-go="#\/"'\)/);
+  assert.match(slice('function valuesPage(', '\n}'), /part\('IconCards', t\('values\.games'\), t\('values\.games\.line'\), 'data-go="#\/"'\)/);
 });
 
 // ───────────────────────── §4 difficulty
@@ -192,8 +192,15 @@ test('no level name reaches the screen: the game, its intro, results and badges 
 });
 
 // ───────────────────────── §5 Öğren, as revised in §10
-test('Öğren has four tabs, İşaretler · Çalgılar · Aileler · Değerler, each a root of the Öğren tab with its own page', () => {
-  assert.deepEqual(OGREN_TABS.map(x => UI.tr[`ogren.${x.key}`]), ['İşaretler', 'Çalgılar', 'Aileler', 'Değerler']);
+test('Öğren has three tabs, İşaretler · Çalgılar · Aileler, each a root of the Öğren tab with its own page; Değerler is the Doremimi tab’s', () => {
+  assert.deepEqual(OGREN_TABS.map(x => UI.tr[`ogren.${x.key}`]), ['İşaretler', 'Çalgılar', 'Aileler']);
+  // ch. 14 §17 (owner, 2026-11-16): Müzikle Değerler Eğitimi is the foundation's programme, a page of the logo's tab.
+  // Its old address still lands there, and no language keeps a tab label for it.
+  assert.deepEqual([resolve('#/degerler').kind, resolve('#/degerler').tab, resolve('#/degerler').page], ['page', 'doremimi', 'degerler']);
+  assert.equal(resolve('#/ogren/degerler').to, '#/degerler');
+  for (const lang of Object.keys(UI)) assert.ok(!('ogren.degerler' in UI[lang]), `${lang} still labels a Değerler tab`);
+  assert.doesNotMatch(slice('const LEARN_TABS = {', '\n};'), /degerler|valuesPage/);
+  assert.match(app, /\n  degerler: \{ title: 'hub\.degerler', html: valuesPage \},/);
   for (const x of OGREN_TABS) {
     assert.deepEqual([resolve(`#/ogren/${x.key}`).kind, resolve(`#/ogren/${x.key}`).tab, resolve(`#/ogren/${x.key}`).segment], ['root', 'ogren', x.key]);
     assert.match(slice('const LEARN_TABS = {', '\n};'), new RegExp(`\\n  ${x.key}: \\(\\) =>`), x.key);
@@ -317,7 +324,8 @@ test('the hub leads everywhere once, every place it leads exists, in ch. 14 §6�
     assert.ok(r.page in PAGE_HOME, `${d} has no home`);
     assert.match(app, new RegExp(`\\n  '?${r.page}'?: \\{ title:`), `${d} is not a page app.js draws`);
   }
-  assert.ok(to.includes('#/ogren/degerler'), 'Müzikle Değerler Eğitimi opens Öğren › Değerler');
+  assert.deepEqual(HUB.flatMap(g => g.rows).find(r => r[1] === 'degerler')[2], { push: '#/degerler' }, 'Müzikle Değerler Eğitimi opens its own page on this tab');
+  assert.ok(!to.some(d => d.startsWith('#/ogren/degerler')), 'and nothing in the hub leads to an Öğren tab for it');
   for (const g of HUB) for (const [, k] of g.rows) assert.ok(UI.tr[`hub.${k}`] && UI.tr[`hub.${k}.line`], `hub.${k}`);
   assert.match(slice('function hub() {', '\n}'), /HUB\.map\(/);
 });

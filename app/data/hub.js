@@ -12,7 +12,7 @@
  */
 export const HUB = [
   { key: 'faaliyetler', cards: true, rows: [
-    ['IconHeart', 'degerler', { go: '#/ogren/degerler' }],
+    ['IconHeart', 'degerler', { push: '#/degerler' }],
     ['IconBolt', 'burslar', { push: '#/burslar' }],
     ['IconStar', 'etkinlikler', { push: '#/etkinlikler' }],
   ] },

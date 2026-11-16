@@ -97,7 +97,7 @@ mutatef "Vurmalı group back on Fa's orange"      app/data/site.js   "s/'Vurmal�
 mutatef "Telli badge keeps the old red"          app/data/content.js "s/color: '#C2379B', rule: \{ kind: 'LearnQuestions', count: 3 \}, conceptId: 'family:TelliCalgilar'/color: '#FF5A4E', rule: { kind: 'LearnQuestions', count: 3 }, conceptId: 'family:TelliCalgilar'/"
 mutatef "the newsletter opens İletişim again"    app/data/hub.js    "s/\['IconMail', 'bulten', \{ push: '#\/bulten' \}\]/['IconMail', 'bulten', { push: '#\/iletisim' }]/"
 mutatef "a hub row leads to no page"             app/data/hub.js    "s/push: '#\/destekciler'/push: '#\/sponsorlar'/"
-mutatef "Öğren gets Bilmeceler back"            app/lib/nav.js     "s/\{ key: 'aileler' \}, \{ key: 'degerler' \}/{ key: 'aileler' }, { key: 'bilmeceler' }, { key: 'degerler' }/"
+mutatef "Öğren gets Bilmeceler back"            app/lib/nav.js     "s/\{ key: 'calgilar' \}, \{ key: 'aileler' \}/{ key: 'calgilar' }, { key: 'bilmeceler' }, { key: 'aileler' }/"
 mutatef "the round starts from the saved ladder" app/app.js         's/ladderFor\(G.origin, LEARNING.ladder\), LEARNING, G.random/ladderFor(G.origin, LEARNING.ladder, profile.ladder), LEARNING, G.random/'
 mutatef "the song page can play again"           app/app.js         's/\$\{\/\* No way into the game from a song[^\n]*\n/<button class="chunky yellow" data-play="karisik" data-origin="cal"><\/button>\n/'
 mutatef "the instrument page can play again"     app/app.js         's/(\n    \$\{d\.riddle \? `<button class="chunky purple")/\n    <button class="chunky yellow" data-play="instrument:x" data-origin="cal"><\/button>$1/' 

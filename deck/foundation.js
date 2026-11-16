@@ -6,6 +6,8 @@
  * content/doremimi-research: DEMO-INTEGRATION.md, CAVEATS.md):
  *
  *   - Achievements only. No praise, no thanks, no adjective about the work: the audience is the people who did it.
+ *     One sentence looks forward instead of back, at the owner's request (the last column, "Bugün"); it claims
+ *     nothing about what was done.
  *   - Every number comes from deck/foundation-facts.js (generated from facts.json), never from memory.
  *   - A concert date is a listing, a poster or a season announcement, so the slides give the date and the hall and
  *     never say it took place; the 2020 dates were postponed and are in the notes only.
@@ -72,10 +74,30 @@ export const MARKERS = [
   { date: '2024', text: 'Seri, Buca Eğitim Fakültesi Dergisi’nde incelendi' },
   { date: '2026-01-19', text: 'Dore Mimi Ritim Atölyesi, CSO Ada Ankara' },
 ];
-const years = [...new Set(MARKERS.map(m => parts(m.date).year))];
 const dayMonth = m => { const p = parts(m.date); return [m.day === false ? null : p.day, p.month].filter(Boolean).join(' '); };
-const timeline = `<ol class="fnd-line">${years.map(y => `<li><b class="fnd-y">${y}</b>${MARKERS.filter(m => parts(m.date).year === y).map(m =>
-  `<span class="fnd-ev">${dayMonth(m) ? `<i>${dayMonth(m)}</i>` : ''}${m.text}</span>`).join('')}</li>`).join('')}</ol>`;
+const marker = date => MARKERS.find(m => m.date === date);
+
+/*
+ * What the slide draws: five columns, not one entry per date. Until the owner read it (2026-11-16) every dated fact
+ * had its own place on the timeline, and five of the eight were the orchestra's: "CSO this time, CSO that time". Its
+ * entries are one column now, under its name once, with their months as one small line (the days and halls are in the
+ * notes). The last column is today, with the forward-looking words the owner asked for ("we are now here and we have
+ * so many new ways to go"). MARKERS above stays the list of dated facts: the notes cite each, and every date a
+ * column names must be one of them (tests/foundation.test.mjs).
+ */
+const ORCHESTRA = ['2020-11-18', '2021-12-26', '2022-02-21', '2023-03-22/24', '2026-01-19'];
+export const COLUMNS = [
+  { dates: ['2019-01-22'], eyebrow: dayMonth(marker('2019-01-22')), text: marker('2019-01-22').text },
+  { dates: ORCHESTRA, wide: true, eyebrow: `${FACTS.concerts.orchestraTr} ile`, text: 'Sitesinde çocuk bölümü, eğitim konserleri, ritim atölyesi',
+    small: ORCHESTRA.map(d => full(d, { day: false })).join(' · ') },
+  { dates: ['2021'], text: marker('2021').text },
+  { dates: ['2024'], text: marker('2024').text },
+];
+const span = dates => { const y = dates.map(d => parts(d).year); return y[0] === y.at(-1) ? y[0] : `${y[0]}–${y.at(-1)}`; };
+const column = c => `<li${c.wide ? ' class="fnd-wide-col"' : ''}><b class="fnd-y">${span(c.dates)}</b><span class="fnd-ev">${c.eyebrow ? `<i>${c.eyebrow}</i>` : ''}${c.text}${c.small ? `<small>${c.small}</small>` : ''}</span></li>`;
+// Today: not a fact with a source, and the only such thing on the slide. Short on purpose, and nothing about the past.
+export const NOW = { label: 'Bugün', text: 'Buradayız.', next: 'Önümüzde yeni yollar, sayısız fırsat var.' };
+const timeline = `<ol class="fnd-line">${COLUMNS.map(column).join('')}<li class="fnd-now"><b class="fnd-y">${NOW.label}</b><span class="fnd-ev">${NOW.text}<small>${NOW.next}</small></span></li></ol>`;
 
 const head = (eyebrow, title, lead, wide = false) => `
   <span class="fnd-eyebrow">${eyebrow}</span>
@@ -96,7 +118,7 @@ const strip = `<ul class="fnd-strip">
   <li>${figure('fnd-set', 'kitap-seti.jpg', 'Serinin on kitabının kapakları', 'Görsel: idefix.com')}
     <div><b>${N.books} kitap, ${FACTS.books.titlesTr.length} çalgı</b><span>${FACTS.books.seriesTr} (${FACTS.books.author}, ${FACTS.books.year}): okul öncesi ve 1. sınıf için.</span></div></li>
   <li>${figure('fnd-poster', 'cso-afis-2022.jpg', '“Dore Mimi CSO’da” afişi', 'Afiş: CSO, Biletinial')}
-    <div><b>Dore Mimi CSO’da</b><span>${ages} yaş için ${FACTS.concerts.kindTr.toLocaleLowerCase('tr')}.</span></div></li>
+    <div><b>Eğitim konserleri</b><span>${ages} yaş için ${FACTS.concerts.kindTr.toLocaleLowerCase('tr')}.</span></div></li>
   <li><div><b>${num('siteVideos').tr}</b><span>${num('riddles').tr}; ${num('guestAnswerers').tr.replace(/^“Dore soruyor” serisinde /, '“Dore soruyor”da ')}.</span></div></li>
 </ul>`;
 
@@ -104,10 +126,10 @@ export const FOUNDATION_SLIDES = [
   {
     id: 'bugune-kadar', label: 'Bugüne kadar', theme: 'dark', layout: 'full',
     html: `${head(FACTS.foundation.nameTr, 'Dore Mimi, <em>bugüne kadar</em>',
-      `Bir kitap serisi, ${FACTS.concerts.orchestraTr} ile konserler ve çalgıları tanıtan videolar.`, true)}
+      `Bir YouTube kanalı, ${N.books} kitap, senfoni orkestrasıyla konserler. Şimdi de bir uygulama.`, true)}
       ${timeline}
       ${strip}`,
-    notes: `<p><b>Uygulamadan önce vakfın bugüne kadar yaptıkları:</b> üstte tarih sırası, altta kitaplar, konserler ve site. Her tarih ve sayı bir kaynağa dayanıyor; kaynaklar aşağıda, satır satır.</p>
+    notes: `<p><b>Uygulamadan önce, vakfın bugüne kadar yaptıkları.</b> Tarihleri tek tek okumayın; son sütunda durun: bugün buradayız, sırada uygulama var. Her tarih ve sayı bir kaynağa dayanıyor; kaynaklar aşağıda, satır satır.</p>
       ${MARKERS.map(m => line(full(m.date, { day: m.day !== false }) + ':', m.text + '.', when(m.date).src)).join('')}
       <p><b>Konser tarihleri ilan, afiş ve sezon duyurusundan.</b> “Yapıldı” demeyin; “programda” ya da yalnızca tarih ve salon. Sorulursa:</p>
       ${['2020-11-20/22', '2021-02-19'].map(d => line(full(d) + ':', when(d).tr, when(d).src)).join('')}

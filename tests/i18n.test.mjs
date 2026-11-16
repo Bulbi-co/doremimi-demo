@@ -44,7 +44,7 @@ test('every key app.js asks for exists; a key it builds from a list exists for e
   // the keys app.js builds: tabs, Öğren's tabs, video kinds, settings, families, hub rows, keyboard sizes, legal texts
   const built = [
     ...['kesfet', 'ogren', 'izle', 'cal'].flatMap(k => [`tab.${k}`, `tab.${k}.title`]), 'tab.doremimi.title', 'tab.doremimi.aria',
-    ...['isaretler', 'calgilar', 'aileler', 'degerler'].map(k => `ogren.${k}`),
+    ...['isaretler', 'calgilar', 'aileler'].map(k => `ogren.${k}`),
     ...['riddle', 'clip', 'interview', 'karaoke', 'intro'].map(k => `kind.${k}`),
     ...['zorluk', 'dil', 'motion', 'buttons', 'music', 'notify'].flatMap(k => [`settings.${k}`, `settings.${k}.line`]),
     ...['small', 'medium', 'large'].flatMap(k => [`kb.${k}`, `kb.${k}.aria`]),

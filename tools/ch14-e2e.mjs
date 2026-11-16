@@ -68,7 +68,7 @@ try {
   const withLevel = async hash => { await open('#/'); await ev(`localStorage.setItem('doremimi-demo-v1', JSON.stringify({ profile: { difficulty: 'baslangic', seenIntro: true } }))`); await send('Page.navigate', { url: `${base}/app/?still&dil=tr${hash}` }); await sleep(1500); };
   // Öğren is information only (§10): no page reached from it starts a round, and a family card shows its instruments
   await withLevel('#/ogren/aileler');
-  for (const hash of ['#/ogren/isaretler', '#/ogren/calgilar', '#/ogren/aileler', '#/ogren/degerler', '#/isaret-kategori/bemol', '#/isaret/bemol', '#/calgi/keman', '#/calgi/piyano']) {
+  for (const hash of ['#/ogren/isaretler', '#/ogren/calgilar', '#/ogren/aileler', '#/degerler', '#/isaret-kategori/bemol', '#/isaret/bemol', '#/calgi/keman', '#/calgi/piyano']) {
     await ev(`location.hash = ${JSON.stringify(hash)}`); await sleep(500);
     check(!(await ev(`!!document.querySelector('#page [data-play], #page [data-do="play"], #page [data-prep]')`)), `${hash}: nothing here starts a round`);
   }

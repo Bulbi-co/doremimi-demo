@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { FOUNDATION_SLIDES, MARKERS, SOURCE_TR } from '../deck/foundation.js';
+import { FOUNDATION_SLIDES, MARKERS, COLUMNS, NOW, SOURCE_TR } from '../deck/foundation.js';
 import { FROM, FACTS, SOURCES } from '../deck/foundation-facts.js';
 import { SLIDES } from '../deck/slides.js';
 import { snapshot, digestOf, RESEARCH } from '../tools/foundation-facts.mjs';
@@ -67,6 +67,21 @@ test('each timeline marker is a dated fact, and nothing postponed or only planne
     assert.ok(FACTS.timeline.some(t => t.date === date && notes.includes(text(t.tr))), `${date} is in the notes, in its fact's own words`);
   }
   assert.doesNotMatch(shown, /ertelendi|planlandı|hazırlıyor/);
+});
+
+test('the timeline is five columns: every dated fact in one of them, the orchestra once, and today last', () => {
+  // Owner, 2026-11-16: the timeline said "CSO this time, CSO that time". One column carries the orchestra now.
+  const drawn = COLUMNS.flatMap(c => c.dates);
+  assert.deepEqual([...drawn].sort(), MARKERS.map(m => m.date).sort(), 'each dated fact is on the slide once, and no other date is');
+  const shown = said()[0].shown;
+  assert.equal(shown.split(FACTS.concerts.orchestraTr).length - 1, 1, 'the orchestra is named once');
+  assert.ok((shown.match(/CSO/g) ?? []).length <= 1, `“CSO” is on the slide ${(shown.match(/CSO/g) ?? []).length} times (the poster's credit may say it once)`);
+  const html = FOUNDATION_SLIDES[0].html;
+  assert.equal((html.match(/<li class="fnd-now">/g) ?? []).length, 1);
+  assert.ok(html.indexOf('<li class="fnd-now">') > html.lastIndexOf('<b class="fnd-y">' + drawn.at(-1).slice(0, 4)), 'today comes after the last dated column');
+  // Today is not a sourced fact: it carries no number and nothing about what was done.
+  assert.doesNotMatch(`${NOW.label} ${NOW.text} ${NOW.next}`, /\d|konser|kitap|yapıldı|oldu/);
+  assert.ok(shown.includes(NOW.text) && shown.includes(NOW.next));
 });
 
 test('the snapshot was not edited by hand: its digest is its own values’', () => {

@@ -32,7 +32,4 @@ export const SCRIPT = [
   [{ name: 'open', hash: '#/ogren/aileler', tap: '[data-fam="YayliCalgilar"]' }],                        // 10 Yaylı Çalgılar: the family's instruments
   [{ name: 'open', hash: '#/ogren/calgilar?aile=yayli', tap: '[data-push="#/calgi/keman"]' }],          // 11 Keman: its page, nothing to play
   [{ name: 'page', hash: '#/cal' }],                                                                    // 12 Çal
-  [{ name: 'song.game', hash: '#/sarki/keman' }, { name: 'game.choose', right: true }],                 // 13 Keman: Bu çalgıyla oyna, seç
-  [{ name: 'game.next' }, { name: 'game.finish', gap: 400 }],                                           // 14 Turu bitir: sonuçlar
-  [{ name: 'results.scroll', to: 'badges' }],                                                           // 15 Rozetler
 ];

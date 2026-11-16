@@ -80,13 +80,14 @@ test('a Çal round never moves, through a whole round of wrong and of right answ
   }
 });
 
-test('every way into the game names its origin: Oyna’s taps and Çal’s song; nothing in Öğren opens a round (§10)', () => {
+test('every way into the game names its origin, and all of them are on Oyna: nothing in Öğren (§10) or on a song page opens a round', () => {
   const tags = app.match(/<button[^>]*data-play="[^"]*"[^>]*>/g) ?? [];
-  assert.ok(tags.length >= 2, 'category card, song page');
-  for (const tag of tags) assert.match(tag, /data-origin="(kesfet|cal)"/, tag);
+  assert.ok(tags.length >= 1, 'the category card');
+  for (const tag of tags) assert.match(tag, /data-origin="kesfet"/, tag);
   for (const tag of app.match(/data-do="play"[^>]*/g)) assert.match(tag, /data-origin="kesfet"/, tag);
   assert.match(slice('function categoryCard(', '\n}'), /data-play="\$\{id\}" data-origin="kesfet"/);
-  assert.match(slice('function songPage(', '\n}'), /data-play="\$\{P\.concept \?\? 'karisik'\}" data-origin="cal"/);
+  // Owner, 2026-11-16: no way into the game from a song or an instrument; the song page plays its song and no more.
+  assert.doesNotMatch(slice('function songPage(', '\n}'), /data-play|data-origin/);
   // every call passes an origin, and Tekrar oyna keeps the round's own
   for (const call of app.match(/openGame\(\{[^}]*\}/g)) assert.match(call, /origin/, call);
   assert.match(app, /openGame\(\{ concept: c, origin: G\.origin, intro: false \}\)/);
@@ -363,6 +364,8 @@ test('the deck’s script plays as ch. 14 tells it: Oyna writes, Öğren is read
   assert.match(script, /"name":"open","hash":"#\/ogren\/aileler","tap":"\[data-fam=\\"YayliCalgilar\\"\]"/);
   assert.match(script, /"name":"open","hash":"#\/ogren\/calgilar\?aile=yayli","tap":"\[data-push=\\"#\/calgi\/keman\\"\]"/);
   assert.doesNotMatch(script, /prep\.|game\.flip|game\.grade/, 'no step turns a card over outside a round that needs it');
-  assert.match(script, /"name":"song\.game","hash":"#\/sarki\/keman"/);
+  // The Çal rule above still stands in lib/modes.js (the app keeps it until its own song page loses the button), but
+  // the script no longer plays a song's round: nothing on the phone opens one.
+  assert.doesNotMatch(script, /song\.game|game\.finish|results\.scroll/);
   assert.doesNotMatch(script, /"level":/, 'the script never picks a level');
 });

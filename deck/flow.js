@@ -18,10 +18,19 @@
  *
  * Effects
  *   { type: 'show', slide }            render slide `slide` (classes, counter, notes)
- *   { type: 'send', msg }              post msg to the phone (msg.id is set when a dm-done is awaited)
+ *   { type: 'send', msg }              post msg to the phone (msg.id is set when a dm-done is awaited; a slide's
+ *                                      `leave` message has none)
  *   { type: 'mark' }                   repaint the step buttons from state.sub
  *   { type: 'timer', ms, token }       call back with { type: 'dwell', token } after ms
  *   { type: 'watchdog', ms, token }    call back with { type: 'watchdog', token } after ms
+ *   { type: 'autotimer', ms, token }   call back with { type: 'autotick', token } after ms (auto-play, below)
+ *
+ * Auto-play (owner, dossier ch. 14 §11: the deck "walks it unattended, still behind the flow lock"). It is not a
+ * second way to move: a tick becomes the very `next` a presenter's → is, so it can only fire while the deck is idle,
+ * plays each step under the same lock and waits for the same dm-done. One tick is armed each time the deck comes to
+ * rest, after a pause long enough to read what is there. Anything the presenter does (→, ←, a dot, a step button, R)
+ * hands the deck back and auto-play stops, even when the lock ignores the press itself. It also stops by itself the
+ * moment the last slide's last step has settled.
  */
 
 /** A slide change keeps the lock at least this long: .device moves over 0.9 s (sunum.css), the slide fades in 0.72 s. */
@@ -35,16 +44,69 @@ export const STEP_DWELL = 350;
  * deck must never stay locked in front of an audience.
  */
 export const WATCHDOG = 20000;
+/**
+ * Auto-play's pauses. After a step: long enough to see what the phone did, or the step's own `hold` where the slide
+ * gives one (the song on the Şarkı slide has to be heard, not just started). On a new slide: the slide's own reading
+ * time (`read`, from deck/slides.js readMs), never less than AUTO_SLIDE. Just switched on: a short beat, because the
+ * presenter has already been looking at this slide.
+ */
+export const AUTO_STEP = 3500;
+export const AUTO_SLIDE = 5000;
+export const AUTO_START = 1200;
+/** The presenter's own inputs. Each one stops auto-play, whether or not the lock lets it move the deck. */
+export const MANUAL = Object.freeze(['next', 'prev', 'goto', 'act', 'reset']);
 
-export function initial(slides) {
-  return { phase: 'loading', slides, cur: -1, sub: 0, pending: null, waitPhone: false, waitDwell: false, nextId: 1, token: 0, held: null };
+/**
+ * `pause` replaces every auto-play pause with one number. Only tools/auto-e2e.mjs sets it (?bekle=), so a headless
+ * run walks the deck in minutes; the lock and every dm-done are waited for exactly as on stage.
+ */
+export function initial(slides, { pause = null } = {}) {
+  return { phase: 'loading', slides, cur: -1, sub: 0, pending: null, waitPhone: false, waitDwell: false, nextId: 1, token: 0, held: null,
+    auto: false, armed: false, autoToken: 0, pause };
 }
 
 /** Steps on slide i: the "canlı göster" buttons' messages, in order. */
 const acts = (s, i) => s.slides[i]?.acts ?? [];
 
+/** The last slide, its steps all played: where → has nothing left to do. */
+const atEnd = s => s.cur >= s.slides.length - 1 && s.sub >= acts(s, s.cur).length;
+
 export function step(s, e) {
+  // A presenter's input takes the deck back from auto-play first, so even a press the lock ignores stops it.
+  const taken = s.auto && MANUAL.includes(e.type);
+  const r = move(taken ? { ...s, auto: false, armed: false } : s, e);
+  // The control is painted by `mark`; an ignored press produced none, and the control would still read "on".
+  if (taken && !r.effects.some(fx => fx.type === 'mark')) r.effects.push({ type: 'mark' });
+  return arm(r, e.type === 'auto' ? AUTO_START : null);
+}
+
+/**
+ * Auto-play's one timer. At rest with auto-play on, exactly one tick is armed; while the deck is busy none is, and a
+ * tick left over from an earlier rest carries an old token. Coming to rest at the end switches auto-play off instead.
+ */
+function arm({ state, effects }, ms) {
+  if (!state.auto || state.phase !== 'idle') return state.armed ? { state: { ...state, armed: false }, effects } : { state, effects };
+  if (state.armed) return { state, effects };
+  if (atEnd(state)) return { state: { ...state, auto: false }, effects: [...effects, { type: 'mark' }] };
+  const token = state.autoToken + 1;
+  const slide = state.slides[state.cur];
+  const rest = state.sub === 0 ? Math.max(AUTO_SLIDE, slide?.read ?? 0) : slide?.holds?.[state.sub - 1] ?? AUTO_STEP;
+  return { state: { ...state, armed: true, autoToken: token }, effects: [...effects, { type: 'autotimer', ms: state.pause ?? ms ?? rest, token }] };
+}
+
+function move(s, e) {
   switch (e.type) {
+    case 'auto': {
+      // The control and the A key: on, or off again. `on` forces it one way (a touch on the phone only ever stops).
+      const on = e.on ?? !s.auto;
+      if (on === s.auto) return { state: s, effects: [] };
+      return { state: { ...s, auto: on, armed: false }, effects: [{ type: 'mark' }] };
+    }
+    case 'autotick': {
+      if (!s.auto || !s.armed || e.token !== s.autoToken || s.phase !== 'idle') return { state: s, effects: [] };
+      // The same move → makes: one step, or the next slide.
+      return move({ ...s, armed: false }, { type: 'next' });
+    }
     case 'ready': {
       if (s.phase !== 'loading') return { state: s, effects: [] };
       const st = { ...s, phase: 'idle' };
@@ -124,9 +186,14 @@ function play(s, k) {
 function enter(s, i, { initial: first = false } = {}) {
   const st = { ...s, cur: i, sub: 0, held: null };
   const show = first ? [] : [{ type: 'show', slide: i }];
+  // A slide that changes something lasting on the phone (Ayarlar: the language) names a `leave` message that puts it
+  // back, sent whichever way the deck leaves the slide: a dot or End pressed while the phone was in French left every
+  // slide after it in French. It carries no id: the phone runs its messages in the order they arrive, so the slide
+  // being entered still plays after it, and that one is the answer the lock waits for.
+  const leave = !first && s.cur !== i ? s.slides[s.cur]?.leave ?? null : null;
   const msg = s.slides[i].phone;
   const r = lock(st, msg ?? null, SLIDE_DWELL);
-  return { state: r.state, effects: [...show, ...r.effects] };
+  return { state: r.state, effects: [...(leave ? [{ type: 'send', msg: leave }] : []), ...show, ...r.effects] };
 }
 
 /** Enter busy: send msg (if any) with a fresh id, start the dwell timer and the watchdog. */

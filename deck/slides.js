@@ -59,20 +59,20 @@ export const SLIDES = [
     id: 'kapak', label: 'Kapak', theme: 'dark', phone: { type: 'reset', hash: '#/' },
     html: `
       <h1 class="title">Müziği oynayarak<br><em>öğren.</em></h1>
-      <p class="lead">Dore Mimi Yetenek ve Eğitim Vakfı için: Dore ve Mimi'nin şarkıları, çalgıları ve videoları, tek bir müzik kart oyunuyla.</p>`,
-    notes: `<p><b>“Doremimi'yi baştan sona birlikte gezeceğiz.”</b> Sağdaki telefon gerçek gibi çalışır; → her slaytın canlı gösterimini sırayla oynatır.</p><p>Önce sağ üstteki <b>Sesi aç</b>'a bir kez tıklayın. Bu slayta dönünce telefon sıfırlanır.</p><p><b>A</b> ya da alttaki <b>Otomatik</b> sunumu kendi kendine yürütür; →, ← ya da telefona dokunmak durdurur.</p>`,
+      <p class="lead">Dore Mimi Yetenek ve Eğitim Vakfı için hazırlanan uygulama: müzik kart oyunu, çalgılar, şarkılar ve videolar tek yerde.</p>`,
+    notes: `<p><b>“Önce vakfın bugüne kadar yaptıklarına, sonra uygulamaya bakacağız.”</b> Sağdaki telefon uygulama gibi çalışır; dokunulabilir.</p><p>Başlamadan sağ üstteki <b>Sesi aç</b>'a bir kez tıklayın. <b>→</b> slayttaki düğmeleri sırayla oynatır, bitince sonraki slayta geçer; <b>←</b> geri alır; <b>R</b> telefonu slaytın başına döndürür. Bu slayta dönünce telefon sıfırlanır.</p><p><b>A</b> ya da alttaki <b>Otomatik</b> sunumu kendi kendine yürütür; →, ← ya da telefona dokunmak durdurur.</p>`,
   },
   // What the foundation has done, before the app is shown (owner, 2026-11-16; dossier ch. 14 §13; deck/foundation.js).
   ...FOUNDATION_SLIDES,
   {
     id: 'gezinme', label: 'Gezinme', theme: 'light', phone: go('#/'),
     html: step('Dört sekme, ortada vakıf',
-      'Oyna · Öğren · İzle · Çal. Ortadaki logo vakfın sayfasını açar; çocuğun profili sağ üstte.',
+      "Altta dört sekme; ortadaki logo Dore Mimi Vakfı'nı, sağ üstteki resim çocuğun profilini açar.",
       [],
       dockPic),
     // The two tabs with no slide of their own; Oyna, Öğren and Çal each get the slide after this one.
     acts: [['Logo: Dore Mimi Vakfı', go('#/doremimi')], ['İzle', go('#/izle')]],
-    notes: `<p>Vakıfla konuştuğumuz düzen: <b>Oyna · Öğren · logo · İzle · Çal.</b> Testçiler uygulamada dolaşmayı karışık bulmuştu; her yer artık tek bir yerden açılır.</p><ol><li><b>Logo</b>: Dore Mimi Vakfı. En üstte duyurular döner; altında Faaliyetler, Katıl, Tanış, Bize ulaş ve Uygulama, her bağlantı bir kez.</li><li><b>İzle</b>: bilmeceler dahil bütün videolar. Videolar YouTube'da olduğu için oynatmadan önce ebeveyn PIN'i istenir (demo PIN'i <b>135790</b>).</li></ol><p>Oyna, Öğren ve Çal sıradaki üç slaytta.</p>`,
+    notes: `<p>Alttaki sıra: <b>Oyna · Öğren · logo · İzle · Çal.</b> Her sayfaya tek bir yerden gidilir.</p><ol><li><b>Logo: Dore Mimi Vakfı</b>: en üstte duyurular döner; altında Faaliyetler, Katıl, Tanış, Bize ulaş ve Uygulama.</li><li><b>İzle</b>: bilmeceler, klipler ve söyleşiler, bütün videolar burada. Videolar YouTube'da olduğu için açılmadan önce ebeveyn PIN'i istenir (demo PIN'i <b>135790</b>).</li></ol><p>Oyna, Öğren ve Çal sıradaki üç slaytta.</p>`,
   },
   {
     /*
@@ -83,29 +83,29 @@ export const SLIDES = [
      */
     id: 'kesfet', label: 'Oyna', theme: 'light', phone: go('#/'),
     html: step('Oyna: oyunun kendisi',
-      'Açılış ekranı oyundur: ortada büyük Şimdi Oyna, altında her konu kendi renginde bir kart. Çocuk kartı görür, cevabı kendisi yazar.',
-      ['Bilemezse harf kutuları, sonra dört seçenek gelir', 'Yanlışta kart dönüp anlatır; yanlış cevap hiçbir şey kaybettirmez']),
+      'Uygulama oyunla açılır: ortada Şimdi Oyna, altında 12 kategori. Çocuk kartı görür, cevabı kendisi yazar.',
+      ['Bilemezse harf kutuları, sonra dört seçenek gelir', 'Yanlış seçimde kart dönüp anlatır; yanlış cevap hiçbir şey kaybettirmez']),
     acts: [
       ['Kategoriler', batch(go('#/'), act('scroll', { to: '.kats-sec' }))],
       ['Şimdi Oyna', batch(go('#/'), act('oyna.press'))],
     ],
-    notes: `<p>Testçilere göre Keşfet oyunu içermiyor gibiydi. Artık sekmenin adı Oyna ve kendisi oyun; duyurular logonun sekmesine taşındı.</p><ol><li><b>Kategoriler</b>: her işaret ve her çalgı ailesi kendi renginde bir kart; karta dokunmak o konunun turunu açar.</li><li><b>Şimdi Oyna</b>: oyun açılır. İlk oyun çocuğun seviyesini sorar (Başlangıç, Orta, İleri).</li></ol><p><b>Buradan sonra telefonda siz oynayın.</b> Gösterilecekler: yanlış yazınca cevap harf kutularına döner; yine olmazsa dört seçenek gelir; yanlış seçimde kart dönüp anlatır. Oyun ancak üst üste dört zorlanmada bir adım kolaylaşır; ekranda seviye adı ya da puan yok.</p><p>Bitince <b>→</b>: bir sonraki slayta geçer ve oyunu kapatır. Cevap yazılırken klavyedeki harfler telefona gider (R dahil); oyunu elle kapatmak için sol üstteki çarpı.</p>`,
+    notes: `<p>Uygulama Oyna sekmesiyle açılır; sekmenin kendisi oyundur.</p><ol><li><b>Kategoriler</b>: yedi müzik işareti ve beş çalgı ailesi, her biri kendi renginde bir kart; karta dokunmak o kategorinin turunu açar.</li><li><b>Şimdi Oyna</b>: Müzik Kart Oyunu açılır. İlk oyunda çocuğun seviyesi sorulur (Başlangıç, Orta, İleri).</li></ol><p><b>Buradan sonra telefonda siz oynayın.</b> Gösterilecekler: yanlış yazınca harf kutuları gelir; yine olmazsa dört seçenek; yanlış seçimde kart dönüp anlatır. Oyun ancak üst üste dört zorlanmada kolaylaşır.</p><p>Bitince <b>→</b>: oyunu kapatır ve sonraki slayta geçer. Cevap yazılırken klavyedeki harfler telefona gider (R ve A dahil); oyunu elle kapatmak için sol üstteki çarpı.</p>`,
   },
   {
     id: 'ogren', label: 'Öğren', theme: 'light', phone: go('#/ogren/aileler'),
     html: step('Öğren: yalnızca bilgi',
-      'İşaretler, çalgılar, aileler ve değerler: çocuk burada okur ve bakar, oyun başlamaz. Kartı çevirip okumak, oyunda zorlandığında yardım olarak gelir.',
-      ['Çalgılar fotoğraflı bir ızgara, aile süzgeciyle', 'Bir aileye dokununca o ailenin çalgıları']),
+      'İşaretler, Çalgılar, Aileler ve Değerler: çocuk burada okur ve bakar; oyun buradan başlamaz.',
+      ['Beş aile: birine dokununca o ailenin çalgıları açılır', '41 çalgı: her birinin fotoğrafı, bilgisi ve şarkısı var']),
     acts: [['Yaylı Çalgılar', batch(go('#/ogren/aileler'), tap('[data-fam="YayliCalgilar"]'))], ['Keman', batch(go('#/ogren/calgilar?aile=yayli'), tap('[data-push="#/calgi/keman"]'))]],
-    notes: `<p>Öğren'in dört sekmesi: <b>İşaretler, Çalgılar, Aileler, Değerler.</b> Burada oynatma düğmesi yok: Öğren bilgi içindir. Bilmeceler İzle'de, notalar Çal'da.</p><ol><li><b>Yaylı Çalgılar</b>: aile kartına dokununca Çalgılar o ailenin süzgeciyle açılır; her çalgı fotoğrafıyla.</li><li><b>Keman</b>: çalgının sayfası, videoları ve şarkısı. Kartları çevirip okumak artık yalnızca oyunda, çocuk üst üste zorlandığında yardım olarak gelir.</li></ol><p>Değerler sekmesi vakfın Müzikle Değerler Eğitimi dizisini anlatır; uygulamada henüz olmayan parçalar “Hazırlanıyor” der.</p>`,
+    notes: `<p>Öğren'in dört sekmesi: <b>İşaretler, Çalgılar, Aileler, Değerler.</b> Slayt Aileler'de açılır. Burada oyun düğmesi yok; bilmeceler İzle'de, şarkılar Çal'da.</p><ol><li><b>Yaylı Çalgılar</b>: aile kartına dokununca Çalgılar sekmesi o ailenin çalgılarıyla açılır; her çalgı fotoğrafıyla.</li><li><b>Keman</b>: çalgının sayfası: kısa bilgisi, bilmece videosu ve şarkısı.</li></ol><p>Değerler sekmesi vakfın Müzikle Değerler Eğitimi'ni anlatır; uygulamada henüz olmayan bölümü “Hazırlanıyor” der.</p>`,
   },
   {
     id: 'cal', label: 'Çal', theme: 'light', phone: go('#/cal'),
     html: step('Çal: piyano ve şarkılar',
-      'Çocuk piyanoda serbestçe çalar; her çalgının şarkısı karaoke sözleriyle çalar.',
+      'Üstte çocuğun serbestçe çaldığı piyano, altında çalgıların şarkıları.',
       []),
-    acts: [['Piyanoda çal', batch(go('#/cal'), act('keys.play', { keys: [60, 62, 64, 65, 67, 67, 69, 67] }))]],
-    notes: `<p>Nota çalan her şey burada.</p><ol><li><b>Piyano</b>: çalınanlar Melodim'e eklenir.</li></ol><p>41 çalgının her birinin şarkısı var; karaoke satırı ilerler, tuşlar yanar. Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı.</p>`,
+    acts: [['Serbest çal', batch(go('#/cal'), act('keys.play', { keys: [60, 62, 64, 65, 67, 67, 69, 67] }))]],
+    notes: `<p>Nota çalan her şey bu sekmede.</p><ol><li><b>Serbest çal</b>: telefon piyanoda kısa bir ezgi çalar; çalınanlar Melodim'e eklenir.</li></ol><p>Altta Şarkılar: 41 çalgının her birinin şarkısı var. Birini sıradaki slaytta dinleyeceğiz.</p>`,
   },
   {
     /*
@@ -115,11 +115,11 @@ export const SLIDES = [
      * Keman has no lyric sheet (ten instruments do), only the words on its karaoke line.
      */
     id: 'sarki', label: 'Şarkı', theme: 'light', phone: go('#/sarki/keman'),
-    html: step("Keman'ın şarkısı, uygulamanın klavyesinde",
-      'Her çalgının kendi şarkısı var: notalar klavyede sırayla yanar, karaoke satırında önce nota adları, sonra sözler ilerler.',
-      ['41 şarkının hepsi aynı klavyede, nota nota çalar', 'Şarkı sözleri ayrı bir sayfada da okunur']),
+    html: step("Keman'ın şarkısı, uygulamanın piyanosunda",
+      'Şarkı çalarken çalan tuş yanar; karaoke satırında önce nota adları, sonra sözler ilerler.',
+      ['41 şarkının hepsi aynı piyanoda, nota nota çalar', 'Şarkı sözleri ayrı bir sayfada da okunur']),
     acts: [['Keman şarkısını çal', batch(go('#/sarki/keman'), act('song.play')), { hold: SONG_HOLD }], ['Gitar: şarkı sözleri', go('#/sozler/gitar')]],
-    notes: `<p>Vakfın verdiği notalar uygulamanın kendi klavyesinde çalar: ayrı bir ses dosyası yok, her nota tek tek çalınır.</p><ol><li><b>Keman şarkısını çal</b>: klavyede o an çalan tuş yanar. Karaoke satırında önce nota adları, yaklaşık 20. saniyeden sonra şarkının sözleri ilerler. Önce sağ üstten <b>Sesi aç</b>'a basılmış olmalı.</li><li><b>Şarkı sözleri</b>: on çalgının sözleri ayrı bir sayfada okunur; burada Gitar'ınki.</li></ol><p>Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı. Sonraki adıma geçince şarkı durur; otomatik oynatma şarkıyı 24 saniye dinletir.</p>`,
+    notes: `<p>Şarkılar uygulamanın piyanosunda nota nota çalar; ses kaydı yok.</p><ol><li><b>Keman şarkısını çal</b>: o an çalan tuş yanar. Karaoke satırında önce nota adları, yaklaşık 20. saniyeden sonra şarkının sözleri ilerler. Ses için sağ üstteki <b>Sesi aç</b>'a basılmış olmalı.</li><li><b>Gitar: şarkı sözleri</b>: on çalgının sözleri ayrı bir sayfada okunur; Keman'ınki olmadığı için burada Gitar'ınki.</li></ol><p>Her şarkı aynı piyano sesiyle çalar; gerçek çalgı sesleri vakfın kararı. Sonraki adıma geçince şarkı durur; otomatik oynatma şarkıyı 24 saniye dinletir.</p>`,
   },
   {
     id: 'aile', label: 'Aile ve içerik', theme: 'light', phone: go('#/profil'),
@@ -127,13 +127,13 @@ export const SLIDES = [
       "Her çocuğa ayrı profil. Dışarı giden her bağlantı ebeveyn PIN'i ister. İçeriği vakıf düzenler.",
       ['Reklam yok, sohbet yok, ücretli ödül yok', "İşaret, soru, çalgı, video: Excel'de açılan tablolar"]),
     acts: [['Kim oynuyor?', batch(go('#/profil'), act('switcher.open'))], ["Ebeveyn PIN'i", batch(go('#/profil'), act('gate.open', { row: 'hesabim' }), act('gate.type'))]],
-    notes: `<p>Profil sağ üstte; kardeşler <b>Kim oynuyor?</b> ile geçer. Ebeveyn sayfaları ve dışarı giden her bağlantı altı haneli PIN ister; üç yanlışta 30 saniye kilit. Demo PIN'i <b>135790</b> (yalnızca bu demoya ait).</p><p>İçerik kodda değil, tablolarda: vakıf ekibi panelden düzenler, yayından önce hatalar satır satır gösterilir. Her sorunun bir zorluğu var (Başlangıç, Orta, İleri); işaret kartlarınınkini biz koyduk, içerik ekibi değiştirebilir. Bugün içerik değişikliği yeni bir sürümle telefona ulaşır.</p>`,
+    notes: `<p>Telefonda Profilim açık; uygulamada sağ üstteki resimden gelinir.</p><ol><li><b>Kim oynuyor?</b>: kardeşler profili buradan değiştirir.</li><li><b>Ebeveyn PIN'i</b>: telefon Hesabım'a dokunur, Ebeveyn kilidi çıkar, PIN yazılır ve Hesabım açılır. Ebeveyn sayfaları ve dışarı giden her bağlantı altı haneli PIN ister; üç yanlışta 30 saniye kilitlenir. Demo PIN'i <b>135790</b> (yalnızca bu demoya ait).</li></ol><p>İçerik tablolarda durur: vakıf ekibi içerik panelinden düzenler, yayından önce hatalar satır satır gösterilir. Her sorunun bir zorluğu var (Başlangıç, Orta, İleri); işaret kartlarınınkini biz koyduk, içerik ekibi değiştirebilir. Bugün içerik değişikliği uygulamanın yeni sürümüyle telefona ulaşır.</p>`,
   },
   {
     id: 'kapanis', label: 'Kapanış', theme: 'dark', layout: 'center', phone: go('#/doremimi'),
     // The platforms were a slide of their own, with three still frames; under the nine-slide cap they are this line.
     html: `<div class="closing"><span class="cl-l">Dore ve Mimi</span><span class="cl-r">artık <em>cebinizde.</em><small class="cl-plat">iPhone · iPad · Android<br>Mac · Windows · tarayıcı</small></span></div>`,
-    notes: `<p>Telefonda vakfın sekmesi açık: duyurular, faaliyetler (Müzikle Değerler Eğitimi, burslar, etkinlikler), gönüllülük ve iletişim.</p><p><b>Tek kod, her cihaz</b> (Avalonia, .NET): iPhone ve iPad'de TestFlight, Android'de APK, Mac, Windows ve tarayıcı. Mağazaya çıkış için imzalar ve vakfın onayı gerekiyor.</p><p>Sorularınız ve değiştirmek istedikleriniz bizim için yol haritası.</p>`,
+    notes: `<p>Telefonda Dore Mimi Vakfı sekmesi açık: duyurular, faaliyetler (Müzikle Değerler Eğitimi, burslar, etkinlikler), gönüllülük ve iletişim.</p><p><b>Aynı uygulama her cihazda:</b> iPhone, iPad, Android, Mac, Windows ve tarayıcı. Mağazalara çıkış için imzalar ve vakfın onayı gerekiyor.</p><p>Sorularınızı ve değiştirmek istediklerinizi dinleyelim.</p>`,
   },
 ];
 

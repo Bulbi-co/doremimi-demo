@@ -79,14 +79,16 @@ of dossier ch. 14 §9 to §14: every → brought up one more feature to explain)
 the foundation has done, on one slide: a timeline and three cards, the books, the concerts and the site
 (`deck/foundation.js`, numbers from `deck/foundation-facts.js`); Gezinme (the dock; the logo's tab, then İzle); Oyna
 (the categories, then Şimdi Oyna: the game opens, on the level question for a new child, and the deck plays nothing
-after it); Öğren (a family's instruments, one instrument's page; nothing to play); Çal (the piano); Şarkı (Keman's
-song playing on the app's keyboard, then Gitar's lyric sheet); Aile ve içerik (Kim oynuyor?, the parent PIN); Kapanış
+after it); Öğren (a family's instruments, one instrument's page; nothing to play); Çal (Serbest çal, the piano); Şarkı (Keman's
+song playing on the app's piano, then Gitar's lyric sheet); Aile ve içerik (Kim oynuyor?, the parent PIN); Kapanış
 (the foundation's tab, the platforms as one line). No slide shows results or XP, and none opens the game from a song
 or an instrument. The slides are data in `deck/slides.js`. Every step is a whole state: it goes to its screen, then
 presses, so ← and R land on the same screen whatever was tapped on the phone in between, and no slide makes the phone
 replay anything to reach it. Until the cut the slides up to Çal walked one seeded script, `app/data/script.js`; no
-slide asks for it now, and it stays for `tools/shoot.mjs` and `tools/ch14-e2e.mjs`. `tests/deck.test.mjs` holds the
-count, the two steps, the Oyna slide and the phone's routes and acts, and `tests/foundation.test.mjs` holds the opening
+slide asks for it now, and it stays for `tools/shoot.mjs` and `tools/ch14-e2e.mjs`. The slides' words are for the foundation's own people: one name for a thing, the
+name the phone shows, and none of our own words (who tested it, what a tab used to be called, what it is built with).
+`tests/deck.test.mjs` holds the
+count, the two steps, the Oyna slide, the phone's routes and acts, the typed numbers and those words, and `tests/foundation.test.mjs` holds the opening
 slide to its facts.
 
 ## What is where

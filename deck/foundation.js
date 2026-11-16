@@ -107,7 +107,7 @@ export const FOUNDATION_SLIDES = [
       `Bir kitap serisi, ${FACTS.concerts.orchestraTr} ile konserler ve çalgıları tanıtan videolar.`, true)}
       ${timeline}
       ${strip}`,
-    notes: `<p><b>Uygulamadan önce: vakfın bugüne kadar yaptıkları, tek slaytta.</b> Her tarih ve sayı bir kaynağa dayanıyor; kaynaklar aşağıda, satır satır.</p>
+    notes: `<p><b>Uygulamadan önce vakfın bugüne kadar yaptıkları:</b> üstte tarih sırası, altta kitaplar, konserler ve site. Her tarih ve sayı bir kaynağa dayanıyor; kaynaklar aşağıda, satır satır.</p>
       ${MARKERS.map(m => line(full(m.date, { day: m.day !== false }) + ':', m.text + '.', when(m.date).src)).join('')}
       <p><b>Konser tarihleri ilan, afiş ve sezon duyurusundan.</b> “Yapıldı” demeyin; “programda” ya da yalnızca tarih ve salon. Sorulursa:</p>
       ${['2020-11-20/22', '2021-02-19'].map(d => line(full(d) + ':', when(d).tr, when(d).src)).join('')}

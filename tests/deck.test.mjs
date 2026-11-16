@@ -10,8 +10,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { SLIDES, SONG_HOLD } from '../deck/slides.js';
 import { SCRIPT } from '../app/data/script.js';
-import { FAMILIES } from '../app/data/content.js';
-import { TABS } from '../app/lib/nav.js';
+import { FAMILIES, SIGN_CATEGORIES } from '../app/data/content.js';
+import { TABS, OGREN_TABS } from '../app/lib/nav.js';
 import { knownRoute, ACT_NAMES, flat } from '../tools/phone-routes.mjs';
 import { SONGS, DIRECTORY } from '../app/data/site.js';
 import { sequence, karaokeLines, length as songLength, slug } from '../app/lib/music.js';
@@ -116,6 +116,30 @@ test('the deck tells no retired story: no XP, no results, no game from a song, n
   // The phone's scripted round (kept for the tools) holds to the same rules.
   assert.ok(SCRIPT.flat().every(a => !('level' in a)), 'the script never picks a level');
   for (const name of ['game.finish', 'results.scroll', 'song.game']) assert.ok(!SCRIPT.flat().some(a => a.name === name), `the script has no ${name}`);
+});
+
+// The audience is the foundation's own people (owner, 2026-11-16: "make sure it is cohesive"): nothing on a slide, a
+// button or in a note is a word of ours (how it was built, who tested it, what a tab used to be called).
+const INTERNAL = /(?<!\p{L})(testçi|dossier|ladder|merdiven|commit|guard|avalonia|testflight|apk|keşfet|süzgeç)|\.net(?!\p{L})/u;
+test('the deck says nothing in the developers’ own words, and calls the piano what the phone calls it', () => {
+  for (const s of SLIDES) { const hit = INTERNAL.exec(words(s).toLocaleLowerCase('tr')); assert.ok(!hit, `${s.id} says “${hit?.[0]}”`); }
+  // The matcher itself: Turkish casing, a word inside a word (Kapak holds no "apk"), a file type.
+  assert.ok(INTERNAL.test('testçilere göre') && INTERNAL.test('KEŞFET'.toLocaleLowerCase('tr')) && INTERNAL.test('avalonia, .net'));
+  assert.ok(!INTERNAL.test('kapak') && !INTERNAL.test('internet'));
+  // Çal's own page says "uygulamanın piyanosu" (app/i18n/ui.js cal.note); the slides once said "klavye" for it.
+  assert.doesNotMatch(SLIDES.map(s => `${s.html} ${(s.acts ?? []).map(a => a[0]).join(' ')}`).join(' '), /klavye/i, 'the slides call it the piano');
+});
+
+test('the numbers typed on the slides are the phone’s: 12 categories, 7 signs, 5 families, 41 instruments, 4 Öğren tabs', () => {
+  const families = Object.keys(FAMILIES).length, signs = SIGN_CATEGORIES.length;
+  const NUM = ['sıfır', 'bir', 'iki', 'üç', 'dört', 'beş', 'altı', 'yedi', 'sekiz', 'dokuz', 'on'];
+  assert.match(slide('kesfet').html, new RegExp(`altında ${signs + families} kategori`));
+  assert.match(words(slide('kesfet')), new RegExp(`${NUM[signs]} müzik işareti ve ${NUM[families]} çalgı ailesi`));
+  assert.match(slide('ogren').html, new RegExp(`>${NUM[families][0].toLocaleUpperCase('tr')}${NUM[families].slice(1)} aile:`));
+  assert.match(slide('ogren').html, new RegExp(`>${DIRECTORY.length} çalgı:`));
+  assert.match(words(slide('ogren')), new RegExp(`Öğren'in ${NUM[OGREN_TABS.length]} sekmesi`));
+  assert.match(app, /if \(gate\.wrong >= 3\) \{ gate\.lockedUntil = Date\.now\(\) \+ 30_000;/, 'the gate locks for 30 s after three wrong PINs');
+  assert.match(words(slide('aile')), /üç yanlışta 30 saniye kilitlenir/);
 });
 
 test('the closing slide carries the platforms as one line, and every slide has presenter notes', () => {

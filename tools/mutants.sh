@@ -118,7 +118,7 @@ mutatef "CONTROL: slides comment only"           deck/slides.js     's/Its own m
 mutatef "CONTROL: script comment only"           app/data/script.js 's/It is data in its own module/It is plain data in its own module/'
 mutatef "Öğren opens on a step of the script"    deck/slides.js     "s/id: 'ogren', label: 'Öğren', theme: 'light', phone: go\('#\/ogren\/aileler'\)/id: 'ogren', label: 'Öğren', theme: 'light', phone: act('goto', { step: 9 })/"
 mutatef "Keman is a step of the script again"    deck/slides.js     "s/\['Keman', batch\(go\('#\/ogren\/calgilar\?aile=yayli'\), tap\('\[data-push=\"#\/calgi\/keman\"\]'\)\)\]/['Keman', act('goto', { step: 11, play: true })]/"
-mutatef "a scripted step behind its own go"      deck/slides.js     "s/\['Piyanoda çal', batch\(go\('#\/cal'\), act\('keys\.play', [^\n]*\n/['Piyanoda çal', batch(go('#\/cal'), act('goto', { step: 12, play: true }))]],\n/"
+mutatef "a scripted step behind its own go"      deck/slides.js     "s/\['Serbest çal', batch\(go\('#\/cal'\), act\('keys\.play', [^\n]*\n/['Serbest çal', batch(go('#\/cal'), act('goto', { step: 12, play: true }))]],\n/"
 mutatef "Çal told before Öğren"                  deck/slides.js     "s/id: 'ogren'/id: 'TMP'/; s/id: 'cal'/id: 'ogren'/; s/id: 'TMP'/id: 'cal'/"
 mutatef "the ladder bullet is back"              deck/slides.js     "s/'Bilemezse harf kutuları, sonra dört seçenek gelir'/\"Zorlandıkça Yaz → Seç → Çevir'e iner, bildikçe çıkar\"/"
 mutatef "the script picks a level"               app/data/script.js "s/origin: 'kesfet', intro: true/origin: 'kesfet', level: 'yaz', intro: true/"
@@ -237,7 +237,7 @@ mutatef "deck CONTROL: slides comment only"      deck/slides.js     's/The two t
 mutatef "deck: a tenth slide"                    deck/slides.js     "s/(  \{\n    id: 'kapanis')/  { id: 'onuncu', label: 'Onuncu', theme: 'dark', layout: 'center', phone: go('#\/doremimi'), html: '<h1 class=\"title\">Bir slayt daha<\/h1>', notes: '<p>Dokuzdan sonra gelen, sahibinin istemediği onuncu slayt.<\/p>' },\n\$1/"
 mutatef "deck: a third step on a slide"          deck/slides.js     "s/act\('gate\.type'\)\)\]\],/act('gate.type'))], ['Ayarlar', go('#\/ayarlar')]],/"
 mutatef "deck: two buttons with one label"       deck/slides.js     "s/\[\"Ebeveyn PIN'i\", batch/['Kim oynuyor?', batch/"
-mutatef "deck: a step presses before it opens its screen" deck/slides.js "s/\['Piyanoda çal', batch\(go\('#\/cal'\), (act\('keys\.play', \{ keys: \[[^\]]*\] \}\))\)\]/['Piyanoda çal', \$1]/"
+mutatef "deck: a step presses before it opens its screen" deck/slides.js "s/\['Serbest çal', batch\(go\('#\/cal'\), (act\('keys\.play', \{ keys: \[[^\]]*\] \}\))\)\]/['Serbest çal', \$1]/"
 mutatef "deck: a slide opens a page the phone lacks" deck/slides.js "s/id: 'aile', label: 'Aile ve içerik', theme: 'light', phone: go\('#\/profil'\)/id: 'aile', label: 'Aile ve içerik', theme: 'light', phone: go('#\/aile')/"
 mutatef "deck: a step names an act the phone lacks" deck/slides.js  "s/act\('switcher\.open'\)/act('switcher.show')/"
 mutatef "deck: the phone loses the tap act"      app/app.js         "s/  'tap': async m => \{/  'press': async m => {/"
@@ -246,7 +246,7 @@ mutatef "deck: Şimdi Oyna types the first answer" deck/slides.js    "s/\['Şimd
 mutatef "deck: Şimdi Oyna answers the level question" deck/slides.js "s/\['Şimdi Oyna', batch\(go\('#\/'\), act\('oyna\.press'\)\)\]/['Şimdi Oyna', batch(go('#\/'), act('oyna.press'), act('intro.finish'))]/"
 mutatef "deck: Şimdi Oyna picks a choice"        deck/slides.js     "s/\['Şimdi Oyna', batch\(go\('#\/'\), act\('oyna\.press'\)\)\]/['Şimdi Oyna', batch(go('#\/'), act('oyna.press'), act('game.choose', { right: true }))]/"
 mutatef "deck: Şimdi Oyna deals its own round"   deck/slides.js     "s/\['Şimdi Oyna', batch\(go\('#\/'\), act\('oyna\.press'\)\)\]/['Şimdi Oyna', batch(go('#\/'), act('game.start', { deck: 'sunum', origin: 'kesfet', intro: true }))]/"
-mutatef "deck: the round is played out on Çal's step" deck/slides.js "s/\['Piyanoda çal', batch\(go\('#\/cal'\), act\('keys\.play', [^\n]*\n/['Piyanoda çal', batch(go('#\/'), act('game.finish'))]],\n/"
+mutatef "deck: the round is played out on Çal's step" deck/slides.js "s/\['Serbest çal', batch\(go\('#\/cal'\), act\('keys\.play', [^\n]*\n/['Serbest çal', batch(go('#\/'), act('game.finish'))]],\n/"
 mutatef "deck: the next card on Aile's step"     deck/slides.js     "s/batch\(go\('#\/profil'\), act\('switcher\.open'\)\)/batch(go('#\/profil'), act('game.next'))/"
 mutatef "deck: the tiles are filled on Aile's step" deck/slides.js  "s/batch\(go\('#\/profil'\), act\('switcher\.open'\)\)/batch(go('#\/profil'), act('game.fill', { send: true }))/"
 mutatef "deck: Şimdi Oyna before Kategoriler"    deck/slides.js     "s/(      \['Kategoriler', [^\n]*\n)(      \['Şimdi Oyna', [^\n]*\n)/\$2\$1/"
@@ -257,7 +257,7 @@ mutatef "deck: oyna.press answers the level too" app/app.js         's/(  .oyna\
 mutatef "deck: oyna.press presses any play button" app/app.js       "s/'oyna\.press': async \(\) => \{ const sel = '\[data-do=\"play\"\]\[data-origin=\"kesfet\"\]';/'oyna.press': async () => { const sel = '[data-do=\"play\"]';/"
 mutatef "deck: Oyna's circle is not what oyna.press presses" app/app.js 's/class="chunky oyna circle" data-do="play" data-origin="kesfet"/class="chunky oyna circle" data-do="play" data-origin="oyna"/'
 mutatef "deck: the phone loses oyna.press"       app/app.js         "s/  'oyna\.press': async/  'oyna.open': async/"
-mutatef "deck: a play button tapped on a page"   deck/slides.js     "s/\['Piyanoda çal', batch\(go\('#\/cal'\), act\('keys\.play', [^\n]*\n/['Piyanoda çal', batch(go('#\/'), tap('[data-play=\"family:TelliCalgilar\"]'))]],\n/"
+mutatef "deck: a play button tapped on a page"   deck/slides.js     "s/\['Serbest çal', batch\(go\('#\/cal'\), act\('keys\.play', [^\n]*\n/['Serbest çal', batch(go('#\/'), tap('[data-play=\"family:TelliCalgilar\"]'))]],\n/"
 mutatef "deck: the notes keep the round for the deck" deck/slides.js "s/<b>Buradan sonra telefonda siz oynayın\.<\/b>/<b>Sıradaki adımlar turu oynatır.<\/b>/"
 # Öğren's taps, and the tabs
 mutatef "deck: the family is a link, not a tap"  deck/slides.js     "s/\['Yaylı Çalgılar', batch\(go\('#\/ogren\/aileler'\), tap\('\[data-fam=\"YayliCalgilar\"\]'\)\)\]/['Yaylı Çalgılar', go('#\/ogren\/calgilar?aile=yayli')]/"
@@ -284,7 +284,7 @@ mutatef "deck: the song step only opens the page" deck/slides.js    "s/batch\(go
 mutatef "deck: a lyric sheet Keman does not have" deck/slides.js    "s/\['Gitar: şarkı sözleri', go\('#\/sozler\/gitar'\)\]/['Keman: şarkı sözleri', go('#\/sozler\/keman')]/"
 mutatef "deck: the song slide opens on Çal's list" deck/slides.js   "s/id: 'sarki', label: 'Şarkı', theme: 'light', phone: go\('#\/sarki\/keman'\)/id: 'sarki', label: 'Şarkı', theme: 'light', phone: go('#\/cal')/"
 mutatef "deck: the song told before Çal"         deck/slides.js     "s/id: 'sarki'/id: 'TMP'/; s/id: 'cal'/id: 'sarki'/; s/id: 'TMP'/id: 'cal'/"
-mutatef "deck: the slide says 40 songs"          deck/slides.js     "s/'41 şarkının hepsi aynı klavyede/'40 şarkının hepsi aynı klavyede/"
+mutatef "deck: the slide says 40 songs"          deck/slides.js     "s/'41 şarkının hepsi aynı piyanoda/'40 şarkının hepsi aynı piyanoda/"
 mutatef "deck: nine lyric sheets in the notes"   deck/slides.js     "s/on çalgının sözleri ayrı bir sayfada okunur/dokuz çalgının sözleri ayrı bir sayfada okunur/"
 mutatef "deck: the karaoke line is only note names again" deck/slides.js "s/karaoke satırında önce nota adları, sonra sözler ilerler\./nota adları karaoke satırında ilerler./"
 mutatef "deck: Keman's song loses its words"     app/data/songs/keman.json 's/"hem"/"la"/g; s/"tel"/"la"/g; s/"li"/"la"/g; s/"yim"/"la"/g; s/"yay"/"la"/g; s/"lı"/"la"/g; s/"en"/"la"/g; s/"çok"/"la"/g; s/"ça"/"la"/g; s/"nı"/"la"/g; s/"rım"/"la"/g; s/"Ku"/"la"/g; s/"zen"/"la"/g; s/"le"/"la"/g; s/"ben"/"la"/g; s/"den"/"la"/g; s/"boy"/"la"/g; s/"lu"/"la"/g; s/"be"/"la"/g; s/"nen"/"la"/g; s/"kü"/"la"/g; s/"çü"/"la"/g; s/"ko"/"la"/g; s/"yım"/"la"/g; s/"Bir"/"la"/g; s/"kaç"/"la"/g; s/"fark"/"la"/g; s/"ren"/"la"/g; s/"gim"/"la"/g; s/"var"/"la"/g; s/"dört"/"la"/g; s/"bir"/"la"/g; s/"ya"/"la"/g; s/"pım"/"la"/g; s/"Her"/"la"/g; s/"mü"/"la"/g; s/"zik"/"la"/g; s/"te"/"la"/g; s/"va"/"la"/g; s/"dur"/"la"/g; s/"mam"/"la"/g; s/"hep"/"la"/g'
@@ -321,3 +321,14 @@ mutate  "clock: no leading zero"                 clock.js           's/String\(n
 mutate  "clock: minutes before hours"            clock.js           's/two\(date\.getHours\(\)\)\}:\$\{two\(date\.getMinutes\(\)\)/two(date.getMinutes())}:\${two(date.getHours())/'
 mutatef "clock: formatted in the app's language again" app/app.js   "s/deviceClock\(new Date\(\)\)/new Date().toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })/"
 mutatef "clock: Intl in the app's language"      app/app.js         "s/deviceClock\(new Date\(\)\)/new Intl.DateTimeFormat(lang, { timeStyle: 'short' }).format(new Date())/"
+# the deck's words: one name for a thing, the phone's; none of our own words; typed numbers held to the phone (tests/deck.test.mjs)
+mutatef "copy CONTROL: benign wording"           deck/slides.js     's/Sorularınızı ve değiştirmek istediklerinizi dinleyelim\./Sorularınızı ve değiştirmek istediklerinizi dinlemek isteriz./'
+mutatef "copy: Testçiler back in a note"         deck/slides.js     's/Her sayfaya tek bir yerden gidilir\./Testçiler dolaşmayı karışık bulmuştu./'
+mutatef "copy: Keşfet named in a note"           deck/slides.js     's/Uygulama Oyna sekmesiyle açılır;/Keşfet artık Oyna;/'
+mutatef "copy: Avalonia in the closing notes"    deck/slides.js     's/<b>Aynı uygulama her cihazda:<\/b>/<b>Tek kod (Avalonia):<\/b>/'
+mutatef "copy: the piano is a klavye again"      deck/slides.js     's/uygulamanın piyanosunda",/uygulamanın klavyesinde",/'
+mutatef "copy: the slide says 11 categories"     deck/slides.js     's/altında 12 kategori/altında 11 kategori/'
+mutatef "copy: six families in the notes"        deck/slides.js     's/yedi müzik işareti ve beş çalgı ailesi/yedi müzik işareti ve altı çalgı ailesi/'
+mutatef "copy: 40 instruments on Öğren"          deck/slides.js     "s/'41 çalgı: her birinin/'40 çalgı: her birinin/"
+mutatef "copy: the gate locks for a minute"      deck/slides.js     's/üç yanlışta 30 saniye kilitlenir/üç yanlışta 60 saniye kilitlenir/'
+mutatef "copy: the phone's gate locks after five" app/app.js        's/if \(gate\.wrong >= 3\) \{ gate\.lockedUntil/if (gate.wrong >= 5) { gate.lockedUntil/'

@@ -147,7 +147,9 @@ Chrome. It starts its own headless Chrome with a throwaway profile and stops it 
 
 ## Deploy
 
-**GitHub Pages** is where the demo is published: <https://bulbi-co.github.io/doremimi-demo/>. Pages serves the
+**GitHub Pages** is where the demo is published: <https://doremimi.bulbi.co/> (a CNAME in Route 53 to
+`bulbi-co.github.io`, and a `CNAME` file the publish script writes; under GitHub's own host name Chrome warned
+visitors of bulbi.co that the site "looks fake"). Pages serves the
 `gh-pages` branch, which holds the site alone (`index.html`, `sunum.*`, `robots.txt`, `app/`, `assets/`, `deck/`);
 `tests/`, `tools/` and `docs/` stay on `main`. To publish what is committed:
 
@@ -156,7 +158,7 @@ bash tools/publish-pages.sh    # HEAD's site becomes one commit on gh-pages; liv
 ```
 
 `.github/workflows/pages.yml` runs the guards and then the same script on every push to `main`. Every path is
-relative, so the project page's `/doremimi-demo/` prefix needs nothing, and `app/index.html` adds the missing
+relative, so it works at the domain's root and under a project page's `/doremimi-demo/` prefix alike, and `app/index.html` adds the missing
 trailing slash itself when a host serves `/app` without it. GitHub sends `cache-control: max-age=600`: a visitor who
 had the page open may see the old files for up to ten minutes after a publish.
 

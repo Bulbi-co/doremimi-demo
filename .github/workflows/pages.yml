@@ -1,4 +1,4 @@
-# Publishes the demo to GitHub Pages: https://bulbi-co.github.io/doremimi-demo/
+# Publishes the demo to GitHub Pages: https://doremimi.bulbi.co/
 #
 # Why Pages and why an Action, in a codebase whose rule is "GitHub Actions is not the release path": that rule is for
 # the Bulbi services (Docker + AWS). This repo is a static demo, and its first host was Vercel, which people in Turkey
